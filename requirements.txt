@@ -1,0 +1,26 @@
+# Core
+sqlalchemy>=2.0
+
+# Data collection
+requests>=2.31
+httpx>=0.25
+beautifulsoup4>=4.12
+lxml>=4.9
+
+# Data processing
+pandas>=2.1
+numpy>=1.25
+
+# Dashboard
+streamlit>=1.29
+plotly>=5.18
+
+# Utils
+python-dotenv>=1.0
+tenacity>=8.2
+fake-useragent>=1.4
+tqdm>=4.66
+schedule>=1.2
+
+# Testing
+pytest>=7.4
