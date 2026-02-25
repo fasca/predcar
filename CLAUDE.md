@@ -7,6 +7,14 @@ Python tool predicting which used cars will become sought-after collectors (5-10
 **Stack:** Python 3.10+ | SQLite (SQLAlchemy) | Streamlit | Plotly
 **UI Language:** French | **Code Language:** English
 
+## Communication
+
+- **TOUJOURS répondre en français** à l'utilisateur (explications, résumés, questions)
+- Code, variables, docstrings, logs : en anglais
+- Commentaires dans le code : en anglais
+- Messages de commit : en français
+- Dashboard UI (labels, titres, descriptions) : en français
+
 ## Key Commands
 
 ```bash

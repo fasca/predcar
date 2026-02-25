@@ -4,7 +4,7 @@
 
 CarCollector Predictor crosses vehicle rarefaction data, mechanical reliability, community sentiment from forums, and market signals to produce a **collector potential score** for each model.
 
-## How It Works?
+## How It Works
 
 1. **Rarefaction tracking** — How fast is each model disappearing from the road? (UK DVLA, NL RDW data)
 2. **Reliability filtering** — Exclude badly-designed models ("lemons") that disappear due to mechanical failure, not collectibility
