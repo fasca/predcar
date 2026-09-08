@@ -31,7 +31,7 @@ make fetch-uk / make ingest-uk   # Archive DfT/DVLA CSVs (VEH0120/0124/0160) →
 make fetch-nl / make ingest-nl   # Monthly aggregated RDW snapshot (SoQL, no personal data) → silver
 make normalize                   # Apply mapping/ → data/silver/fleet_stock.parquet, fail if coverage < 95 %
 make validate                    # Silver invariants
-make score                       # (planned) Indicators + score v1 → data/gold/
+make score                       # Indicators + score v1 → data/gold/ (docs/methodology.md)
 make site                        # (planned) Build static site from data/gold/
 make test / make lint            # pytest / ruff
 ```
@@ -51,7 +51,7 @@ mapping/       → makes.csv, models.csv, target_models.csv (make/model normaliz
 config/        → score.yaml (ALL score weights and thresholds)
 predcar/       → Python package: ingestion, normalization, metrics, Typer CLI
 site/          → Static site generator sources
-docs/          → SPEC.md (reference), SOURCES.md (URLs + licences), sources/<source>.md
+docs/          → SPEC.md (reference), SOURCES.md, sources/<source>.md, mapping.md, methodology.md
 tests/         → pytest: schema per source vintage, invariants, snapshot tests
 tasks/         → todo.md + lessons.md (task tracking)
 ```

@@ -1,4 +1,4 @@
-.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize validate test lint
+.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score validate test lint
 
 install:
 	uv sync
@@ -17,6 +17,9 @@ ingest-nl:           ## Parse latest raw RDW snapshot into data/silver/fleet_sto
 
 normalize:           ## Apply mapping/ → data/silver/fleet_stock.parquet, fail if coverage < 95 %
 	uv run predcar normalize
+
+score:               ## Indicators + score v1 → data/gold/ (parquet + ranking.csv)
+	uv run predcar score
 
 validate:            ## Check silver invariants
 	uv run predcar validate

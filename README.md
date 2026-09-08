@@ -66,6 +66,12 @@ make normalize                              # échoue si < 95 % du parc des marq
 make validate                               # invariants sur tous les Parquet silver
 ```
 
+### 5. Indicateurs et score
+
+```bash
+make score        # data/gold/indicators.parquet, scores.parquet, ranking.csv (docs/methodology.md)
+```
+
 ## Commandes
 
 | Commande | Effet |
@@ -73,9 +79,10 @@ make validate                               # invariants sur tous les Parquet si
 | `make fetch-uk` / `make ingest-uk` | Archive puis parse les CSV DfT/DVLA |
 | `make fetch-nl` / `make ingest-nl` | Archive puis parse un snapshot agrégé RDW |
 | `make normalize` | Applique `mapping/` → `data/silver/fleet_stock.parquet`, gate de couverture |
+| `make score` | Indicateurs (stock, attrition, SORN, inflexion, rareté) + score v1 → `data/gold/` |
 | `make validate` | Invariants silver (stock ≥ 0, clés uniques, statuts) |
 | `make test` / `make lint` | pytest / ruff |
-| `uv run predcar --help` | Toutes les sous-commandes (`fetch`, `ingest`, `normalize`, `validate`) |
+| `uv run predcar --help` | Toutes les sous-commandes (`fetch`, `ingest`, `normalize`, `score`, `validate`) |
 
 ## Arborescence
 
@@ -83,8 +90,8 @@ make validate                               # invariants sur tous les Parquet si
 config/     score.yaml (poids, seuils), mapping.yaml (couverture), sources.yaml (registre des sources)
 mapping/    makes.csv, models.csv, target_models.csv — normalisation marque/modèle (docs/mapping.md)
 data/       raw/ (immuable, manifest versionné), silver/ (parquet normalisés), gold/ (scores)
-predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, normalize, cli
-docs/       SPEC.md, SOURCES.md (URLs + licences), sources/<source>.md (schémas), mapping.md
+predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, normalize, metrics, score, cli
+docs/       SPEC.md, SOURCES.md (URLs + licences), sources/<source>.md (schémas), mapping.md, methodology.md
 tests/      pytest — schémas, invariants, parseurs, mapping, fixtures
 tasks/      todo.md, lessons.md
 ```
@@ -104,7 +111,7 @@ Phase 2 : KBA (DE), SDES (FR), STATS19, Google Trends, YouTube. Voir `docs/SOURC
 score = 0.35·rareté + 0.25·conservation + 0.20·ratio_SORN + 0.20·point_inflexion_récent
 ```
 
-Composantes normalisées 0–1, orientées « plus haut = plus collector », pondérations dans `config/score.yaml`. Composante manquante = exclue et poids renormalisés, jamais imputée à 0.
+Composantes normalisées 0–1, orientées « plus haut = plus collector », pondérations dans `config/score.yaml`. Composante manquante = exclue et poids renormalisés, jamais imputée à 0. Formules, sources et limites : [`docs/methodology.md`](docs/methodology.md).
 
 ## Licence
 
