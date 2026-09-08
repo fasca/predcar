@@ -45,3 +45,14 @@ logs/
 # Coverage
 htmlcov/
 .coverage
+
+# Raw payloads are archived locally with a MANIFEST.json (sha256) that IS versioned;
+# the payloads themselves are too large for git.
+data/raw/**
+!data/raw/.gitkeep
+!data/raw/**/
+!data/raw/**/MANIFEST.json
+data/silver/*.parquet
+data/gold/*.parquet
+.pytest_cache/
+.ruff_cache/

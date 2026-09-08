@@ -1,0 +1,16 @@
+# Data source registry. URLs are verified by HTTP request and recorded in docs/SOURCES.md.
+uk_dft:
+  licence: OGL-3.0
+  # Landing page listing the CSV assets; asset URLs change at every release and are
+  # resolved at fetch time by scanning this page for the file names below.
+  page_url: https://www.gov.uk/government/statistical-data-sets/vehicle-licensing-statistics-data-files
+  files:
+    - df_VEH0120_GB.csv
+    - df_VEH0124_AM.csv
+    - df_VEH0124_NZ.csv
+    - df_VEH0160_GB.csv
+
+nl_rdw:
+  licence: CC0-1.0
+  dataset_id: m9d7-ebf2
+  api_url: https://opendata.rdw.nl/resource/m9d7-ebf2.json
