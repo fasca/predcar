@@ -3,7 +3,7 @@ version: 1
 
 weights:
   rarity: 0.35
-  conservation: 0.25          # = -relative_attrition, normalized 0-1
+  conservation: 0.25          # = -relative_attrition, normalized 0-1 (rank)
   sorn_ratio: 0.20            # UK only
   recent_inflection_point: 0.20
 
@@ -12,12 +12,16 @@ weights:
 min_weight_coverage: 0.60
 
 rarity:
-  # Current stock thresholds (SPEC §5): < 500 / < 100 / < 20 units
+  # Current stock tiers (SPEC §5): < 500 / < 100 / < 20 units, exposed as a label
   thresholds: [500, 100, 20]
 
 attrition:
-  smoothing_years: 3
-  min_history_years: 3        # conservation / inflection unavailable below this
+  smoothing_years: 3          # rolling mean window on annual attrition
+  min_history_years: 3        # conservation / inflection unavailable below this many attrition points
+
+peers:
+  age_bucket_years: 5         # peers = same segment, same (age // bucket)
+  min_peers: 3                # relative attrition unavailable with fewer peer observations
 
 inflection:
   recent_years: 5             # inflection counts as "recent" if < N years ago

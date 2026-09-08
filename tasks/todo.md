@@ -35,8 +35,15 @@
       `models.csv` jusqu'à ≥ 95 % GB et NL
 
 ### Étape 4 — Indicateurs et score v1
-- [ ] Stock, survie, attrition (lissage 3 ans), attrition relative, ratio SORN, inflexion, rareté
-- [ ] Score composite, composantes manquantes renormalisées, `components_available`
+- [x] `predcar/metrics.py` : séries annuelles par famille (VEH0120 / VEH0124 / RDW, jamais
+      sommées), niveau génération vs modèle générique, attrition lissée, pairs (segment ×
+      tranche d'âge, ≥ 3 modèles distincts), attrition relative, inflexion, SORN, survie, rareté,
+      agrégat Europe
+- [x] `predcar/score.py` : composantes 0–1, poids renormalisés, `min_weight_coverage`,
+      `components_available`, rang ; `make score` → gold parquet + `ranking.csv`
+- [x] `docs/methodology.md` (source de la page Méthodologie du site)
+- [ ] Vérifier sur données réelles : nombre de cibles publiées, distribution des composantes,
+      snapshot tests sur les 5 modèles témoins
 
 ### Étape 5 — Site statique
 - [ ] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel

@@ -29,6 +29,11 @@ class AttritionConfig(BaseModel):
     min_history_years: int = Field(ge=1)
 
 
+class PeersConfig(BaseModel):
+    age_bucket_years: int = Field(ge=1)
+    min_peers: int = Field(ge=1)
+
+
 class InflectionConfig(BaseModel):
     recent_years: int = Field(ge=1)
 
@@ -39,6 +44,7 @@ class ScoreConfig(BaseModel):
     min_weight_coverage: float = Field(gt=0, le=1)
     rarity: RarityConfig
     attrition: AttritionConfig
+    peers: PeersConfig
     inflection: InflectionConfig
 
     @model_validator(mode="after")

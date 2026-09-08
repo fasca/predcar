@@ -10,9 +10,10 @@ import typer
 
 from predcar import normalize as normalize_mod
 from predcar import raw, schemas
+from predcar import score as score_mod
 from predcar.config import load_mapping_config, load_sources_config
 from predcar.ingest import dft, rdw
-from predcar.paths import MAPPING_DIR, SILVER_DIR
+from predcar.paths import GOLD_DIR, MAPPING_DIR, SILVER_DIR
 
 app = typer.Typer(help="predcar data pipeline", no_args_is_help=True)
 fetch_app = typer.Typer(help="Download raw files into data/raw/<source>/<date>/")
@@ -85,6 +86,20 @@ def normalize(
 def _echo_error(exc: Exception) -> Exception:
     typer.echo(f"ERROR: {exc}", err=True)
     return exc
+
+
+@app.command()
+def score(
+    silver_dir: Path = typer.Option(SILVER_DIR),
+    gold_dir: Path = typer.Option(GOLD_DIR),
+) -> None:
+    """Indicators (stock, attrition, SORN, inflection, rarity) and score v1 → data/gold/."""
+    try:
+        written = score_mod.score(silver_dir, gold_dir)
+    except score_mod.ScoreError as exc:
+        raise typer.Exit(code=2) from _echo_error(exc)
+    for name, path in written.items():
+        typer.echo(f"{name}: {path}")
 
 
 @app.command()
