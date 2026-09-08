@@ -2,6 +2,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+import httpx
 import polars as pl
 import pytest
 
@@ -190,3 +191,24 @@ def test_ingest_refuses_tampered_snapshot(fixtures: Path, tmp_path: Path) -> Non
     (snapshot / "df_VEH0160_GB.csv").write_text("BodyType\nCars\n")
     with pytest.raises(raw.RawArchiveError):
         dft.ingest(snapshot, tmp_path / "silver")
+
+
+# --------------------------------------------------------------------------- fetch
+
+
+def test_fetch_resolves_page_and_archives_every_file(fixtures: Path, tmp_path: Path) -> None:
+    from predcar.config import load_sources_config
+
+    page = (fixtures / "dft_landing_page.html").read_text()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith(".csv"):
+            return httpx.Response(200, content=b"BodyType,Make\nCars,BMW\n")
+        return httpx.Response(200, text=page)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    written = dft.fetch(load_sources_config(), client, root=tmp_path)
+    assert sorted(p.name for p in written) == sorted(ALL_FILES)
+    snapshot = written[0].parent
+    assert set(raw.read_manifest(snapshot)) == set(ALL_FILES)
+    raw.verify(snapshot)

@@ -141,7 +141,9 @@ def resolve_asset_urls(page_html: str, filenames: list[str]) -> dict[str, str]:
     return found
 
 
-def fetch(sources: SourcesConfig, client: httpx.Client | None = None) -> list[Path]:
+def fetch(
+    sources: SourcesConfig, client: httpx.Client | None = None, root: Path | None = None
+) -> list[Path]:
     """Archive every configured DfT CSV into today's raw snapshot."""
     own_client = client is None
     client = client or httpx.Client(follow_redirects=True, timeout=120)
@@ -149,7 +151,7 @@ def fetch(sources: SourcesConfig, client: httpx.Client | None = None) -> list[Pa
         page = client.get(str(sources.uk_dft.page_url))
         page.raise_for_status()
         urls = resolve_asset_urls(page.text, sources.uk_dft.files)
-        return [raw.archive(SOURCE, url, name, client) for name, url in urls.items()]
+        return [raw.archive(SOURCE, url, name, client, root) for name, url in urls.items()]
     finally:
         if own_client:
             client.close()

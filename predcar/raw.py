@@ -35,9 +35,12 @@ def sha256_of(path: Path) -> str:
     return digest.hexdigest()
 
 
-def snapshot_dir(source: str, day: date | None = None, root: Path = RAW_DIR) -> Path:
-    """Directory for one dated snapshot of a source (created on demand)."""
-    path = root / source / (day or datetime.now(UTC).date()).isoformat()
+def snapshot_dir(source: str, day: date | None = None, root: Path | None = None) -> Path:
+    """Directory for one dated snapshot of a source (created on demand).
+
+    ``root`` defaults to ``data/raw`` and is resolved at call time so tests can redirect it.
+    """
+    path = (root or RAW_DIR) / source / (day or datetime.now(UTC).date()).isoformat()
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -115,20 +118,26 @@ def download(url: str, dest: Path, client: httpx.Client | None = None) -> Path:
     return dest
 
 
-def archive(source: str, url: str, filename: str, client: httpx.Client | None = None) -> Path:
+def archive(
+    source: str,
+    url: str,
+    filename: str,
+    client: httpx.Client | None = None,
+    root: Path | None = None,
+) -> Path:
     """Download a file into today's snapshot of a source and register its checksum.
 
     Refuses to overwrite a file already present in the snapshot.
     """
-    directory = snapshot_dir(source)
+    directory = snapshot_dir(source, root=root)
     dest = download(url, directory / filename, client)
     register_file(directory, filename, url)
     return dest
 
 
-def latest_snapshot(source: str, root: Path = RAW_DIR) -> Path:
+def latest_snapshot(source: str, root: Path | None = None) -> Path:
     """Most recent dated snapshot directory of a source."""
-    base = root / source
+    base = (root or RAW_DIR) / source
     candidates = sorted(p for p in base.iterdir() if p.is_dir()) if base.is_dir() else []
     if not candidates:
         raise RawArchiveError(f"no raw snapshot for source '{source}' under {base}")
