@@ -26,8 +26,13 @@
       la liste, committer le MANIFEST.json ; planifier le cron mensuel (GitHub Actions)
 
 ### Étape 3 — Mapping marques/modèles
-- [ ] `mapping/makes.csv`, `mapping/models.csv` pour ~150 modèles cibles
-- [ ] Application du mapping → `make`, `model_gen`, `generation` ; échec si couverture < 95 %
+- [x] `mapping/target_models.csv` (~240 générations cibles), `makes.csv` (alias), `models.csv`
+      (règles regex + plages d'années, catch-alls par marque cible)
+- [x] `predcar normalize` : application, détection d'ambiguïtés, couverture par pays, rapport
+      des non-mappés, échec si < `config/mapping.yaml:min_coverage` (0.95)
+- [x] `docs/mapping.md`, tests (règles témoins, pipeline bout en bout)
+- [ ] **Itérer sur données réelles** : `predcar normalize --min-coverage 0`, compléter
+      `models.csv` jusqu'à ≥ 95 % GB et NL
 
 ### Étape 4 — Indicateurs et score v1
 - [ ] Stock, survie, attrition (lissage 3 ans), attrition relative, ratio SORN, inflexion, rareté
