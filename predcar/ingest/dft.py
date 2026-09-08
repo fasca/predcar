@@ -1,7 +1,7 @@
 """UK DfT/DVLA vehicle licensing statistics (VEH0120, VEH0124, VEH0160) → silver.
 
 The three tables share one "wide" layout: identification columns followed by one column
-per period (quarter or year). This module resolves the asset URLs from the GOV.UK
+per period (quarter or year), most recent first. This module resolves the asset URLs from the GOV.UK
 landing page, archives the CSVs, unpivots them and conforms them to the silver schemas.
 
 The expected layout is documented in docs/sources/dft_uk.md. Any drift (missing id
@@ -39,7 +39,7 @@ _QUARTER_END = {1: (3, 31), 2: (6, 30), 3: (9, 30), 4: (12, 31)}
 # Raw licence status labels → silver Status. "Total" rows are checked then dropped.
 _STATUS_MAP = {"licensed": schemas.Status.LICENSED, "sorn": schemas.Status.SORN}
 _TOTAL_LABELS = {"total", "all"}
-# Aggregation over the raw columns the silver schema does not keep (Fuel, YearOfManufacture).
+# Aggregation over the raw columns the silver schema does not keep (Fuel, YearManufacture).
 _AGG = [pl.col("count").sum(), pl.col("source").first()]
 
 
@@ -56,8 +56,7 @@ class DftTable:
     kind: Literal["stock", "new_reg"]
     id_columns: tuple[str, ...]
     period_kind: Literal["quarter", "year"]
-    status_column: str | None = None
-    default_status: schemas.Status | None = None
+    status_column: str | None = None  # required for kind="stock"
     year_first_reg_column: str | None = None
 
 
@@ -79,12 +78,12 @@ TABLES: dict[str, DftTable] = {
             "Make",
             "GenModel",
             "Model",
-            "Fuel",
             "YearFirstUsed",
-            "YearOfManufacture",
+            "YearManufacture",
+            "LicenceStatus",
         ),
         period_kind="year",
-        default_status=schemas.Status.LICENSED,
+        status_column="LicenceStatus",
         year_first_reg_column="YearFirstUsed",
     ),
     "VEH0124_NZ": DftTable(
@@ -96,12 +95,12 @@ TABLES: dict[str, DftTable] = {
             "Make",
             "GenModel",
             "Model",
-            "Fuel",
             "YearFirstUsed",
-            "YearOfManufacture",
+            "YearManufacture",
+            "LicenceStatus",
         ),
         period_kind="year",
-        default_status=schemas.Status.LICENSED,
+        status_column="LicenceStatus",
         year_first_reg_column="YearFirstUsed",
     ),
     "VEH0160": DftTable(
@@ -244,13 +243,19 @@ def parse_table(df: pl.DataFrame, table: DftTable) -> pl.DataFrame:
         out = out.with_columns(pl.lit(None).alias(c) for c in ("make", "model_gen", "generation"))
         return schemas.conform(out, schemas.FLEET_NEW_REG_SCHEMA).sort(schemas.FLEET_NEW_REG_KEY)
 
-    long = _with_status(long, table)
+    # Year of first use first: the Total check (if any) is done per cohort.
+    # A non-numeric year ("[x]") is kept as the null-year bucket, never dropped.
     if table.year_first_reg_column:
-        long = long.with_columns(
-            pl.col(table.year_first_reg_column).cast(pl.Int32, strict=False).alias("year_first_reg")
-        )
+        year = pl.col(table.year_first_reg_column).str.strip_chars()
+        long = long.with_columns(year.cast(pl.Int32, strict=False).alias("year_first_reg"))
+        unknown_years = long.filter(pl.col("year_first_reg").is_null()).height
+        if unknown_years:
+            logger.info(
+                "%s: %d values with unusable year -> null bucket", table.name, unknown_years
+            )
     else:
         long = long.with_columns(pl.lit(None, dtype=pl.Int32).alias("year_first_reg"))
+    long = _with_status(long, table)
     out = long.group_by(schemas.FLEET_STOCK_KEY).agg(_AGG)
     out = out.with_columns(pl.lit(None).alias(c) for c in ("make", "model_gen", "generation"))
     return schemas.conform(out, schemas.FLEET_STOCK_SCHEMA).sort(schemas.FLEET_STOCK_KEY)
@@ -259,7 +264,7 @@ def parse_table(df: pl.DataFrame, table: DftTable) -> pl.DataFrame:
 def _with_status(long: pl.DataFrame, table: DftTable) -> pl.DataFrame:
     """Map the raw licence status column, checking Total = Licensed + SORN when present."""
     if table.status_column is None:
-        return long.with_columns(pl.lit(table.default_status).alias("status"))
+        raise DftSchemaError(f"{table.name}: stock table declared without a status column")
     key = pl.col(table.status_column).str.strip_chars().str.to_lowercase()
     labels = set(long.select(key.alias("k"))["k"].unique().to_list())
     unknown = labels - set(_STATUS_MAP) - _TOTAL_LABELS
@@ -278,9 +283,10 @@ def _with_status(long: pl.DataFrame, table: DftTable) -> pl.DataFrame:
 
 
 def _check_totals(long: pl.DataFrame, totals: pl.DataFrame, table: DftTable) -> None:
-    group = ["make_raw", "model_gen_raw", "model_raw", "period"]
-    # A suppressed Licensed or SORN cell has already been dropped: only groups where every
-    # component status is visible can be compared with their Total.
+    # One group per cohort (year_first_reg included): a suppressed Licensed or SORN cell has
+    # already been dropped, so only groups where every component status is visible can be
+    # compared with their Total.
+    group = [c for c in schemas.FLEET_STOCK_KEY if c != "status"]
     parts = (
         long.filter(pl.col("status_key").is_in(list(_STATUS_MAP)))
         .group_by(group)
@@ -292,7 +298,9 @@ def _check_totals(long: pl.DataFrame, totals: pl.DataFrame, table: DftTable) -> 
         .drop("n_status")
     )
     tot = totals.group_by(group).agg(pl.col("count").sum().alias("total"))
-    mismatch = parts.join(tot, on=group, how="inner").filter(pl.col("parts") != pl.col("total"))
+    mismatch = parts.join(tot, on=group, how="inner", nulls_equal=True).filter(
+        pl.col("parts") != pl.col("total")
+    )
     if mismatch.height:
         raise schemas.InvariantError(
             f"{table.name}: licensed + SORN != total for {mismatch.height} groups, "

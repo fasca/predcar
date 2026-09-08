@@ -14,7 +14,10 @@ conservé tel quel (identité). Exemples : `VAUXHALL → OPEL`, `MERCEDES → ME
 
 Une règle s'applique quand la marque canonique vaut `make` **et** que la regex (insensible à
 la casse, recherche non ancrée : mettre `^`) matche `model_raw` (DfT `Model`, RDW
-`handelsbenaming`, en majuscules).
+`handelsbenaming`, en majuscules) **débarrassé d'un éventuel préfixe marque** : le RDW écrit
+`TOYOTA AYGO`, `ALFA GIULIETTA`, `HONDA S2000` là où DfT écrit `AYGO`. Tout alias de la marque
+(`makes.csv`) suivi d'un espace est retiré avant le test, sauf s'il ne resterait rien (`MINI`).
+`model_raw` lui-même n'est jamais modifié.
 
 | Cas | `year_from`/`year_to` | Effet |
 |---|---|---|
@@ -49,6 +52,8 @@ uv run predcar normalize --min-coverage 0    # explorer sans échouer, lire le r
 make normalize                               # seuil de config/mapping.yaml
 ```
 
-État : les règles ont été écrites **sans accès aux libellés réels** (proxy). Elles sont
-testées sur des libellés témoins (`tests/test_normalize.py`) ; la première passe sur données
-réelles produira certainement un rapport non vide à traiter.
+État (2026-09-08, premières données réelles) : couverture **GB 97,9 %**, **NL 98,2 %**
+(immatriculations neuves GB 98,1 %). La première passe a révélé 11 familles de regex trop larges
+(`^900` capturait `9000`, `^MX-3` capturait `MX-30`, `^C2` capturait `C25`, `^ASTRA` capturait
+`ASTRAVAN`…) : toute règle sur un libellé numérique ou court se termine par `\b`. Le plus gros
+reste non mappé est `MODEL MISSING` (DfT), volontairement laissé sans `model_gen`.

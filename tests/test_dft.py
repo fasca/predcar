@@ -121,12 +121,35 @@ def test_veh0124_cohorts_sum_over_manufacture_year(fixtures: Path) -> None:
     out = dft.parse_table(df, dft.TABLES["VEH0124_AM"])
     schemas.check_fleet_stock(out)
 
-    assert set(out["status"].to_list()) == {"licensed"}
+    assert set(out["status"].to_list()) == {"licensed", "sorn"}
     e46_2001 = out.filter((pl.col("model_raw") == "M3 E46") & (pl.col("year_first_reg") == 2001))
-    assert e46_2001.sort("period")["count"].to_list() == [342, 320]  # 320+22, 300+20... sorted
-    # [z] / [low] markers dropped
+    licensed = e46_2001.filter(pl.col("status") == "licensed").sort("period")
+    assert licensed["count"].to_list() == [342, 320]  # 2022: 320+22 ; 2023: 300+20
+    assert e46_2001.filter(pl.col("status") == "sorn").sort("period")["count"].to_list() == [38, 40]
+    # [z] / [low] markers dropped, never imputed as 0
     assert out.filter(pl.col("year_first_reg") == 1995).height == 0
     assert out.filter(pl.col("year_first_reg") == 2002).height == 1
+    # "[x]" year of first use is kept as the null-year bucket
+    unknown = out.filter(pl.col("year_first_reg").is_null())
+    assert unknown["count"].to_list() == [3, 3]
+
+
+def test_veh0124_total_check_is_per_cohort(fixtures: Path) -> None:
+    """A SORN cell suppressed on one cohort must not invalidate the Total of another."""
+    df = dft.read_wide_csv(fixtures / "df_VEH0124_AM.csv")
+    totals = pl.DataFrame(
+        [
+            ["Cars", "BMW", "M3", "M3 E46", "2001", "2001", "Total", "360", "380"],
+            ["Cars", "BMW", "M3", "M3 E46", "2002", "2002", "Total", "999", "999"],
+        ],
+        schema=df.columns,
+        orient="row",
+    )
+    out = dft.parse_table(pl.concat([df, totals]), dft.TABLES["VEH0124_AM"])
+    assert "total" not in out["status"].to_list()
+    bad = totals.with_columns(pl.lit("361").alias("2023"))
+    with pytest.raises(schemas.InvariantError, match="licensed \\+ SORN != total"):
+        dft.parse_table(pl.concat([df, bad]), dft.TABLES["VEH0124_AM"])
 
 
 # --------------------------------------------------------------------------- VEH0160

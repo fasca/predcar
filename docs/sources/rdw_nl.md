@@ -1,10 +1,9 @@
 # Source : NL RDW — Gekentekende voertuigen (`m9d7-ebf2`)
 
-**Statut : schéma *présumé*, à valider contre une réponse réelle de l'API.**
-`opendata.rdw.nl` était inaccessible depuis l'environnement de développement (proxy sortant).
-Le layout ci-dessous suit la documentation Socrata du dataset ; il doit être confirmé par
-`make fetch-nl` puis `make ingest-nl` sur une machine connectée. Toute divergence lève
-`RdwSchemaError` avec le détail : corriger `predcar/ingest/rdw.py` **et** ce document.
+**Statut : schéma observé sur la réponse réelle du 2026-09-08** (`data/raw/nl_rdw/2026-09-08/`,
+203 051 lignes agrégées en 5 pages, 10 799 397 voitures particulières). Le layout présumé était
+correct ; deux cas non prévus ont été ajoutés (ligne sans `handelsbenaming`, ligne sans année).
+Toute divergence future lève `RdwSchemaError` : corriger `predcar/ingest/rdw.py` **et** ce document.
 
 - Dataset : https://opendata.rdw.nl/Voertuigen/Open-Data-RDW-Gekentekende_voertuigen/m9d7-ebf2
 - API SoQL : https://opendata.rdw.nl/resource/m9d7-ebf2.json
@@ -35,20 +34,26 @@ $limit  = 50000 / $offset = k × 50000       # jusqu'à une page courte
 | `voertuigsoort` | text | filtre `Personenauto` |
 | `n` (alias) | nombre sérialisé en texte | `count` |
 
-Points à vérifier sur la réponse réelle (cases à cocher) :
+Liste de vérification, cochée sur la réponse du 2026-09-08 :
 
-- [ ] `datum_eerste_toelating_dt` existe bien en floating timestamp et `date_extract_y` est accepté
-      (repli : `datum_eerste_toelating` en Number, `floor(datum_eerste_toelating / 10000)`).
-- [ ] `count(*)` et `jaar` renvoyés en chaîne ou en nombre JSON : les deux sont acceptés.
-- [ ] Valeur exacte de `voertuigsoort` pour les voitures particulières (`Personenauto`).
-- [ ] `$limit` de 50 000 accepté par l'endpoint (sinon réduire `PAGE_SIZE`).
-- [ ] Volume de la réponse agrégée (attendu : quelques dizaines de milliers de lignes).
+- [x] `datum_eerste_toelating_dt` existe en floating timestamp et `date_extract_y` est accepté.
+- [x] `count(*)` et `jaar` sont renvoyés en chaînes (`"n": "1"`, `"jaar": "2014"`).
+- [x] `voertuigsoort = 'Personenauto'` est la valeur des voitures particulières.
+- [x] `$limit` de 50 000 accepté (pages pleines de 50 000 lignes, dernière page de 3 051).
+- [x] Volume réel : 203 051 lignes (bien plus que « quelques dizaines de milliers ») ; 44 lignes sans
+      `handelsbenaming` (46 véhicules, clé absente du JSON) ; 510 lignes sans `jaar` (13 186 véhicules) ;
+      années de 1887 à 2026.
+- [x] Environ 22 % des véhicules des marques cibles ont un `handelsbenaming` préfixé par la marque
+      (`TOYOTA AYGO`, `ALFA GIULIETTA`) : le préfixe est retiré avant le mapping (`docs/mapping.md`).
+      BMW utilise des familles (`3ER REIHE`, `X REIHE`) sans finition.
 
 ## Règles de parsing
 
 - **Période** : la date du snapshot (`data/raw/nl_rdw/<YYYY-MM-DD>/`), pas une date du dataset.
 - **Année** hors `1900..année du snapshot` ou vide → `year_first_reg` null, comptes sommés dans
   le seau « année inconnue », nombre de lignes journalisé.
+- **Modèle absent** : une ligne sans `handelsbenaming` reçoit `model_raw = (MISSING)` (jamais
+  supprimée ni fusionnée avec le `ONBEKEND` du RDW), nombre journalisé.
 - **Statut** : null (le RDW n'a pas d'équivalent SORN ; `vervaldatum_apk` pourrait servir de
   proxy en phase 2).
 - **Réponse vide** → erreur **avant** toute écriture, jamais un snapshot vide.

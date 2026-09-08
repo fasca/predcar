@@ -1,6 +1,10 @@
-BodyType,Make,GenModel,Model,Fuel,YearFirstUsed,YearOfManufacture,2023,2022
-Cars,BMW,M3,M3 E46,Petrol,2001,2001,300,320
-Cars,BMW,M3,M3 E46,Petrol,2001,2000,20,22
-Cars,BMW,M3,M3 E46,Petrol,2002,2002,350,[z]
-Cars,AUDI,RS2,RS2 AVANT,Petrol,1994,1994,60,62
-Cars,AUDI,RS2,RS2 AVANT,Petrol,1995,1995,[low],[low]
+BodyType,Make,GenModel,Model,YearFirstUsed,YearManufacture,LicenceStatus,2023,2022
+Cars,BMW,M3,M3 E46,2001,2001,Licensed,300,320
+Cars,BMW,M3,M3 E46,2001,2000,Licensed,20,22
+Cars,BMW,M3,M3 E46,2001,2001,SORN,40,38
+Cars,BMW,M3,M3 E46,2002,2002,Licensed,350,[z]
+Cars,BMW,M3,M3 E46,2002,2002,SORN,[z],[z]
+Cars,BMW,M3,M3 E46,[x],[x],Licensed,3,3
+Cars,AUDI,RS2,RS2 AVANT,1994,1994,Licensed,60,62
+Cars,AUDI,RS2,RS2 AVANT,1994,1994,SORN,12,10
+Cars,AUDI,RS2,RS2 AVANT,1995,1995,Licensed,[low],[low]

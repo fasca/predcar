@@ -8,7 +8,7 @@ chaque source, chaque limite. Paramètres dans `config/score.yaml`, jamais en du
 | Série | Pays | Granularité | Niveau | Ce qu'elle apporte |
 |---|---|---|---|---|
 | VEH0120 (DfT) | GB | trimestrielle, 1994 → | modèle générique (`model_gen`) | stock long historique, **SORN** |
-| VEH0124 (DfT) | GB | annuelle, 2014 → | génération (via année de 1re immatriculation) | stock par génération, cohortes |
+| VEH0124 (DfT) | GB | annuelle, 2014 → | génération (via année de 1re immatriculation) | stock par génération, cohortes (Licensed et SORN distingués ; le ratio SORN publié reste celui de VEH0120) |
 | VEH0160 (DfT) | GB | trimestrielle, 2001 → | modèle générique | immatriculations neuves (ventes) |
 | RDW `m9d7-ebf2` | NL | snapshot mensuel, depuis notre 1er snapshot | génération (via année de 1re admission) | stock par génération |
 

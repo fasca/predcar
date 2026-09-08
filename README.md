@@ -18,12 +18,11 @@ make test          # 80+ tests, doit être vert
 
 ## Récupérer les données (à faire depuis votre machine)
 
-> ⚠️ L'environnement Claude Code utilisé pour développer ce dépôt passe par un proxy qui
-> **bloque gov.uk, opendata.rdw.nl, kba.de et data.gouv.fr**. Les parseurs ont donc été écrits
-> sur des schémas *présumés* et documentés (`docs/sources/*.md`). Les commandes ci-dessous
-> doivent être lancées depuis une machine avec accès Internet normal. Elles téléchargent,
-> archivent avec checksum, puis parsent ; toute divergence de schéma lève une erreur explicite
-> plutôt que de produire de faux chiffres.
+> Les commandes ci-dessous téléchargent, archivent avec checksum, puis parsent. Les schémas
+> UK DfT et NL RDW ont été **validés sur les fichiers réels du 2026-09-08** (`docs/sources/*.md`) ;
+> toute divergence future lève une erreur explicite plutôt que de produire de faux chiffres.
+> Si votre réseau bloque gov.uk ou opendata.rdw.nl (proxy), lancez-les depuis une machine
+> connectée puis committez `data/raw/**/MANIFEST.json` et `reports/<date>/`.
 
 ### 1. Royaume-Uni — DfT/DVLA (VEH0120, VEH0124, VEH0160)
 
@@ -34,9 +33,8 @@ make ingest-uk     # → data/silver/fleet_stock_uk_dft.parquet, fleet_new_reg_u
 ```
 
 Si `make ingest-uk` échoue avec `DftSchemaError` (colonne manquante, statut inconnu, aucune
-colonne de période), le layout réel diffère du layout présumé : ouvrir le CSV, corriger
-`predcar/ingest/dft.py` et cocher la liste de vérification de
-[`docs/sources/dft_uk.md`](docs/sources/dft_uk.md).
+colonne de période), le DfT a changé son layout : ouvrir le CSV, corriger
+`predcar/ingest/dft.py` et mettre à jour [`docs/sources/dft_uk.md`](docs/sources/dft_uk.md).
 
 ### 2. Pays-Bas — RDW (dataset `m9d7-ebf2`)
 
@@ -46,10 +44,9 @@ make fetch-nl      # une requête SoQL agrégée (marque × modèle × année), 
 make ingest-nl     # → data/silver/fleet_stock_nl_rdw_<AAAA-MM-JJ>.parquet
 ```
 
-Points à confirmer sur la première réponse réelle (liste dans
-[`docs/sources/rdw_nl.md`](docs/sources/rdw_nl.md)) : la colonne typée
-`datum_eerste_toelating_dt` et `date_extract_y`, le `$limit` de 50 000. À relancer **chaque
-mois** : le RDW n'a pas d'historique, on le construit snapshot par snapshot.
+Schéma et volumes observés dans [`docs/sources/rdw_nl.md`](docs/sources/rdw_nl.md)
+(≈ 200 000 lignes agrégées, 5 pages). À relancer **chaque mois** : le RDW n'a pas d'historique,
+on le construit snapshot par snapshot.
 
 ### 3. Après les deux premiers runs réussis
 
@@ -74,10 +71,9 @@ make score        # data/gold/indicators.parquet, scores.parquet, ranking.csv (d
 
 ### 6. Exporter les résultats pour analyse à distance
 
-Le développement se fait sans accès aux sources : les schémas, les regex de mapping et les
-indicateurs ont été écrits sur des hypothèses. L'export produit un **dossier de preuves,
-léger et versionnable**, que vous committez ; il permet à Claude Code d'analyser les vraies
-données depuis son environnement et de corriger schémas, règles et bugs.
+L'export produit un **dossier de preuves, léger et versionnable**, que vous committez ; il
+permet d'analyser les vraies données (depuis n'importe quel environnement, même sans accès aux
+sources) et de corriger schémas, règles et indicateurs sur preuves datées.
 
 ```bash
 make export                       # reports/<AAAA-MM-JJ>/ (marche même si normalize a échoué)

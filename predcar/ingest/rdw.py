@@ -41,6 +41,10 @@ COL_MODEL = "handelsbenaming"
 COL_YEAR = "jaar"
 COL_COUNT = "n"
 EXPECTED_COLUMNS = (COL_MAKE, COL_MODEL, COL_YEAR, COL_COUNT)
+# Socrata omits a key when its value is null: a vehicle without a trade name is kept under
+# this explicit label (silver requires a non-null model_raw), never dropped or merged with
+# the RDW's own "ONBEKEND".
+MODEL_MISSING = "(MISSING)"
 
 
 class RdwSchemaError(ValueError):
@@ -138,6 +142,8 @@ def parse_rows(rows: list[dict], period: date) -> pl.DataFrame:
     ``jaar`` outside 1900..period.year (or non-numeric) becomes null and the counts are
     summed into the null-year bucket; the number of affected rows is logged.
 
+    A row without ``handelsbenaming`` gets ``model_raw = MODEL_MISSING`` (logged).
+
     Raises:
         RdwSchemaError: when expected columns are absent or ``n`` is not an integer.
     """
@@ -152,6 +158,10 @@ def parse_rows(rows: list[dict], period: date) -> pl.DataFrame:
     ]
     if missing:
         raise RdwSchemaError(f"missing columns {missing} in rows like {rows[0]}")
+    no_model = df[COL_MODEL].null_count()
+    if no_model:
+        logger.info("rdw: %d rows without %s labelled %s", no_model, COL_MODEL, MODEL_MISSING)
+        df = df.with_columns(pl.col(COL_MODEL).fill_null(MODEL_MISSING))
 
     count = pl.col(COL_COUNT).str.strip_chars().cast(pl.Int64, strict=False)
     if df.select(count.is_null().sum()).item():
