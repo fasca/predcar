@@ -24,6 +24,8 @@ def test_query_aggregates_server_side_and_never_projects_kenteken() -> None:
     params = rdw.build_query(limit=10, offset=20)
     assert "kenteken" not in json.dumps(params).lower()
     assert "count(*)" in params["$select"]
+    assert "date_extract_y(datum_eerste_toelating_dt)" in params["$select"]
+    assert "substring" not in params["$select"]  # datum_eerste_toelating is a Socrata Number
     assert params["$group"] == "merk,handelsbenaming,jaar"
     assert params["$order"] == params["$group"]  # stable offset paging
     assert params["$where"] == "voertuigsoort='Personenauto'"
@@ -75,6 +77,14 @@ def test_fetch_archives_rows_query_and_manifest(fixtures: Path, tmp_path: Path) 
 
     with pytest.raises(raw.RawArchiveError, match="immutable"):
         rdw.fetch(load_sources_config(), client, root=tmp_path)
+    assert not list(snapshot.glob("*.part"))
+
+
+def test_fetch_refuses_empty_response_without_writing(tmp_path: Path) -> None:
+    client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=[])))
+    with pytest.raises(rdw.RdwSchemaError, match="empty"):
+        rdw.fetch(load_sources_config(), client, root=tmp_path)
+    assert not (tmp_path / rdw.SOURCE).exists() or not any((tmp_path / rdw.SOURCE).rglob("*"))
 
 
 # --------------------------------------------------------------------------- parse
@@ -98,6 +108,13 @@ def test_parse_rows_to_fleet_stock(fixtures: Path) -> None:
     assert s2000.filter(pl.col("year_first_reg") == 2000)["count"].to_list() == [310]
 
 
+def test_parse_rows_accepts_json_numbers() -> None:
+    rows = [{"merk": "BMW", "handelsbenaming": "M3", "jaar": 2001, "n": 7}]
+    out = rdw.parse_rows(rows, PERIOD)
+    assert out["year_first_reg"].to_list() == [2001]
+    assert out["count"].to_list() == [7]
+
+
 def test_parse_rows_rejects_empty_and_malformed() -> None:
     with pytest.raises(rdw.RdwSchemaError, match="empty"):
         rdw.parse_rows([], PERIOD)
@@ -110,14 +127,13 @@ def test_parse_rows_rejects_empty_and_malformed() -> None:
 # --------------------------------------------------------------------------- ingest
 
 
-def _snapshot(fixtures: Path, tmp_path: Path, register: bool = True) -> Path:
+def _snapshot(fixtures: Path, tmp_path: Path, register: tuple[str, ...] | None = None) -> Path:
     snapshot = tmp_path / "raw" / rdw.SOURCE / PERIOD.isoformat()
     snapshot.mkdir(parents=True)
     (snapshot / rdw.DATA_FILE).write_bytes((fixtures / "rdw_agg_page.json").read_bytes())
     (snapshot / rdw.QUERY_FILE).write_text("{}")
-    raw.register_file(snapshot, rdw.QUERY_FILE)
-    if register:
-        raw.register_file(snapshot, rdw.DATA_FILE)
+    for name in register if register is not None else (rdw.DATA_FILE, rdw.QUERY_FILE):
+        raw.register_file(snapshot, name)
     return snapshot
 
 
@@ -129,6 +145,16 @@ def test_ingest_snapshot_end_to_end(fixtures: Path, tmp_path: Path) -> None:
     assert stock["count"].sum() == 575
 
 
-def test_ingest_refuses_unregistered_data_file(fixtures: Path, tmp_path: Path) -> None:
+@pytest.mark.parametrize("registered", [(rdw.QUERY_FILE,), (rdw.DATA_FILE,)])
+def test_ingest_refuses_snapshot_missing_a_registered_file(
+    fixtures: Path, tmp_path: Path, registered: tuple[str, ...]
+) -> None:
     with pytest.raises(raw.RawArchiveError, match="incomplete"):
-        rdw.ingest(_snapshot(fixtures, tmp_path, register=False), tmp_path / "silver")
+        rdw.ingest(_snapshot(fixtures, tmp_path, register=registered), tmp_path / "silver")
+
+
+def test_ingest_refuses_snapshot_without_query_file(fixtures: Path, tmp_path: Path) -> None:
+    snapshot = _snapshot(fixtures, tmp_path, register=(rdw.DATA_FILE,))
+    (snapshot / rdw.QUERY_FILE).unlink()
+    with pytest.raises(raw.RawArchiveError, match="query.json"):
+        rdw.ingest(snapshot, tmp_path / "silver")

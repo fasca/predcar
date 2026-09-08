@@ -16,7 +16,7 @@ Le dataset est un **instantané véhicule par véhicule** du parc actuel, sans h
 téléchargeons jamais de lignes individuelles : une seule requête agrégée côté serveur.
 
 ```
-$select = merk, handelsbenaming, substring(datum_eerste_toelating,1,4) as jaar, count(*) as n
+$select = merk, handelsbenaming, date_extract_y(datum_eerste_toelating_dt) as jaar, count(*) as n
 $where  = voertuigsoort='Personenauto'
 $group  = merk, handelsbenaming, jaar
 $order  = merk, handelsbenaming, jaar        # pagination stable par $offset
@@ -31,14 +31,15 @@ $limit  = 50000 / $offset = k × 50000       # jusqu'à une page courte
 |---|---|---|
 | `merk` | text | `make_raw` (majuscules) |
 | `handelsbenaming` | text | `model_raw` (majuscules) ; pas de niveau « modèle générique » → `model_gen_raw` null |
-| `datum_eerste_toelating` | text `YYYYMMDD` | `substring(…,1,4)` → `year_first_reg` |
+| `datum_eerste_toelating_dt` | floating timestamp | `date_extract_y(…)` → `year_first_reg` (`datum_eerste_toelating` est un *Number* `YYYYMMDD`, incompatible avec `substring`) |
 | `voertuigsoort` | text | filtre `Personenauto` |
 | `n` (alias) | nombre sérialisé en texte | `count` |
 
 Points à vérifier sur la réponse réelle (cases à cocher) :
 
-- [ ] `datum_eerste_toelating` est bien un texte `YYYYMMDD` (sinon utiliser `datum_eerste_toelating_dt` et `date_extract_y`).
-- [ ] `count(*)` renvoyé sous la clé `n` en chaîne (`"120"`) et non en nombre.
+- [ ] `datum_eerste_toelating_dt` existe bien en floating timestamp et `date_extract_y` est accepté
+      (repli : `datum_eerste_toelating` en Number, `floor(datum_eerste_toelating / 10000)`).
+- [ ] `count(*)` et `jaar` renvoyés en chaîne ou en nombre JSON : les deux sont acceptés.
 - [ ] Valeur exacte de `voertuigsoort` pour les voitures particulières (`Personenauto`).
 - [ ] `$limit` de 50 000 accepté par l'endpoint (sinon réduire `PAGE_SIZE`).
 - [ ] Volume de la réponse agrégée (attendu : quelques dizaines de milliers de lignes).
@@ -50,9 +51,10 @@ Points à vérifier sur la réponse réelle (cases à cocher) :
   le seau « année inconnue », nombre de lignes journalisé.
 - **Statut** : null (le RDW n'a pas d'équivalent SORN ; `vervaldatum_apk` pourrait servir de
   proxy en phase 2).
-- **Réponse vide** → erreur, jamais un snapshot vide.
+- **Réponse vide** → erreur **avant** toute écriture, jamais un snapshot vide.
 - Le snapshot archive les lignes (`gekentekende_voertuigen_agg.json`) et la requête exacte
-  (`query.json`), tous deux dans `MANIFEST.json`. Snapshot immuable : refetch le même jour → erreur.
+  (`query.json`), écrits atomiquement (`.part` puis rename) et tous deux exigés dans
+  `MANIFEST.json` à l'ingestion. Snapshot immuable : refetch le même jour → erreur.
 
 ## Limites
 

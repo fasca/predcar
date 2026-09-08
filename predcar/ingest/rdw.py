@@ -31,6 +31,10 @@ QUERY_FILE = "query.json"
 PAGE_SIZE = 50_000
 FORBIDDEN_FIELDS = frozenset({"kenteken"})
 
+# ``datum_eerste_toelating`` is a Socrata *Number* (YYYYMMDD) so text functions are rejected;
+# the typed floating-timestamp twin ``datum_eerste_toelating_dt`` supports date_extract_y.
+COL_DATE = "datum_eerste_toelating_dt"
+
 # Column aliases returned by the aggregated query.
 COL_MAKE = "merk"
 COL_MODEL = "handelsbenaming"
@@ -52,7 +56,7 @@ def build_query(limit: int = PAGE_SIZE, offset: int = 0) -> dict[str, str]:
     params = {
         "$select": (
             f"{COL_MAKE},{COL_MODEL},"
-            f"substring(datum_eerste_toelating,1,4) as {COL_YEAR},count(*) as {COL_COUNT}"
+            f"date_extract_y({COL_DATE}) as {COL_YEAR},count(*) as {COL_COUNT}"
         ),
         "$where": "voertuigsoort='Personenauto'",
         "$group": f"{COL_MAKE},{COL_MODEL},{COL_YEAR}",
@@ -96,26 +100,36 @@ def fetch(
     finally:
         if own_client:
             client.close()
+    if not rows:
+        raise RdwSchemaError("empty API response: nothing archived (check the SoQL filter)")
     directory = raw.snapshot_dir(SOURCE, root=root)
     data_path = directory / DATA_FILE
-    if data_path.exists():
-        raise raw.RawArchiveError(f"{data_path} already exists; raw snapshots are immutable")
-    data_path.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
-    (directory / QUERY_FILE).write_text(
-        json.dumps(
-            {
-                "api_url": str(sources.nl_rdw.api_url),
-                "params": build_query(),
-                "fetched_at": datetime.now(UTC).isoformat(timespec="seconds"),
-                "rows": len(rows),
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
+    query_path = directory / QUERY_FILE
+    for path in (data_path, query_path):
+        if path.exists():
+            raise raw.RawArchiveError(f"{path} already exists; raw snapshots are immutable")
+    query = {
+        "api_url": str(sources.nl_rdw.api_url),
+        "params": build_query(),
+        "fetched_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "rows": len(rows),
+    }
+    _write_atomic(data_path, json.dumps(rows, ensure_ascii=False))
+    _write_atomic(query_path, json.dumps(query, indent=2))
     raw.register_file(directory, DATA_FILE, str(sources.nl_rdw.api_url))
     raw.register_file(directory, QUERY_FILE)
     return data_path
+
+
+def _write_atomic(dest: Path, text: str) -> None:
+    """Write to ``<dest>.part`` then rename, so an interrupted write leaves no half file."""
+    part = dest.with_name(dest.name + ".part")
+    try:
+        part.write_text(text, encoding="utf-8")
+        part.replace(dest)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
 
 
 def parse_rows(rows: list[dict], period: date) -> pl.DataFrame:
@@ -129,7 +143,10 @@ def parse_rows(rows: list[dict], period: date) -> pl.DataFrame:
     """
     if not rows:
         raise RdwSchemaError("empty response: refusing to write an empty snapshot")
-    df = pl.DataFrame(rows, schema={c: pl.Utf8 for c in EXPECTED_COLUMNS}, strict=False)
+    # Socrata serialises numbers as strings or JSON numbers depending on the column type;
+    # normalise everything to text before typing it ourselves.
+    text_rows = [{k: (None if v is None else str(v)) for k, v in row.items()} for row in rows]
+    df = pl.DataFrame(text_rows, schema={c: pl.Utf8 for c in EXPECTED_COLUMNS}, strict=False)
     missing = [
         c for c in EXPECTED_COLUMNS if c not in df.columns or df[c].null_count() == df.height
     ]
@@ -173,11 +190,14 @@ def ingest(snapshot: Path, out_dir: Path = SILVER_DIR) -> Path:
     The snapshot directory name (``YYYY-MM-DD``) is the observation period.
     """
     raw.verify(snapshot)
-    data_path = snapshot / DATA_FILE
-    if DATA_FILE not in raw.read_manifest(snapshot) or not data_path.is_file():
-        raise raw.RawArchiveError(f"incomplete RDW snapshot {snapshot}: missing {DATA_FILE}")
+    manifest = raw.read_manifest(snapshot)
+    missing = [
+        f for f in (DATA_FILE, QUERY_FILE) if f not in manifest or not (snapshot / f).is_file()
+    ]
+    if missing:
+        raise raw.RawArchiveError(f"incomplete RDW snapshot {snapshot}: missing {missing}")
     period = date.fromisoformat(snapshot.name)
-    rows = json.loads(data_path.read_text(encoding="utf-8"))
+    rows = json.loads((snapshot / DATA_FILE).read_text(encoding="utf-8"))
     stock = parse_rows(rows, period)
     schemas.check_fleet_stock(stock)
     logger.info("rdw %s: %d silver rows", period, stock.height)
