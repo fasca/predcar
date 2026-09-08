@@ -305,7 +305,9 @@ def normalize(
     targets = load_targets(mapping_dir / TARGETS_FILE)
     check_targets_have_rules(targets, rules)
 
-    written: dict[str, Path] = {}
+    # Stage everything in memory; nothing is written until the coverage gate has passed,
+    # so a failed run never leaves outputs from different mapping runs side by side.
+    staged: dict[str, pl.DataFrame] = {}
     coverage_frames: list[pl.DataFrame] = []
     for table in ("fleet_stock", "fleet_new_reg"):
         files = sorted(p for p in silver_dir.glob(f"{table}_*.parquet"))
@@ -324,9 +326,7 @@ def normalize(
                 total,
             )
         coverage_frames.append(cov.with_columns(pl.lit(table).alias("table")))
-        out = silver_dir / f"{table}.parquet"
-        mapped.write_parquet(out)
-        written[table] = out
+        staged[table] = mapped
         if table == "fleet_stock":
             report = unmapped_report(mapped, targets, report_top)
             if report.height:
@@ -339,7 +339,10 @@ def normalize(
                     f"(see the unmapped report above)"
                 )
     if coverage_frames:
-        cov_path = silver_dir / "mapping_coverage.parquet"
-        pl.concat(coverage_frames).write_parquet(cov_path)
-        written["mapping_coverage"] = cov_path
+        staged["mapping_coverage"] = pl.concat(coverage_frames)
+
+    written: dict[str, Path] = {}
+    for name, frame in staged.items():
+        written[name] = silver_dir / f"{name}.parquet"
+        frame.write_parquet(written[name])
     return written

@@ -214,6 +214,35 @@ def test_repo_mapping_files_are_valid_and_cover_targets() -> None:
     assert len(targets) >= 150
 
 
+def test_every_target_label_resolves_to_itself_without_conflict() -> None:
+    """A target's own name (e.g. ``POLO GTI``, ``NSX``) must not also hit a catch-all rule.
+
+    Labels that no rule matches are skipped (the name is not a real source label); labels
+    that match must resolve to the target's model_gen, and never raise MappingError.
+    """
+    makes = n.load_makes(MAPPING_DIR / n.MAKES_FILE)
+    rules = n.load_models(MAPPING_DIR / n.MODELS_FILE)
+    targets = n.load_targets(MAPPING_DIR / n.TARGETS_FILE)
+    rows = [
+        {
+            "make_raw": t.make,
+            "model_raw": t.model_gen.replace("_", " "),
+            "year_first_reg": (t.year_from + t.year_to) // 2,
+            "count": i,
+        }
+        for i, t in enumerate(targets)
+    ]
+    out = n.apply(_stock(rows), makes, rules)  # raises MappingError on any conflict
+    resolved = out.filter(pl.col("model_gen").is_not_null())
+    wrong = [
+        (t.make, t.model_gen, got)
+        for t, got in zip(targets, out["model_gen"].to_list(), strict=True)
+        if got is not None and got != t.model_gen
+    ]
+    assert not wrong, wrong
+    assert resolved.height >= 0.8 * len(targets)
+
+
 @pytest.mark.parametrize(
     ("make_raw", "model_raw", "year", "model_gen", "generation"),
     [
@@ -238,6 +267,10 @@ def test_repo_mapping_files_are_valid_and_cover_targets() -> None:
         ("FORD", "PUMA", 1999, "PUMA", "MK1"),
         ("FORD", "FOCUS ST-3", 2008, "FOCUS ST", "MK2"),
         ("MAZDA", "MX-5", 2001, "MX-5", "NB"),
+        ("HONDA", "NSX", 1995, "NSX", "NA1_NA2"),
+        ("VOLKSWAGEN", "POLO GTI", 2007, "POLO GTI", "9N"),
+        ("VOLKSWAGEN", "SCIROCCO", 2010, "SCIROCCO", "MK3"),
+        ("MERCEDES-BENZ", "S 500", 2000, "S-CLASS", "W220"),
     ],
 )
 def test_repo_rules_on_witness_labels(
@@ -303,5 +336,10 @@ def test_normalize_fails_below_coverage(fixtures: Path, tmp_path: Path) -> None:
     )
     with pytest.raises(n.CoverageError, match="below 95%"):
         n.normalize(silver, mapping, min_coverage=0.95)
+    # nothing published on failure: no partial or stale output set
+    assert not list(silver.glob("fleet_stock.parquet"))
+    assert not list(silver.glob("fleet_new_reg.parquet"))
+    assert not list(silver.glob("mapping_coverage.parquet"))
     # exploration mode: same mapping, no gate
-    n.normalize(silver, mapping, min_coverage=0.0)
+    written = n.normalize(silver, mapping, min_coverage=0.0)
+    assert set(written) == {"fleet_stock", "fleet_new_reg", "mapping_coverage"}
