@@ -1,10 +1,16 @@
-# CarCollector Predictor
+# predcar — CarCollector Predictor
 
 ## Project Overview
 
-Python tool predicting which used cars will become sought-after collectors (5-10 year horizon). Crosses rarefaction data, reliability, forum sentiment, and market signals to produce a **collector potential score** per model.
+Python data pipeline producing a **sourced, dated statistical proof** of the rarefaction of
+1990–2015 car models in Europe, built only from official open data, and deriving a
+**collector potential score** per model/generation.
 
-**Stack:** Python 3.10+ | SQLite (SQLAlchemy) | Streamlit | Plotly
+**MVP scope (v2):** zero scraping, zero user accounts, zero market prices. A reproducible
+Parquet pipeline + a static site.
+
+**Stack:** Python 3.12 | Polars | DuckDB | Pydantic | Typer | uv | static site (Astro or
+MkDocs + Plotly) | `make` + GitHub Actions (monthly cron) | GitHub Pages
 **UI Language:** French | **Code Language:** English
 
 ## Communication
@@ -13,53 +19,72 @@ Python tool predicting which used cars will become sought-after collectors (5-10
 - Code, variables, docstrings, logs : en anglais
 - Commentaires dans le code : en anglais
 - Messages de commit : en français
-- Dashboard UI (labels, titres, descriptions) : en français
+- Site (labels, titres, page méthodologie) : en français
 
 ## Key Commands
 
+Planned targets (to be created in phase 1; keep this list in sync with the `Makefile`):
+
 ```bash
-python scripts/seed_database.py       # Init DB with seed data
-python scripts/run_collection.py      # Run all data collectors
-python scripts/run_analysis.py        # Calculate all scores
-streamlit run dashboard/app.py        # Launch dashboard
-pytest tests/ -v                      # Run all tests
+uv sync                          # Install dependencies
+make ingest-uk                   # Download + normalize DfT/DVLA files (VEH0120/0124/0160)
+make ingest-rdw                  # Monthly aggregated RDW snapshot (SoQL, no personal data)
+make normalize                   # Apply mapping/ → data/silver/, fail if coverage < 95 %
+make score                       # Indicators + score v1 → data/gold/
+make site                        # Build static site from data/gold/
+uv run pytest tests/ -v          # Run all tests
 ```
 
 ## Architecture
 
 ```
-collectors/    → Fetch data (DVLA, RDW, forums, marketplaces)
-analysis/      → Score calculation from collected data
-database/      → SQLAlchemy models, DB init
-dashboard/     → Streamlit pages + components
-data/          → Static seed JSON files
-scripts/       → CLI entry points (collect, analyze, seed)
-tests/         → pytest tests mirroring src structure
+data/raw/      → Immutable downloads, <source>/<YYYY-MM-DD>/<file>, with checksum
+data/silver/   → Normalized Parquet, common schemas (fleet_stock, fleet_new_reg)
+data/gold/     → Aggregates, indicators, scores (input of the site)
+mapping/       → makes.csv, models.csv, target_models.csv (make/model normalization)
+config/        → score.yaml (ALL score weights and thresholds)
+predcar/       → Python package: ingestion, normalization, metrics, Typer CLI
+site/          → Static site generator sources
+docs/          → SPEC.md (reference), SOURCES.md (URLs + licences), sources/<source>.md
+tests/         → pytest: schema per source vintage, invariants, snapshot tests
 tasks/         → todo.md + lessons.md (task tracking)
-docs/          → SPEC.md (full technical reference)
 ```
 
 ## Style Guide
 
-- Python 3.10+, type hints everywhere
+- Python 3.12, type hints everywhere
 - PEP 8, max line 100 chars
 - Google-style docstrings on all public functions
 - snake_case functions/vars, PascalCase classes, UPPER_SNAKE constants
 - Specific exceptions only, never bare `except:`
 - `logging` module only, never `print()` in production
-- SQLAlchemy ORM, no raw SQL in business logic
+- Polars for all dataframes (no pandas), DuckDB for ad-hoc queries over Parquet
+- Pydantic models for every source schema and config file
+- Transformations are pure functions: same raw input → same silver/gold output
 - Group imports: stdlib → third-party → local, alphabetical
 
 ## Workflow Rules
 
 ### Plan First
 - Enter plan mode for ANY task with 3+ steps or architectural decisions
+- One phase-step per PR (see `docs/SPEC.md` §7)
 - If something goes sideways, STOP and re-plan — don't keep pushing
 - Use plan mode for verification, not just building
+
+### Source-First (before any parser)
+1. Download a sample of the source into `data/raw/`
+2. Document the observed schema in `docs/sources/<source>.md`
+3. Write the schema tests
+4. **Then** write the parser
+- Uncertain URL (KBA, data.gouv) → verify with an HTTP request, record the final URL
+  in `docs/SOURCES.md`
 
 ### Verify Before Done
 - Never mark a task complete without proving it works
 - Run tests, check logs, demonstrate correctness
+- Invariants must hold: stock ≥ 0, licensed + SORN consistent, cohorts monotonic
+- Snapshot tests on 5 witness models: BMW E46 M3, Peugeot 205 GTI, Honda S2000,
+  Renault Clio Williams, Audi RS2
 - Ask: "Would a staff engineer approve this?"
 
 ### Self-Improvement
@@ -83,41 +108,44 @@ docs/          → SPEC.md (full technical reference)
 
 ## Data Sources
 
-### Parc (rarefaction)
-- **UK DVLA**: CSV from GOV.UK (VEH0120/VEH0124), quarterly, by make/model
-- **NL RDW**: REST API opendata.rdw.nl, all vehicles since 1952, no auth
+### Phase 1 (MVP)
+- **UK DfT/DVLA**: CSV from GOV.UK — `df_VEH0120_GB` (quarterly stock, Licensed/SORN),
+  `df_VEH0124_AM`/`_NZ` (stock by first-registration year, annual), `df_VEH0160_GB`
+  (first registrations). Work at `GenModel` level + manual generation mapping.
+- **NL RDW**: Socrata dataset `m9d7-ebf2`, aggregated server-side with `$select`/`$group`.
+  Snapshot only (no history) → archive a monthly snapshot in `data/raw/rdw/YYYY-MM/`.
 
-### Market Signals
-- **AutoScout24**: scrape, pan-European
-- **mobile.de**: scrape, DE/AT
-- **LeBonCoin**: scrape, FR
-- **eBay Motors UK**: scrape, UK
-- **Marktplaats.nl**: scrape, NL
+### Phase 2
+- **DE KBA**: FZ 10 / FZ 17 XLSX (multi-line headers, labels change per vintage)
+- **FR SDES / data.gouv.fr**: new registrations by model only (no stock by model)
+- **STATS19** (UK accidents), **Google Trends** (pytrends), **YouTube Data API**
 
-### Forum Sentiment
-- **Forum-Auto.com**, **PistonHeads.com**, **Motor-Talk.de** + brand-specific forums
-- Measure: thread count, "cherche"/"WTB" frequency, sentiment keywords
+### Phase 3 (optional)
+- Public auction results (Collecting Cars, Car & Classic, Catawiki, BaT, Aguttes…)
+- Marketplaces only if value is demonstrated, with robots.txt + rate limiting
 
-### Reliability
-- MOT UK data, RDW APK data, curated `data/known_lemons.json`
+## Indicators and Score
 
-## Scoring Formula
+Per (model_gen, generation, country), then aggregated for Europe:
+Stock(t), Survival(t), annual attrition (−Δln(Stock)/Δt, 3-year smoothing),
+relative attrition vs. same segment/age, SORN ratio (UK), inflection point, absolute rarity.
 
 ```
-collector_potential = (
-    rarefaction_score     * 0.30 +
-    desirability_score    * 0.25 +
-    reliability_score     * 0.20 +
-    market_momentum_score * 0.15 +
-    forum_buzz_score      * 0.10
-)
+score = 0.35 * rarity
+      + 0.25 * relative_attrition
+      + 0.20 * sorn_ratio
+      + 0.20 * recent_inflection_point
 ```
+
+Weights and thresholds live in `config/score.yaml` — **never hardcoded**. Every component
+is exposed individually on the site (show the *why*, not just the rank).
 
 ## Critical Rules
 
-- All scraping: respect robots.txt, 2-5s delays, rotate User-Agent
-- Never store personal data
-- DVLA = Open Government Licence v3.0
-- RDW = public domain, 1000 rows/request, paginate with $offset
-- Forum scraping = aggregate stats only, not individual posts
-- Reference: `docs/SPEC.md` for full technical specification
+- **No marketplace scraping in phases 1–2.** No forum scraping at all.
+- Never store personal data: RDW `kenteken` is never downloaded, always aggregate via API
+- Every raw file is archived immutably with a checksum; transformations are replayable
+- The normalization step fails if < 95 % of a country's fleet is mapped for target makes
+- Source licences documented in `docs/SOURCES.md` (OGL v3 UK, CC0 RDW, DL-DE/BY-2-0 KBA,
+  Licence Ouverte FR)
+- Reference: `docs/SPEC.md` for the full specification
