@@ -14,6 +14,8 @@ Python 3.12 · [uv](https://docs.astral.sh/uv/) · Polars · DuckDB · Pydantic 
 uv sync                 # dépendances
 make fetch-uk           # archive les CSV DfT/DVLA dans data/raw/uk_dft/<date>/ (+ MANIFEST.json sha256)
 make ingest-uk          # data/silver/fleet_stock_uk_dft.parquet, fleet_new_reg_uk_dft.parquet
+make fetch-nl           # snapshot agrégé RDW (jamais de kenteken) dans data/raw/nl_rdw/<date>/
+make ingest-nl          # data/silver/fleet_stock_nl_rdw_<date>.parquet
 make validate           # invariants silver
 make test               # pytest
 make lint               # ruff

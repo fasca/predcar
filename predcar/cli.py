@@ -10,7 +10,7 @@ import typer
 
 from predcar import raw, schemas
 from predcar.config import load_sources_config
-from predcar.ingest import dft
+from predcar.ingest import dft, rdw
 from predcar.paths import SILVER_DIR
 
 app = typer.Typer(help="predcar data pipeline", no_args_is_help=True)
@@ -35,6 +35,12 @@ def fetch_uk() -> None:
         typer.echo(path)
 
 
+@fetch_app.command("nl")
+def fetch_nl() -> None:
+    """Archive one aggregated RDW snapshot (make × model × first-use year), never per vehicle."""
+    typer.echo(rdw.fetch(load_sources_config()))
+
+
 @ingest_app.command("uk")
 def ingest_uk(
     snapshot: Path | None = typer.Option(None, help="Raw snapshot dir (default: latest)"),
@@ -43,6 +49,15 @@ def ingest_uk(
     snapshot = snapshot or raw.latest_snapshot(dft.SOURCE)
     for name, path in dft.ingest(snapshot).items():
         typer.echo(f"{name}: {path}")
+
+
+@ingest_app.command("nl")
+def ingest_nl(
+    snapshot: Path | None = typer.Option(None, help="Raw snapshot dir (default: latest)"),
+) -> None:
+    """Parse one RDW snapshot into silver fleet_stock_nl_rdw_<date>.parquet."""
+    snapshot = snapshot or raw.latest_snapshot(rdw.SOURCE)
+    typer.echo(rdw.ingest(snapshot))
 
 
 @app.command()

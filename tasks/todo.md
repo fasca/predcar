@@ -20,8 +20,10 @@
 - [ ] Ajouter les 5 modèles témoins en snapshot tests sur les données réelles
 
 ### Étape 2 — Ingestion RDW (snapshot agrégé mensuel)
-- [ ] Échantillon `data/raw/nl_rdw/`, `docs/sources/rdw_nl.md`, tests de schéma
-- [ ] Requête SoQL agrégée (jamais `kenteken`), pagination, `predcar fetch nl` / `ingest nl`
+- [x] Requête SoQL agrégée (jamais `kenteken`), pagination `$limit`/`$offset`, `predcar fetch nl` / `ingest nl`
+- [x] `docs/sources/rdw_nl.md` (schéma présumé + liste de vérification), tests MockTransport
+- [ ] **Valider sur une réponse réelle** (`make fetch-nl` depuis une machine connectée), cocher
+      la liste, committer le MANIFEST.json ; planifier le cron mensuel (GitHub Actions)
 
 ### Étape 3 — Mapping marques/modèles
 - [ ] `mapping/makes.csv`, `mapping/models.csv` pour ~150 modèles cibles
