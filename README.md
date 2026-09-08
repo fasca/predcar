@@ -1,90 +1,53 @@
-# 🚗 CarCollector Predictor
+# predcar
 
-**Predict which used cars will become valuable collectors in 5-10 years.**
+**Preuve statistique, sourcée et datée, de la raréfaction des modèles automobiles 1990–2015 en Europe**, à partir de données publiques officielles, et score de potentiel « collector » qui en découle.
 
-CarCollector Predictor crosses vehicle rarefaction data, mechanical reliability, community sentiment from forums, and market signals to produce a **collector potential score** for each model.
+Périmètre MVP : zéro scraping, zéro compte utilisateur, zéro prix de marché. Un pipeline de données reproductible et un site statique. Spécification complète : [`docs/SPEC.md`](docs/SPEC.md).
 
-## How It Works
+## Stack
 
-1. **Rarefaction tracking** — How fast is each model disappearing from the road? (UK DVLA, NL RDW data)
-2. **Reliability filtering** — Exclude badly-designed models ("lemons") that disappear due to mechanical failure, not collectibility
-3. **Forum sentiment** — Early buzz on enthusiast forums is a leading indicator of rising collector interest
-4. **Market signals** — Price trends and listing volumes across 5 European marketplaces
+Python 3.12 · [uv](https://docs.astral.sh/uv/) · Polars · DuckDB · Pydantic · Typer · Parquet · site statique (GitHub Pages) · `make` + GitHub Actions.
 
-## Data Sources
-
-| Source | Type | Coverage | Update |
-|--------|------|----------|--------|
-| UK DVLA (GOV.UK) | Vehicles in circulation by model | UK | Quarterly |
-| NL RDW (Open API) | All registered vehicles since 1952 | Netherlands | Real-time |
-| AutoScout24 | Listings & prices | Pan-European | Weekly |
-| mobile.de | Listings & prices | DE, AT | Weekly |
-| LeBonCoin | Listings & prices | France | Weekly |
-| eBay Motors | Listings & prices | UK | Weekly |
-| Marktplaats | Listings & prices | Netherlands | Weekly |
-| Forums (10+) | Community sentiment | FR, UK, DE | Monthly |
-
-## Tech Stack
-
-- **Python 3.10+** — Core language
-- **SQLite / SQLAlchemy** — Database
-- **Streamlit** — Dashboard
-- **Plotly** — Charts
-- **httpx + BeautifulSoup4** — Data collection
-
-## Quick Start
+## Démarrage
 
 ```bash
-# Clone and setup
-git clone https://github.com/YOUR_USER/carcollector-predictor.git
-cd carcollector-predictor
-pip install -r requirements.txt
-
-# Initialize database with seed data
-python scripts/seed_database.py
-
-# Run data collection
-python scripts/run_collection.py
-
-# Calculate scores
-python scripts/run_analysis.py
-
-# Launch dashboard
-streamlit run dashboard/app.py
+uv sync                 # dépendances
+make fetch-uk           # archive les CSV DfT/DVLA dans data/raw/uk_dft/<date>/ (+ MANIFEST.json sha256)
+make ingest-uk          # data/silver/fleet_stock_uk_dft.parquet, fleet_new_reg_uk_dft.parquet
+make validate           # invariants silver
+make test               # pytest
+make lint               # ruff
 ```
 
-## Project Structure
+## Arborescence
 
 ```
-├── CLAUDE.md              # Claude Code project memory
-├── config.py              # Configuration & constants
-├── database/              # SQLAlchemy models & DB init
-├── collectors/            # Data collectors (DVLA, RDW, scrapers, forums)
-├── analysis/              # Scoring engine
-├── dashboard/             # Streamlit web interface
-├── data/                  # Seed data (JSON)
-├── scripts/               # CLI entry points
-├── tests/                 # pytest test suite
-├── tasks/                 # Development tracking
-└── docs/                  # Full technical specification
+config/     score.yaml (poids, seuils), sources.yaml (registre des sources)
+mapping/    makes.csv, models.csv, target_models.csv — normalisation marque/modèle
+data/       raw/ (immuable, manifest versionné), silver/ (parquet normalisés), gold/ (scores)
+predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, cli
+docs/       SPEC.md, SOURCES.md (URLs + licences), sources/<source>.md (schémas observés)
+tests/      pytest — schémas, invariants, parseurs, fixtures
+tasks/      todo.md, lessons.md
 ```
 
-## Scoring Formula
+## Sources (phase 1)
+
+| Source | Contenu | Licence |
+|---|---|---|
+| UK DfT/DVLA VEH0120 / VEH0124 / VEH0160 | Parc trimestriel (Licensed/SORN), cohortes par année de 1re immatriculation, immatriculations neuves | OGL v3.0 |
+| NL RDW `m9d7-ebf2` | Parc actuel véhicule par véhicule, agrégé côté API, snapshot mensuel | CC0 |
+
+Phase 2 : KBA (DE), SDES (FR), STATS19, Google Trends, YouTube. Voir `docs/SOURCES.md`.
+
+## Score v1
 
 ```
-collector_potential = (
-    rarefaction_score     × 0.30    # How fast is it disappearing?
-  + desirability_score    × 0.25    # Is it special? (engine, driving experience)
-  + reliability_score     × 0.20    # Is it reliable? (not a lemon)
-  + market_momentum_score × 0.15    # Are prices rising, listings dropping?
-  + forum_buzz_score      × 0.10    # Are enthusiasts talking about it?
-)
+score = 0.35·rareté + 0.25·conservation + 0.20·ratio_SORN + 0.20·point_inflexion_récent
 ```
 
-## Contributing
+Composantes normalisées 0–1, orientées « plus haut = plus collector », pondérations dans `config/score.yaml`. Composante manquante = exclue et poids renormalisés, jamais imputée à 0.
 
-This project is built with [Claude Code](https://claude.ai). See `CLAUDE.md` for development conventions and `docs/SPEC.md` for the complete technical specification.
+## Licence
 
-## License
-
-MIT
+MIT. Données : voir les licences de chaque source dans `docs/SOURCES.md`.

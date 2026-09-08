@@ -1,0 +1,13 @@
+BodyType,Make,GenModel,Model,Fuel,LicenceStatus,2024 Q2,2024 Q1,2023 Q4
+Cars,BMW,M3,M3 E46,Petrol,Licensed,"1,200",1250,1300
+Cars,BMW,M3,M3 E46,Petrol,SORN,300,280,250
+Cars,BMW,M3,M3 E46,Petrol,Total,1500,1530,1550
+Cars,BMW,M3,M3 CSL,Petrol,Licensed,40,41,[c]
+Cars,BMW,M3,M3 CSL,Petrol,SORN,10,9,[c]
+Cars,BMW,M3,M3 CSL,Petrol,Total,50,50,[c]
+Cars,HONDA,S2000,S2000,Petrol,Licensed,2000,2050,2100
+Cars,HONDA,S2000,S2000,Petrol,SORN,500,480,460
+Cars,HONDA,S2000,S2000,Petrol,Total,2500,2530,2560
+Motorcycles,HONDA,CBR,CBR 600,Petrol,Licensed,9999,9999,9999
+Motorcycles,HONDA,CBR,CBR 600,Petrol,SORN,1,1,1
+Motorcycles,HONDA,CBR,CBR 600,Petrol,Total,10000,10000,10000

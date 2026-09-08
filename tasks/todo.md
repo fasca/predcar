@@ -1,51 +1,49 @@
-# CarCollector Predictor — Plan de Développement
+# predcar — Plan de développement (SPEC v2, §7)
 
-## Phase 1 — Fondations
-- [ ] Créer la structure de dossiers complète
-- [ ] Écrire `config.py` (URLs, chemins, constantes scoring)
-- [ ] Écrire `database/models.py` (SQLAlchemy, 6 tables)
-- [ ] Écrire `database/init_db.py` (création base)
-- [ ] Écrire `data/seed_vehicles.json` (~60 modèles)
-- [ ] Écrire `data/known_lemons.json`
-- [ ] Écrire `data/forums_sources.json`
-- [ ] Écrire `scripts/seed_database.py`
-- [ ] Tests: `tests/test_database.py`
+## Phase 1 — MVP
 
-## Phase 2 — Collecteurs
-- [ ] `collectors/base_collector.py` (classe abstraite + rate limiter)
-- [ ] `collectors/dvla_uk.py` (download CSV + parse VEH0120/VEH0124)
-- [ ] `collectors/rdw_nl.py` (API Socrata, pagination)
-- [ ] `collectors/scraper_autoscout.py` (prix/volume pan-EU)
-- [ ] `collectors/scraper_mobile_de.py` (prix/volume DE/AT)
-- [ ] `collectors/scraper_leboncoin.py` (prix/volume FR)
-- [ ] `collectors/scraper_ebay_uk.py` (prix/volume UK)
-- [ ] `collectors/forum_scraper.py` (sentiment multi-forums)
-- [ ] Tests: `tests/test_collectors.py`
+### Étape 0 — Bootstrap
+- [x] pyproject.toml (uv, Python 3.12), Makefile, ruff, pytest
+- [x] config/score.yaml (poids v1), config/sources.yaml
+- [x] mapping/*.csv (squelettes avec les 5 modèles témoins)
+- [x] data/raw|silver|gold, archive raw avec MANIFEST.json (sha256)
+- [x] Schémas silver `fleet_stock` / `fleet_new_reg` + invariants
+- [x] README, docs/SOURCES.md, suppression de requirements.txt
 
-## Phase 3 — Moteur d'Analyse
-- [ ] `analysis/attrition.py` (taux raréfaction)
-- [ ] `analysis/reliability.py` (score fiabilité)
-- [ ] `analysis/desirability.py` (score désirabilité)
-- [ ] `analysis/market_signals.py` (tendance prix/volume)
-- [ ] `analysis/forum_buzz.py` (score sentiment forums)
-- [ ] `analysis/scorer.py` (score composite final)
-- [ ] Tests: `tests/test_analysis.py`
+### Étape 1 — Ingestion UK (VEH0120, VEH0124, VEH0160)
+- [x] Résolution des URLs depuis la page gov.uk, `predcar fetch uk`
+- [x] Parseur wide → long (unpivot, marqueurs, statuts, Total vérifié), `predcar ingest uk`
+- [x] Tests : périodes, statuts, colonnes manquantes, agrégations, ingestion bout en bout
+- [ ] **Valider le schéma présumé sur un échantillon réel** (`make fetch-uk` sur une machine
+      avec accès à gov.uk), cocher la liste de `docs/sources/dft_uk.md`, consigner l'URL dans
+      `docs/SOURCES.md`, committer le MANIFEST.json
+- [ ] Ajouter les 5 modèles témoins en snapshot tests sur les données réelles
 
-## Phase 4 — Dashboard Streamlit
-- [ ] `dashboard/app.py` (main, navigation)
-- [ ] `dashboard/pages/overview.py` (classement top modèles)
-- [ ] `dashboard/pages/model_detail.py` (fiche modèle + graphiques)
-- [ ] `dashboard/pages/trends.py` (courbes comparatives)
-- [ ] `dashboard/pages/alerts.py` (modèles en mouvement)
-- [ ] Filtres: marque, époque, motorisation, budget, score minimum
+### Étape 2 — Ingestion RDW (snapshot agrégé mensuel)
+- [ ] Échantillon `data/raw/nl_rdw/`, `docs/sources/rdw_nl.md`, tests de schéma
+- [ ] Requête SoQL agrégée (jamais `kenteken`), pagination, `predcar fetch nl` / `ingest nl`
 
-## Phase 5 — Automatisation
-- [ ] Tâches cron pour collecte automatique
-- [ ] Notifications (Telegram/email) pour alertes
-- [ ] Sources supplémentaires (KBA DE, ASTRA CH)
-- [ ] Export rapports PDF
+### Étape 3 — Mapping marques/modèles
+- [ ] `mapping/makes.csv`, `mapping/models.csv` pour ~150 modèles cibles
+- [ ] Application du mapping → `make`, `model_gen`, `generation` ; échec si couverture < 95 %
+
+### Étape 4 — Indicateurs et score v1
+- [ ] Stock, survie, attrition (lissage 3 ans), attrition relative, ratio SORN, inflexion, rareté
+- [ ] Score composite, composantes manquantes renormalisées, `components_available`
+
+### Étape 5 — Site statique
+- [ ] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel
+
+## Phase 2
+- [ ] KBA (DE) : inventaire des XLSX 2010–2026 et schémas par millésime
+- [ ] Immatriculations FR (SDES), STATS19, Google Trends, YouTube
+
+## Phase 3
+- [ ] Enchères, extrapolation Weibull publiée, newsletter/alertes
 
 ---
 
 ## Review Notes
-_Section à remplir après chaque phase complétée._
+- 2026-09-08 : gov.uk et opendata.rdw.nl inaccessibles depuis l'environnement Claude Code
+  (proxy). Le parseur DfT est écrit sur un schéma présumé et documenté ; la validation sur
+  échantillon réel est la première tâche à faire depuis une machine connectée.

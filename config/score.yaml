@@ -1,0 +1,23 @@
+# Score v1 parameters — every weight and threshold lives here, never in code (SPEC §5).
+version: 1
+
+weights:
+  rarity: 0.35
+  conservation: 0.25          # = -relative_attrition, normalized 0-1
+  sorn_ratio: 0.20            # UK only
+  recent_inflection_point: 0.20
+
+# Minimum sum of available weights to publish a score (missing components are
+# excluded and the remaining weights renormalized to 1, never imputed as 0).
+min_weight_coverage: 0.60
+
+rarity:
+  # Current stock thresholds (SPEC §5): < 500 / < 100 / < 20 units
+  thresholds: [500, 100, 20]
+
+attrition:
+  smoothing_years: 3
+  min_history_years: 3        # conservation / inflection unavailable below this
+
+inflection:
+  recent_years: 5             # inflection counts as "recent" if < N years ago
