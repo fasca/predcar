@@ -56,7 +56,7 @@ mapping/       → makes.csv, models.csv, target_models.csv (make/model normaliz
 config/        → score.yaml (ALL score weights and thresholds)
 predcar/       → Python package: ingestion, normalization, metrics, Typer CLI
 site/          → Static site generator sources
-docs/          → SPEC.md (reference), SOURCES.md, sources/<source>.md, mapping.md, methodology.md
+docs/          → SPEC.md (reference), ARCHITECTURE.md, SOURCES.md, sources/<source>.md, mapping.md, methodology.md
 reports/       → Dated evidence bundles from real runs (committed, see make export)
 tests/         → pytest: schema per source vintage, invariants, snapshot tests
 tasks/         → todo.md + lessons.md (task tracking)
@@ -118,6 +118,7 @@ tasks/         → todo.md + lessons.md (task tracking)
 2. Check in before starting implementation
 3. Mark items complete as you go
 4. Update `tasks/lessons.md` after corrections
+5. Add an entry to `CHANGELOG.md` (dated, per PR: Ajouté / Modifié / Corrigé) in every PR
 
 ## Data Sources
 
