@@ -24,7 +24,7 @@ l'année**.
 
 ## 2. Indicateurs
 
-Par (modèle générique, génération, pays) :
+Par (marque, modèle générique, génération, pays) — deux marques peuvent partager un libellé de modèle (SPIDER Alfa Romeo et Renault) et ne sont jamais fusionnées :
 
 - **Stock(t)** : véhicules en circulation = tous statuts sauf `sorn`.
 - **Ventes cumulées** : immatriculations neuves VEH0160 du modèle générique sur les années de
@@ -39,9 +39,10 @@ Par (modèle générique, génération, pays) :
   distincts** ; un modèle seul dans son segment n'a pas de pairs.
 - **Attrition relative** = a(t) − médiane des pairs. Négatif = disparaît moins vite que ses
   pairs = déjà conservé.
-- **Point d'inflexion** : première année de la série finale d'années consécutives où
-  l'attrition lissée est sous la médiane des pairs au même âge. Null si la dernière année
-  n'est pas sous la médiane (pas de « collectorisation » en cours).
+- **Point d'inflexion** : première année de la série finale d'années **consécutives** où
+  l'attrition lissée est sous la médiane des pairs au même âge ; une année manquante dans la
+  série réinitialise la run. Null si la dernière année n'est pas sous la médiane (pas de
+  « collectorisation » en cours).
 - **Ratio SORN** (GB uniquement) = SORN / (SORN + Licensed) à la dernière période de VEH0120,
   niveau modèle générique.
 - **Rareté absolue** : stock courant ; étiquette `<20`, `<100`, `<500`, `>=500`
@@ -97,4 +98,4 @@ ont `rarity` + `sorn_ratio` = 0.55 et ne sont pas publiés non plus.
 | `stock_series.parquet` | série annuelle utilisée par (cible, pays) : stock, attrition lissée, niveau, tranche d'âge |
 | `indicators.parquet` | indicateurs par (cible, pays) et ligne `EU` |
 | `scores.parquet` | composantes brutes et normalisées, poids couverts, score, rang |
-| `ranking.csv` | export du classement (SPEC §6) |
+| `ranking.csv` | export du classement (SPEC §6) : **uniquement les cibles publiées** (score non nul) ; les lignes non publiées restent dans `scores.parquet` à titre de diagnostic |

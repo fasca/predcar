@@ -96,7 +96,7 @@ def composite(df: pl.DataFrame, cfg: ScoreConfig) -> pl.DataFrame:
     )
     return out.with_columns(
         pl.col("score").rank(method="min", descending=True).cast(pl.Int32).alias("rank")
-    ).sort("rank", "model_gen", "generation", nulls_last=True)
+    ).sort("rank", "make", "model_gen", "generation", nulls_last=True)
 
 
 # --------------------------------------------------------------------------- pipeline
@@ -145,8 +145,10 @@ def score(
     series.write_parquet(written["series"])
     pl.concat([indicators, eu]).write_parquet(written["indicators"])
     scores.write_parquet(written["scores"])
-    scores.select(
+    # ranking.csv is the public export: only targets that passed the publication gate
+    scores.filter(pl.col("score").is_not_null()).select(
         "rank",
+        "make",
         "model_gen",
         "generation",
         "segment",

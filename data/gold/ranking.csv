@@ -1,5 +1,0 @@
-rank,model_gen,generation,segment,score,weight_coverage,stock,rarity,conservation,sorn_ratio,recent_inflection_point,relative_attrition,inflection_year,latest_year,components_available
-,205 GTI,MK1,GTI,,0.35,40,1.0,,,,,,2026,rarity
-,M3,E46,SPORTIVE,,0.55,890,0.23555353630782708,,0.2,,,,2026,rarity|sorn_ratio
-,RS2,B4,SPORTIVE,,0.35,60,0.9000895558312408,,,,,,2023,rarity
-,S2000,AP1_AP2,ROADSTER,,0.55,2315,0.0,,0.2,,,,2026,rarity|sorn_ratio

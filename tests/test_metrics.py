@@ -106,6 +106,7 @@ def test_annual_stock_keeps_last_period_and_splits_sorn() -> None:
     assert out.row(0, named=True) == {
         "country": "GB",
         "series": "VEH0120",
+        "make": "M",
         "model_gen": "A",
         "generation": None,
         "year": 2020,
@@ -366,7 +367,7 @@ def test_score_pipeline_writes_gold(tmp_path: Path) -> None:
     written = sc.score(silver, gold, mapping, CFG)
     assert set(written) == {"series", "indicators", "scores", "ranking"}
     ranking = pl.read_csv(written["ranking"])
-    assert ranking.columns[:5] == ["rank", "model_gen", "generation", "segment", "score"]
+    assert ranking.columns[:6] == ["rank", "make", "model_gen", "generation", "segment", "score"]
     top = ranking.filter(pl.col("rank") == 1)
     assert top["score"][0] == ranking["score"].max()
     indicators = pl.read_parquet(written["indicators"])
@@ -376,3 +377,117 @@ def test_score_pipeline_writes_gold(tmp_path: Path) -> None:
 def test_score_requires_normalized_input(tmp_path: Path) -> None:
     with pytest.raises(sc.ScoreError, match="normalize"):
         sc.score(tmp_path, tmp_path / "gold", tmp_path, CFG)
+
+
+# --------------------------------------------------------------------------- review fixes
+
+
+def test_two_makes_sharing_a_model_gen_are_never_merged() -> None:
+    rows = [
+        _row(
+            make_raw="ALFA",
+            make="ALFA ROMEO",
+            model_gen="SPIDER",
+            source_file="df_VEH0120_GB.csv",
+            count=900,
+        ),
+        _row(
+            make_raw="ALFA",
+            make="ALFA ROMEO",
+            model_gen="SPIDER",
+            source_file="df_VEH0120_GB.csv",
+            status="sorn",
+            count=100,
+        ),
+        _row(
+            make_raw="RENAULT",
+            make="RENAULT",
+            model_gen="SPIDER",
+            source_file="df_VEH0120_GB.csv",
+            count=50,
+        ),
+        _row(
+            make_raw="RENAULT",
+            make="RENAULT",
+            model_gen="SPIDER",
+            source_file="df_VEH0120_GB.csv",
+            status="sorn",
+            count=50,
+        ),
+    ]
+    alfa = TargetModel(
+        make="ALFA ROMEO",
+        model_gen="SPIDER",
+        generation="916",
+        segment="ROADSTER",
+        year_from=1995,
+        year_to=2005,
+    )
+    renault = TargetModel(
+        make="RENAULT",
+        model_gen="SPIDER",
+        generation="SPIDER",
+        segment="ROADSTER",
+        year_from=1996,
+        year_to=1999,
+    )
+    new_reg = _new_reg(
+        [
+            {
+                "make": "ALFA ROMEO",
+                "model_gen": "SPIDER",
+                "period": date(2001, 12, 31),
+                "count": 1000,
+            },
+            {"make": "RENAULT", "model_gen": "SPIDER", "period": date(1998, 12, 31), "count": 10},
+        ]
+    )
+    ind, _ = metrics.compute_indicators(_stock(rows), new_reg, [alfa, renault], CFG)
+    by = {r["make"]: r for r in ind.iter_rows(named=True)}
+    assert by["ALFA ROMEO"]["stock"] == 900 and by["ALFA ROMEO"]["sorn_ratio"] == pytest.approx(0.1)
+    assert by["RENAULT"]["stock"] == 50 and by["RENAULT"]["sorn_ratio"] == pytest.approx(0.5)
+    assert by["ALFA ROMEO"]["cumulative_sales"] == 1000 and by["RENAULT"]["cumulative_sales"] == 10
+
+
+def test_europe_keeps_unavailable_sales_null() -> None:
+    stock = _stock(_gen_series("A", 1000, 0.1))
+    ind, _ = metrics.compute_indicators(stock, _new_reg([]), [_target("A")], CFG)
+    assert ind["cumulative_sales"][0] is None
+    eu = metrics.aggregate_europe(ind)
+    assert eu["cumulative_sales"][0] is None  # not 0
+
+
+def test_inflection_run_resets_across_a_missing_year() -> None:
+    """SLOW's series has no 2019 row: the run below the peer median restarts in 2020+."""
+    rows = [r for r in _gen_series("SLOW", 2000, 0.03) if r["period"].year != 2019]
+    rows += (
+        _gen_series("FAST1", 2000, 0.2)
+        + _gen_series("FAST2", 3000, 0.2)
+        + _gen_series("FAST3", 4000, 0.2)
+    )
+    targets = [_target(m) for m in ("SLOW", "FAST1", "FAST2", "FAST3")]
+    ind, _ = metrics.compute_indicators(_stock(rows), _new_reg([]), targets, CFG)
+    slow = ind.filter(pl.col("model_gen") == "SLOW").row(0, named=True)
+    assert slow["inflection_year"] is not None and slow["inflection_year"] >= 2020
+
+
+def test_ranking_export_excludes_unpublished_rows(tmp_path: Path) -> None:
+    stock, new_reg, targets = _population()
+    silver, gold, mapping = tmp_path / "silver", tmp_path / "gold", tmp_path / "mapping"
+    silver.mkdir()
+    mapping.mkdir()
+    stock.write_parquet(silver / "fleet_stock.parquet")
+    new_reg.write_parquet(silver / "fleet_new_reg.parquet")
+    (mapping / "target_models.csv").write_text(
+        "make,model_gen,generation,segment,year_from,year_to\n"
+        + "".join(
+            f"{t.make},{t.model_gen},{t.generation},{t.segment},{t.year_from},{t.year_to}\n"
+            for t in targets
+        )
+    )
+    written = sc.score(silver, gold, mapping, CFG)
+    ranking = pl.read_csv(written["ranking"])
+    scores = pl.read_parquet(written["scores"])
+    assert ranking.height == scores.filter(pl.col("score").is_not_null()).height
+    assert "LONELY" not in ranking["model_gen"].to_list()
+    assert "make" in ranking.columns

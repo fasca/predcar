@@ -13,6 +13,9 @@ For each target generation and country, stock and attrition come from the genera
 series when it exists, otherwise from the model_gen-level series (``level`` is recorded).
 The SORN ratio is always model_gen level (GB only). Cumulative sales come from
 ``fleet_new_reg`` (VEH0160, model_gen level, 2001+) restricted to the generation's years.
+
+A target is identified by ``(make, model_gen, generation)``: two makes may share a
+``model_gen`` label (ALFA ROMEO SPIDER, RENAULT SPIDER) and are never merged.
 """
 
 from __future__ import annotations
@@ -32,6 +35,7 @@ GEN_LEVEL_SERIES = ("VEH0124", "RDW")
 MODEL_LEVEL_SERIES = ("VEH0120", "RDW")
 SORN_SERIES = "VEH0120"
 EUROPE = "EU"
+TARGET_KEY = ["make", "model_gen", "generation"]
 
 
 def series_of(source_file: str) -> str:
@@ -49,12 +53,13 @@ def series_of(source_file: str) -> str:
 
 
 def annual_stock(stock: pl.DataFrame) -> pl.DataFrame:
-    """End-of-year stock per (country, series, model_gen, generation, year).
+    """End-of-year stock per (country, series, make, model_gen, generation, year).
 
     ``stock`` = vehicles in circulation (every status except ``sorn``), ``sorn`` = SORN
     count (0 where the source has no such status). For quarterly/monthly series the last
     period of each year is kept.
     """
+    keys = ["country", "series", "make", "model_gen", "generation", "year"]
     df = (
         stock.filter(pl.col("model_gen").is_not_null())
         .with_columns(
@@ -62,13 +67,12 @@ def annual_stock(stock: pl.DataFrame) -> pl.DataFrame:
             pl.col("period").dt.year().alias("year"),
             (pl.col("status") == "sorn").fill_null(False).alias("is_sorn"),
         )
-        .group_by("country", "series", "model_gen", "generation", "year", "period")
+        .group_by(*keys, "period")
         .agg(
             pl.col("count").filter(~pl.col("is_sorn")).sum().alias("stock"),
             pl.col("count").filter(pl.col("is_sorn")).sum().alias("sorn"),
         )
     )
-    keys = ["country", "series", "model_gen", "generation", "year"]
     # window filter rather than a join: joins do not match null generations
     return (
         df.filter(pl.col("period") == pl.col("period").max().over(keys))
@@ -78,13 +82,21 @@ def annual_stock(stock: pl.DataFrame) -> pl.DataFrame:
 
 
 def annual_new_reg(new_reg: pl.DataFrame) -> pl.DataFrame:
-    """New registrations per (country, model_gen, year)."""
+    """New registrations per (country, make, model_gen, year)."""
     return (
         new_reg.filter(pl.col("model_gen").is_not_null())
         .with_columns(pl.col("period").dt.year().alias("year"))
-        .group_by("country", "model_gen", "year")
+        .group_by("country", "make", "model_gen", "year")
         .agg(pl.col("count").sum().alias("new_reg"))
-        .sort("country", "model_gen", "year")
+        .sort("country", "make", "model_gen", "year")
+    )
+
+
+def _for_target(df: pl.DataFrame, target: TargetModel, country: str) -> pl.DataFrame:
+    return df.filter(
+        (pl.col("country") == country)
+        & (pl.col("make") == target.make)
+        & (pl.col("model_gen") == target.model_gen)
     )
 
 
@@ -111,15 +123,14 @@ def select_series(
     """Generation-level series if present, else the model_gen-level series.
 
     The model_gen-level fallback (all generations summed) is only meaningful when the target
-    is the sole target generation of its model_gen; otherwise it would credit every
+    is the sole target generation of its (make, model_gen); otherwise it would credit every
     generation with the whole model's stock, so ``None`` is returned instead.
     """
-    base = annual.filter((pl.col("country") == country) & (pl.col("model_gen") == target.model_gen))
+    base = _for_target(annual, target, country)
     gen = base.filter(
         (pl.col("generation") == target.generation) & pl.col("series").is_in(GEN_LEVEL_SERIES)
     )
     if gen.height:
-        # one series only: prefer the one with the most years
         best = gen.group_by("series").len().sort("len", descending=True)["series"][0]
         rows = gen.filter(pl.col("series") == best).sort("year")
         return TargetSeries(
@@ -174,11 +185,7 @@ def rarity_tier(stock: int, thresholds: list[int]) -> str:
 
 def sorn_ratio(annual: pl.DataFrame, target: TargetModel, country: str) -> float | None:
     """SORN / (SORN + licensed) at the latest period of the SORN-carrying series (model_gen)."""
-    rows = annual.filter(
-        (pl.col("country") == country)
-        & (pl.col("model_gen") == target.model_gen)
-        & (pl.col("series") == SORN_SERIES)
-    )
+    rows = _for_target(annual, target, country).filter(pl.col("series") == SORN_SERIES)
     if not rows.height:
         return None
     latest = rows.filter(pl.col("year") == rows["year"].max())
@@ -187,16 +194,48 @@ def sorn_ratio(annual: pl.DataFrame, target: TargetModel, country: str) -> float
 
 
 def cumulative_sales(new_reg_annual: pl.DataFrame, target: TargetModel, country: str) -> int | None:
-    """New registrations of the model_gen inside the generation's production years."""
-    rows = new_reg_annual.filter(
-        (pl.col("country") == country)
-        & (pl.col("model_gen") == target.model_gen)
-        & pl.col("year").is_between(target.year_from, target.year_to)
+    """New registrations of the (make, model_gen) inside the generation's production years."""
+    rows = _for_target(new_reg_annual, target, country).filter(
+        pl.col("year").is_between(target.year_from, target.year_to)
     )
     return int(rows["new_reg"].sum()) if rows.height else None
 
 
 # --------------------------------------------------------------------------- indicators
+
+_SERIES_SCHEMA = {
+    "make": pl.Utf8,
+    "model_gen": pl.Utf8,
+    "generation": pl.Utf8,
+    "segment": pl.Utf8,
+    "country": pl.Utf8,
+    "level": pl.Utf8,
+    "series": pl.Utf8,
+    "year": pl.Int32,
+    "stock": pl.Int64,
+    "attrition": pl.Float64,
+    "age_bucket": pl.Int32,
+}
+_INDICATORS_SCHEMA = {
+    "make": pl.Utf8,
+    "model_gen": pl.Utf8,
+    "generation": pl.Utf8,
+    "segment": pl.Utf8,
+    "country": pl.Utf8,
+    "level": pl.Utf8,
+    "series": pl.Utf8,
+    "latest_year": pl.Int32,
+    "stock": pl.Int64,
+    "rarity_tier": pl.Utf8,
+    "cumulative_sales": pl.Int64,
+    "survival": pl.Float64,
+    "history_years": pl.Int32,
+    "attrition": pl.Float64,
+    "relative_attrition": pl.Float64,
+    "n_peers": pl.Int32,
+    "inflection_year": pl.Int32,
+    "sorn_ratio": pl.Float64,
+}
 
 
 def compute_indicators(
@@ -208,29 +247,32 @@ def compute_indicators(
     """All indicators per (target, country) plus the annual series used.
 
     Returns:
-        ``(indicators, series)``. ``indicators`` has one row per (model_gen, generation,
-        country) with nullable components; ``series`` the yearly stock/attrition used.
+        ``(indicators, series)``. ``indicators`` has one row per (make, model_gen,
+        generation, country) with nullable components; ``series`` the yearly
+        stock/attrition used.
     """
     annual = annual_stock(stock)
     new_reg_annual = annual_new_reg(new_reg)
     countries = sorted(annual["country"].unique().to_list())
-    generations_per_model: dict[str, int] = {}
+    generations_per_model: dict[tuple[str, str], int] = {}
     for t in targets:
-        generations_per_model[t.model_gen] = generations_per_model.get(t.model_gen, 0) + 1
+        key = (t.make, t.model_gen)
+        generations_per_model[key] = generations_per_model.get(key, 0) + 1
 
     # 1. per-target series + attrition
     series_rows: list[dict] = []
-    picked: dict[tuple[str, str, str], tuple[TargetModel, TargetSeries, list[float | None]]] = {}
+    picked: list[tuple[TargetModel, TargetSeries, list[float | None]]] = []
     for t in targets:
         for c in countries:
-            ts = select_series(annual, t, c, generations_per_model[t.model_gen] == 1)
+            ts = select_series(annual, t, c, generations_per_model[(t.make, t.model_gen)] == 1)
             if ts is None:
                 continue
             att = attrition(ts.years, ts.stock, cfg.attrition.smoothing_years)
-            picked[(t.model_gen, t.generation, c)] = (t, ts, att)
+            picked.append((t, ts, att))
             for y, s, a in zip(ts.years, ts.stock, att, strict=True):
                 series_rows.append(
                     {
+                        "make": t.make,
                         "model_gen": t.model_gen,
                         "generation": t.generation,
                         "segment": t.segment,
@@ -243,23 +285,9 @@ def compute_indicators(
                         "age_bucket": age_bucket(y, t, cfg.peers.age_bucket_years),
                     }
                 )
-    series = pl.DataFrame(
-        series_rows,
-        schema={
-            "model_gen": pl.Utf8,
-            "generation": pl.Utf8,
-            "segment": pl.Utf8,
-            "country": pl.Utf8,
-            "level": pl.Utf8,
-            "series": pl.Utf8,
-            "year": pl.Int32,
-            "stock": pl.Int64,
-            "attrition": pl.Float64,
-            "age_bucket": pl.Int32,
-        },
-    )
+    series = pl.DataFrame(series_rows, schema=_SERIES_SCHEMA)
 
-    # 2. peer medians: same country, segment and age bucket, pooled over years and models
+    # 2. peer medians: same country, segment and age bucket, pooled over years and models.
     # n_peers counts distinct models, not observations: a model alone in its segment
     # must not be compared with itself.
     peers = (
@@ -267,7 +295,7 @@ def compute_indicators(
         .group_by("country", "segment", "age_bucket")
         .agg(
             pl.col("attrition").median().alias("peer_median"),
-            pl.struct("model_gen", "generation").n_unique().alias("n_peers"),
+            pl.struct(*TARGET_KEY).n_unique().alias("n_peers"),
         )
     )
     peer_lookup = {
@@ -277,7 +305,8 @@ def compute_indicators(
 
     # 3. indicators per (target, country)
     out: list[dict] = []
-    for (model_gen, generation, c), (t, ts, att) in picked.items():
+    for t, ts, att in picked:
+        c = ts.country
         latest_year, latest_stock = ts.years[-1], ts.stock[-1]
         n_points = sum(a is not None for a in att)
         history_ok = n_points >= cfg.attrition.min_history_years
@@ -294,8 +323,9 @@ def compute_indicators(
         denom = max(sales or 0, max(ts.stock))
         out.append(
             {
-                "model_gen": model_gen,
-                "generation": generation,
+                "make": t.make,
+                "model_gen": t.model_gen,
+                "generation": t.generation,
                 "segment": t.segment,
                 "country": c,
                 "level": ts.level,
@@ -313,29 +343,8 @@ def compute_indicators(
                 "sorn_ratio": sorn_ratio(annual, t, c),
             }
         )
-    indicators = pl.DataFrame(
-        out,
-        schema={
-            "model_gen": pl.Utf8,
-            "generation": pl.Utf8,
-            "segment": pl.Utf8,
-            "country": pl.Utf8,
-            "level": pl.Utf8,
-            "series": pl.Utf8,
-            "latest_year": pl.Int32,
-            "stock": pl.Int64,
-            "rarity_tier": pl.Utf8,
-            "cumulative_sales": pl.Int64,
-            "survival": pl.Float64,
-            "history_years": pl.Int32,
-            "attrition": pl.Float64,
-            "relative_attrition": pl.Float64,
-            "n_peers": pl.Int32,
-            "inflection_year": pl.Int32,
-            "sorn_ratio": pl.Float64,
-        },
-    )
-    return indicators.sort("model_gen", "generation", "country"), series
+    indicators = pl.DataFrame(out, schema=_INDICATORS_SCHEMA)
+    return indicators.sort(*TARGET_KEY, "country"), series
 
 
 def _inflection_year(
@@ -346,14 +355,20 @@ def _inflection_year(
     peer_lookup: dict,
     cfg: ScoreConfig,
 ) -> int | None:
-    """First year of the trailing run where attrition is below the peer median at same age.
+    """First year of the trailing run of *consecutive* years where attrition is below the
+    peer median at the same age.
 
-    None when the latest year is not below its peers (no ongoing "collectorisation").
+    A missing year (gap in the series) or a missing attrition value resets the run. None
+    when the latest year is not below its peers (no ongoing "collectorisation").
     """
     start: int | None = None
+    prev_year: int | None = None
     for y, a in zip(ts.years, att, strict=True):
-        if a is None:
+        gap = prev_year is not None and y != prev_year + 1
+        prev_year = y
+        if a is None or gap:
             start = None
+        if a is None:
             continue
         med, n = peer_lookup.get(
             (country, t.segment, age_bucket(y, t, cfg.peers.age_bucket_years)), (None, 0)
@@ -371,19 +386,22 @@ def _inflection_year(
 
 def aggregate_europe(indicators: pl.DataFrame) -> pl.DataFrame:
     """One row per target: stock summed over countries, attrition stock-weighted, SORN from GB,
-    inflection = the most recent country inflection, survival stock-weighted."""
+    inflection = the most recent country inflection, survival stock-weighted.
+
+    A value missing in every country stays null (never NaN, never 0).
+    """
     if not indicators.height:
         return indicators.clear()
     w = pl.col("stock")
-    eu = (
-        indicators.group_by("model_gen", "generation", "segment")
+    return (
+        indicators.group_by(*TARGET_KEY, "segment")
         .agg(
             pl.lit(EUROPE).alias("country"),
             pl.lit("europe").alias("level"),
             pl.col("series").unique().sort().str.join("+").alias("series"),
             pl.col("latest_year").max(),
             w.sum().alias("stock"),
-            pl.col("cumulative_sales").sum().alias("cumulative_sales"),
+            _nullable_sum("cumulative_sales").alias("cumulative_sales"),
             _weighted("survival", w).alias("survival"),
             pl.col("history_years").max(),
             _weighted("attrition", w).alias("attrition"),
@@ -395,7 +413,11 @@ def aggregate_europe(indicators: pl.DataFrame) -> pl.DataFrame:
         .with_columns(pl.lit(None, dtype=pl.Utf8).alias("rarity_tier"))
         .select(indicators.columns)
     )
-    return eu
+
+
+def _nullable_sum(col: str) -> pl.Expr:
+    """Sum that stays null when every value is null (Polars' sum of all-null is 0)."""
+    return pl.when(pl.col(col).is_not_null().any()).then(pl.col(col).sum()).otherwise(None)
 
 
 def _weighted(col: str, w: pl.Expr) -> pl.Expr:
