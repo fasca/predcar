@@ -72,6 +72,34 @@ make validate                               # invariants sur tous les Parquet si
 make score        # data/gold/indicators.parquet, scores.parquet, ranking.csv (docs/methodology.md)
 ```
 
+### 6. Exporter les résultats pour analyse à distance
+
+Le développement se fait sans accès aux sources : les schémas, les regex de mapping et les
+indicateurs ont été écrits sur des hypothèses. L'export produit un **dossier de preuves,
+léger et versionnable**, que vous committez ; il permet à Claude Code d'analyser les vraies
+données depuis son environnement et de corriger schémas, règles et bugs.
+
+```bash
+make export                       # reports/<AAAA-MM-JJ>/ (marche même si normalize a échoué)
+git add data/raw reports && git commit -m "données réelles du <date>" && git push
+```
+
+Contenu de `reports/<date>/` :
+
+| Fichier | Contenu | Sert à |
+|---|---|---|
+| `manifest.json` | commit git, versions, config, comptes, **erreurs par étape** | savoir ce qui a marché |
+| `raw/<source>/<date>/*.head.csv` | 60 premières lignes verbatim de chaque CSV | valider le layout présumé |
+| `raw/…/*.profile.json` | colonnes, valeurs distinctes des colonnes d'identification, marqueurs `[c]`/`[x]`…, en-têtes de période ; échantillon et types pour le JSON RDW | corriger les parseurs |
+| `silver/summary.json` | lignes, périodes, statuts, comptes par fichier silver | cohérence d'ensemble |
+| `silver/labels_target_makes.csv` | **tous** les libellés bruts des marques cibles avec leur mapping et leur volume | écrire les règles manquantes |
+| `silver/unmapped_target_makes.csv`, `coverage.csv`, `other_makes.csv` | rapport de couverture complet | atteindre 95 % |
+| `gold/anomalies.csv` | cohortes en hausse (imports), sauts de stock suspects | repérer glitches et changements de libellé |
+| `gold/*.csv` | indicateurs, scores, séries, classement | vérifier les résultats |
+
+Aucun payload brut n'est copié (taille) ; un CSV > 20 Mo est gzippé. Les données sources
+sont agrégées, sans donnée personnelle.
+
 ## Commandes
 
 | Commande | Effet |
@@ -80,9 +108,10 @@ make score        # data/gold/indicators.parquet, scores.parquet, ranking.csv (d
 | `make fetch-nl` / `make ingest-nl` | Archive puis parse un snapshot agrégé RDW |
 | `make normalize` | Applique `mapping/` → `data/silver/fleet_stock.parquet`, gate de couverture |
 | `make score` | Indicateurs (stock, attrition, SORN, inflexion, rareté) + score v1 → `data/gold/` |
+| `make export` | Dossier de preuves `reports/<date>/` à committer pour analyse à distance |
 | `make validate` | Invariants silver (stock ≥ 0, clés uniques, statuts) |
 | `make test` / `make lint` | pytest / ruff |
-| `uv run predcar --help` | Toutes les sous-commandes (`fetch`, `ingest`, `normalize`, `score`, `validate`) |
+| `uv run predcar --help` | Toutes les sous-commandes (`fetch`, `ingest`, `normalize`, `score`, `export`, `validate`) |
 
 ## Arborescence
 
@@ -90,9 +119,10 @@ make score        # data/gold/indicators.parquet, scores.parquet, ranking.csv (d
 config/     score.yaml (poids, seuils), mapping.yaml (couverture), sources.yaml (registre des sources)
 mapping/    makes.csv, models.csv, target_models.csv — normalisation marque/modèle (docs/mapping.md)
 data/       raw/ (immuable, manifest versionné), silver/ (parquet normalisés), gold/ (scores)
-predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, normalize, metrics, score, cli
+predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, normalize, metrics, score, export, cli
 docs/       SPEC.md, SOURCES.md (URLs + licences), sources/<source>.md (schémas), mapping.md, methodology.md
 tests/      pytest — schémas, invariants, parseurs, mapping, fixtures
+reports/    exports datés (preuves de runs réels, committés)
 tasks/      todo.md, lessons.md
 ```
 

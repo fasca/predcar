@@ -45,6 +45,11 @@
 - [ ] Vérifier sur données réelles : nombre de cibles publiées, distribution des composantes,
       snapshot tests sur les 5 modèles témoins
 
+### Étape 4 bis — Boucle de retour sur données réelles
+- [x] `predcar export` → `reports/<date>/` : preuves raw, libellés des marques cibles, couverture,
+      anomalies, gold CSV, manifest avec erreurs par étape ; README §6 ; CLAUDE.md
+- [ ] Premier export réel committé par l'utilisateur, puis corriger parseurs / règles / indicateurs
+
 ### Étape 5 — Site statique
 - [ ] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel
 

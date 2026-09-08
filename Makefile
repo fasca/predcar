@@ -1,4 +1,4 @@
-.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score validate test lint
+.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score export validate test lint
 
 install:
 	uv sync
@@ -20,6 +20,9 @@ normalize:           ## Apply mapping/ → data/silver/fleet_stock.parquet, fail
 
 score:               ## Indicators + score v1 → data/gold/ (parquet + ranking.csv)
 	uv run predcar score
+
+export:              ## Evidence bundle → reports/<date>/ (commit it so the remote reviewer can analyse real data)
+	uv run predcar export
 
 validate:            ## Check silver invariants
 	uv run predcar validate
