@@ -1,8 +1,33 @@
 from pathlib import Path
 
+import httpx
 import pytest
 
 from predcar import raw
+
+
+def _client(body: bytes = b"x,y\n1,2\n", status: int = 200) -> httpx.Client:
+    return httpx.Client(
+        transport=httpx.MockTransport(lambda req: httpx.Response(status, content=body))
+    )
+
+
+def test_download_is_atomic_and_refuses_overwrite(tmp_path: Path) -> None:
+    dest = tmp_path / "a.csv"
+    raw.download("https://example.org/a.csv", dest, _client())
+    assert dest.read_bytes() == b"x,y\n1,2\n"
+    assert not list(tmp_path.glob("*.part"))
+    with pytest.raises(raw.RawArchiveError, match="immutable"):
+        raw.download("https://example.org/a.csv", dest, _client(b"changed"))
+    assert dest.read_bytes() == b"x,y\n1,2\n"
+
+
+def test_failed_download_leaves_nothing_behind(tmp_path: Path) -> None:
+    dest = tmp_path / "a.csv"
+    with pytest.raises(httpx.HTTPStatusError):
+        raw.download("https://example.org/a.csv", dest, _client(status=500))
+    assert not dest.exists()
+    assert not list(tmp_path.glob("*.part"))
 
 
 def test_register_and_verify_roundtrip(tmp_path: Path) -> None:

@@ -84,15 +84,30 @@ def register_file(directory: Path, filename: str, url: str | None = None) -> dic
 
 
 def download(url: str, dest: Path, client: httpx.Client | None = None) -> Path:
-    """Stream a URL to disk. Fails loudly on any non-2xx status."""
+    """Stream a URL to disk atomically: written to ``<dest>.part`` then renamed.
+
+    Raises:
+        RawArchiveError: if ``dest`` already exists (snapshots are immutable).
+        httpx.HTTPStatusError: on any non-2xx status.
+    """
+    if dest.exists():
+        raise RawArchiveError(
+            f"{dest} already exists; raw snapshots are immutable (delete it explicitly "
+            "or fetch into a new snapshot)"
+        )
+    part = dest.with_name(dest.name + ".part")
     own_client = client is None
     client = client or httpx.Client(follow_redirects=True, timeout=120)
     try:
         with client.stream("GET", url) as resp:
             resp.raise_for_status()
-            with dest.open("wb") as fh:
+            with part.open("wb") as fh:
                 for chunk in resp.iter_bytes(_CHUNK):
                     fh.write(chunk)
+        part.replace(dest)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
     finally:
         if own_client:
             client.close()
@@ -101,7 +116,10 @@ def download(url: str, dest: Path, client: httpx.Client | None = None) -> Path:
 
 
 def archive(source: str, url: str, filename: str, client: httpx.Client | None = None) -> Path:
-    """Download a file into today's snapshot of a source and register its checksum."""
+    """Download a file into today's snapshot of a source and register its checksum.
+
+    Refuses to overwrite a file already present in the snapshot.
+    """
     directory = snapshot_dir(source)
     dest = download(url, directory / filename, client)
     register_file(directory, filename, url)

@@ -277,10 +277,17 @@ def _with_status(long: pl.DataFrame, table: DftTable) -> pl.DataFrame:
 
 def _check_totals(long: pl.DataFrame, totals: pl.DataFrame, table: DftTable) -> None:
     group = ["make_raw", "model_gen_raw", "model_raw", "period"]
+    # A suppressed Licensed or SORN cell has already been dropped: only groups where every
+    # component status is visible can be compared with their Total.
     parts = (
         long.filter(pl.col("status_key").is_in(list(_STATUS_MAP)))
         .group_by(group)
-        .agg(pl.col("count").sum().alias("parts"))
+        .agg(
+            pl.col("count").sum().alias("parts"),
+            pl.col("status_key").n_unique().alias("n_status"),
+        )
+        .filter(pl.col("n_status") == len(_STATUS_MAP))
+        .drop("n_status")
     )
     tot = totals.group_by(group).agg(pl.col("count").sum().alias("total"))
     mismatch = parts.join(tot, on=group, how="inner").filter(pl.col("parts") != pl.col("total"))
@@ -305,29 +312,37 @@ def ingest(snapshot: Path, out_dir: Path = SILVER_DIR) -> dict[str, Path]:
         Table name (``fleet_stock`` / ``fleet_new_reg``) → written Parquet path.
     """
     raw.verify(snapshot)
+    _require_complete(snapshot)
     stocks: list[pl.DataFrame] = []
     new_regs: list[pl.DataFrame] = []
     for table in TABLES.values():
-        path = snapshot / table.filename
-        if not path.exists():
-            logger.warning("%s: %s absent from snapshot, skipped", table.name, table.filename)
-            continue
-        parsed = parse_table(read_wide_csv(path), table)
+        parsed = parse_table(read_wide_csv(snapshot / table.filename), table)
         logger.info("%s: %d silver rows", table.name, parsed.height)
         (new_regs if table.kind == "new_reg" else stocks).append(parsed)
-    if not stocks and not new_regs:
-        raise raw.RawArchiveError(f"no DfT file found in {snapshot}")
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    written: dict[str, Path] = {}
-    if stocks:
-        stock = pl.concat(stocks)
-        schemas.check_fleet_stock(stock)
-        written["fleet_stock"] = out_dir / "fleet_stock_uk_dft.parquet"
-        stock.write_parquet(written["fleet_stock"])
-    if new_regs:
-        new_reg = pl.concat(new_regs)
-        schemas.check_fleet_new_reg(new_reg)
-        written["fleet_new_reg"] = out_dir / "fleet_new_reg_uk_dft.parquet"
-        new_reg.write_parquet(written["fleet_new_reg"])
+    stock = pl.concat(stocks)
+    schemas.check_fleet_stock(stock)
+    new_reg = pl.concat(new_regs)
+    schemas.check_fleet_new_reg(new_reg)
+    written = {
+        "fleet_stock": out_dir / "fleet_stock_uk_dft.parquet",
+        "fleet_new_reg": out_dir / "fleet_new_reg_uk_dft.parquet",
+    }
+    stock.write_parquet(written["fleet_stock"])
+    new_reg.write_parquet(written["fleet_new_reg"])
     return written
+
+
+def _require_complete(snapshot: Path) -> None:
+    """Every DfT table must be on disk and in the manifest; a partial fetch is not ingested."""
+    manifest = raw.read_manifest(snapshot)
+    missing = [
+        t.filename
+        for t in TABLES.values()
+        if t.filename not in manifest or not (snapshot / t.filename).is_file()
+    ]
+    if missing:
+        raise raw.RawArchiveError(
+            f"incomplete DfT snapshot {snapshot}: missing {missing}; re-run fetch"
+        )

@@ -41,8 +41,12 @@ Points à vérifier sur l'échantillon réel (cases à cocher) :
   (`[c]`, `[x]`, `[z]`, `[low]`, `:`, `-`, vide) → ligne **supprimée** (jamais imputée à 0),
   nombre de lignes supprimées journalisé.
 - **Statut** (VEH0120) : `Licensed` → `licensed`, `SORN` → `sorn`. Une ligne `Total`/`All`,
-  si présente, est vérifiée (`licensed + sorn == total` par modèle et période, sinon
-  `InvariantError`) puis supprimée. Tout autre libellé → `DftSchemaError`.
+  si présente, est vérifiée (`licensed + sorn == total` par modèle et période, uniquement
+  quand les deux statuts sont visibles, sinon `InvariantError`) puis supprimée. Tout autre
+  libellé → `DftSchemaError`.
+- **Snapshot complet** : l'ingestion exige les quatre fichiers présents sur disque **et** dans
+  `MANIFEST.json` ; un fetch partiel n'est jamais ingéré. Un snapshot est immuable : refetch le
+  même jour → erreur, jamais d'écrasement.
 - **Agrégation** : somme sur `Fuel` et `YearOfManufacture` ; `make_raw`, `model_gen_raw`
   (`GenModel`), `model_raw` (`Model`) sont conservés en majuscules, tels que fournis.
 - **Colonnes de normalisation** (`make`, `model_gen`, `generation`) : nulles à cette étape,

@@ -76,6 +76,22 @@ def test_veh0120_total_mismatch_is_an_invariant_error(fixtures: Path) -> None:
         dft.parse_table(df, dft.TABLES["VEH0120"])
 
 
+def test_total_check_skips_groups_with_a_suppressed_status(fixtures: Path) -> None:
+    df = dft.read_wide_csv(fixtures / "df_VEH0120_GB.csv")
+    # S2000 SORN suppressed in 2024 Q2 while Total stays numeric: valid source data.
+    df = df.with_columns(
+        pl.when((pl.col("GenModel") == "S2000") & (pl.col("LicenceStatus") == "SORN"))
+        .then(pl.lit("[c]"))
+        .otherwise(pl.col("2024 Q2"))
+        .alias("2024 Q2")
+    )
+    out = dft.parse_table(df, dft.TABLES["VEH0120"])
+    s2000_q2 = out.filter(
+        (pl.col("model_raw") == "S2000") & (pl.col("period") == date(2024, 6, 30))
+    )
+    assert s2000_q2["status"].to_list() == ["licensed"]
+
+
 def test_unknown_status_label_fails_loudly(fixtures: Path) -> None:
     df = dft.read_wide_csv(fixtures / "df_VEH0120_GB.csv")
     df = df.with_columns(pl.col("LicenceStatus").str.replace("SORN", "Untaxed"))
@@ -128,28 +144,49 @@ def test_veh0160_new_registrations_sum_over_fuel(fixtures: Path) -> None:
 # --------------------------------------------------------------------------- ingest
 
 
-def test_ingest_snapshot_end_to_end(fixtures: Path, tmp_path: Path) -> None:
+ALL_FILES = tuple(t.filename for t in dft.TABLES.values())
+
+
+def _snapshot(fixtures: Path, tmp_path: Path, files: tuple[str, ...] = ALL_FILES) -> Path:
     snapshot = tmp_path / "raw" / "uk_dft" / "2026-09-08"
     snapshot.mkdir(parents=True)
-    for name in ("df_VEH0120_GB.csv", "df_VEH0124_AM.csv", "df_VEH0160_GB.csv"):
+    for name in files:
         (snapshot / name).write_bytes((fixtures / name).read_bytes())
         raw.register_file(snapshot, name)
+    return snapshot
 
+
+def test_ingest_snapshot_end_to_end(fixtures: Path, tmp_path: Path) -> None:
+    snapshot = _snapshot(fixtures, tmp_path)
     written = dft.ingest(snapshot, tmp_path / "silver")
     assert set(written) == {"fleet_stock", "fleet_new_reg"}
 
     stock = pl.read_parquet(written["fleet_stock"])
     schemas.check_fleet_stock(stock)
-    assert set(stock["source_file"].to_list()) == {"df_VEH0120_GB.csv", "df_VEH0124_AM.csv"}
+    assert set(stock["source_file"].to_list()) == {
+        "df_VEH0120_GB.csv",
+        "df_VEH0124_AM.csv",
+        "df_VEH0124_NZ.csv",
+    }
     manifest = json.loads((snapshot / raw.MANIFEST_NAME).read_text())
-    assert len(manifest) == 3
+    assert len(manifest) == len(ALL_FILES)
+
+
+def test_ingest_refuses_incomplete_snapshot(fixtures: Path, tmp_path: Path) -> None:
+    snapshot = _snapshot(fixtures, tmp_path, ALL_FILES[:-1])
+    with pytest.raises(raw.RawArchiveError, match="incomplete.*df_VEH0160_GB.csv"):
+        dft.ingest(snapshot, tmp_path / "silver")
+
+
+def test_ingest_refuses_file_missing_from_manifest(fixtures: Path, tmp_path: Path) -> None:
+    snapshot = _snapshot(fixtures, tmp_path, ALL_FILES[:-1])
+    (snapshot / ALL_FILES[-1]).write_bytes((fixtures / ALL_FILES[-1]).read_bytes())
+    with pytest.raises(raw.RawArchiveError, match="incomplete"):
+        dft.ingest(snapshot, tmp_path / "silver")
 
 
 def test_ingest_refuses_tampered_snapshot(fixtures: Path, tmp_path: Path) -> None:
-    snapshot = tmp_path / "raw" / "uk_dft" / "2026-09-08"
-    snapshot.mkdir(parents=True)
-    (snapshot / "df_VEH0160_GB.csv").write_bytes((fixtures / "df_VEH0160_GB.csv").read_bytes())
-    raw.register_file(snapshot, "df_VEH0160_GB.csv")
+    snapshot = _snapshot(fixtures, tmp_path)
     (snapshot / "df_VEH0160_GB.csv").write_text("BodyType\nCars\n")
     with pytest.raises(raw.RawArchiveError):
         dft.ingest(snapshot, tmp_path / "silver")
