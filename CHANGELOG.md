@@ -16,7 +16,9 @@ de développement n'atteint pas les sources (proxy), voir `docs/ARCHITECTURE.md`
   60 premières lignes verbatim et profil de chaque CSV brut, profil du JSON RDW, résumé
   silver, tous les libellés bruts des marques cibles avec mapping et volume, non-mappés
   complets, couverture, anomalies (cohortes en hausse, sauts de stock), gold en CSV.
-- Best-effort : une étape absente ou en échec est consignée, le reste est écrit.
+- Best-effort : `manifest.json` consigne l'état de chaque étape (`stages` : `ok`, `absent`
+  quand il n'y avait rien à exporter, `failed` avec le détail dans `errors`) et le reste est
+  écrit quand même.
 - README §6 (commandes à lancer et à committer), `CLAUDE.md` : lire le dernier export en
   début de session.
 

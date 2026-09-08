@@ -88,7 +88,7 @@ Contenu de `reports/<date>/` :
 
 | Fichier | Contenu | Sert à |
 |---|---|---|
-| `manifest.json` | commit git, versions, config, comptes, **erreurs par étape** | savoir ce qui a marché |
+| `manifest.json` | commit git, versions, config, comptes, **état par étape** (`ok` / `absent` / `failed`) et erreurs | savoir ce qui a tourné et ce qui a marché |
 | `raw/<source>/<date>/*.head.csv` | 60 premières lignes verbatim de chaque CSV | valider le layout présumé |
 | `raw/…/*.profile.json` | colonnes, valeurs distinctes des colonnes d'identification, marqueurs `[c]`/`[x]`…, en-têtes de période ; échantillon et types pour le JSON RDW | corriger les parseurs |
 | `silver/summary.json` | lignes, périodes, statuts, comptes par fichier silver | cohérence d'ensemble |

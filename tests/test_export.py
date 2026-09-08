@@ -42,6 +42,7 @@ def test_export_full_bundle(fixtures: Path, tmp_path: Path) -> None:
     )
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["errors"] == {}
+    assert manifest["stages"] == {"raw": "ok", "silver": "ok", "gold": "ok"}
     files = set(manifest["files"])
     assert {
         "raw/uk_dft/2026-09-08/df_VEH0120_GB.csv.head.csv",
@@ -97,6 +98,8 @@ def test_export_is_best_effort_on_empty_dirs(tmp_path: Path) -> None:
     manifest = json.loads((out / "manifest.json").read_text())
     assert manifest["files"] == ["manifest.json"] or manifest["files"] == []
     assert manifest["errors"] == {}
+    # a stage that had nothing to export is distinguishable from one that succeeded
+    assert manifest["stages"] == {"raw": "absent", "silver": "absent", "gold": "absent"}
 
 
 def test_export_records_step_errors_instead_of_aborting(tmp_path: Path) -> None:

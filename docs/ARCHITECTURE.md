@@ -116,9 +116,10 @@ data.gouv.fr. Conséquence : les parseurs, les regex et la distribution des indi
 `docs/sources/`. Le cycle prévu :
 
 1. l'utilisateur lance, depuis une machine connectée, `make fetch-uk ingest-uk fetch-nl
-   ingest-nl`, `predcar normalize --min-coverage 0`, `make score`, `make export` ;
+   ingest-nl`, `uv run predcar normalize --min-coverage 0`, `make score`, `make export` ;
 2. il committe `data/raw/**/MANIFEST.json` et `reports/<date>/` ;
-3. Claude Code lit `reports/<date>/manifest.json` en début de session, corrige parseurs,
+3. Claude Code lit `reports/<date>/manifest.json` en début de session (`stages` dit quelles
+   étapes ont tourné, `errors` pourquoi une étape a échoué), corrige parseurs,
    règles et indicateurs à partir des preuves (en-têtes verbatim, profils, libellés réels,
    anomalies), puis relance le cycle.
 

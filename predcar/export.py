@@ -49,6 +49,8 @@ class Bundle:
         self.out_dir = out_dir
         self.files: list[str] = []
         self.errors: dict[str, str] = {}
+        # stage → "ok" | "absent" (nothing to export) | "failed" (see errors)
+        self.stages: dict[str, str] = {}
         self.counts: dict[str, int | float | None] = {}
 
     def path(self, *parts: str) -> Path:
@@ -367,12 +369,20 @@ def export(
     out_dir.mkdir(parents=True)
     bundle = Bundle(out_dir)
 
-    with bundle.step("raw"):
-        export_raw(bundle, raw_dir)
-    with bundle.step("silver"):
-        export_silver(bundle, silver_dir, mapping_dir)
-    with bundle.step("gold"):
-        export_gold(bundle, silver_dir, gold_dir)
+    for name, run in (
+        ("raw", lambda: export_raw(bundle, raw_dir)),
+        ("silver", lambda: export_silver(bundle, silver_dir, mapping_dir)),
+        ("gold", lambda: export_gold(bundle, silver_dir, gold_dir)),
+    ):
+        before = len(bundle.files)
+        with bundle.step(name):
+            run()
+        if name in bundle.errors:
+            bundle.stages[name] = "failed"
+        elif len(bundle.files) == before:
+            bundle.stages[name] = "absent"
+        else:
+            bundle.stages[name] = "ok"
 
     configs = {}
     for name in ("score.yaml", "mapping.yaml", "sources.yaml"):
@@ -388,6 +398,7 @@ def export(
         },
         "versions": _versions(),
         "config": configs,
+        "stages": bundle.stages,
         "counts": bundle.counts,
         "errors": bundle.errors,
         "files": sorted(bundle.files),
