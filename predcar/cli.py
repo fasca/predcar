@@ -8,6 +8,7 @@ from pathlib import Path
 import polars as pl
 import typer
 
+from predcar import export as export_mod
 from predcar import normalize as normalize_mod
 from predcar import raw, schemas
 from predcar import score as score_mod
@@ -100,6 +101,17 @@ def score(
         raise typer.Exit(code=2) from _echo_error(exc)
     for name, path in written.items():
         typer.echo(f"{name}: {path}")
+
+
+@app.command()
+def export(
+    out_dir: Path | None = typer.Option(None, help="Default: reports/<YYYY-MM-DD>/"),
+) -> None:
+    """Git-friendly evidence bundle of this run (raw heads/profiles, labels, coverage, gold CSV)."""
+    path = export_mod.export(out_dir)
+    manifest = path / "manifest.json"
+    typer.echo(f"export: {path}")
+    typer.echo(f"manifest: {manifest}")
 
 
 @app.command()
