@@ -82,7 +82,8 @@ tasks/         → todo.md + lessons.md (task tracking)
 ### Verify Before Done
 - Never mark a task complete without proving it works
 - Run tests, check logs, demonstrate correctness
-- Invariants must hold: stock ≥ 0, licensed + SORN consistent, cohorts monotonic
+- Invariants must hold: stock ≥ 0, licensed + SORN consistent, cohorts non-increasing
+  except imports (log a rise as an anomaly, do not reject it)
 - Snapshot tests on 5 witness models: BMW E46 M3, Peugeot 205 GTI, Honda S2000,
   Renault Clio Williams, Audi RS2
 - Ask: "Would a staff engineer approve this?"
@@ -132,10 +133,17 @@ relative attrition vs. same segment/age, SORN ratio (UK), inflection point, abso
 
 ```
 score = 0.35 * rarity
-      + 0.25 * relative_attrition
+      + 0.25 * conservation          # = -relative_attrition
       + 0.20 * sorn_ratio
       + 0.20 * recent_inflection_point
 ```
+
+- Every component is normalized 0–1 and oriented "higher = more collector"
+- Missing components (e.g. `sorn_ratio` outside UK) are excluded and the remaining weights
+  renormalized — never imputed as 0; publish only if weight coverage ≥ `min_weight_coverage`
+- Cohort survival = aggregated retention curves, **not Kaplan-Meier** (no individual events)
+- Generation is assigned from `year_first_reg` (VEH0124, RDW); VEH0120 rows without a year
+  stay at `model_gen` level unless the label itself is discriminant
 
 Weights and thresholds live in `config/score.yaml` — **never hardcoded**. Every component
 is exposed individually on the site (show the *why*, not just the rank).

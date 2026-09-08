@@ -116,6 +116,10 @@ Chaque pays écrit « BMW 3 SERIES », « BMW 3ER », « BMW 320I », « BMW 3-S
 
 1. `mapping/makes.csv` : alias → marque canonique.
 2. `mapping/models.csv` : (make, regex sur model_raw, plage d'années) → (model_gen, generation).
+   La plage d'années s'applique à `year_first_reg` (VEH0124, RDW). Pour les lignes sans année
+   (VEH0120), `generation` n'est attribuée que si la regex sur `model_raw` est discriminante à
+   elle seule (code châssis dans le libellé) ; sinon `generation` = null et la ligne reste au
+   niveau `model_gen`. Ne jamais appliquer la plage d'années à la période d'observation.
 3. Couverture mesurée : le pipeline échoue si < 95 % du parc d'un pays est mappé pour les marques cibles.
 4. Liste cible initiale : ~150 modèles 1990–2015 des segments coupé/sportive/GTI/roadster/berline premium, choisis à la main dans `mapping/target_models.csv`.
 
@@ -126,17 +130,20 @@ Par (model_gen, generation, country) puis agrégé Europe :
 - **Stock(t)** : véhicules en circulation.
 - **Survival(t)** = Stock(t) / max(ventes cumulées, Stock max observé).
 - **Attrition annuelle** = −Δln(Stock) / Δt, lissée sur 3 ans.
-- **Attrition relative** = attrition du modèle − attrition médiane des modèles de même segment et même âge médian (le signal clé : un modèle qui disparaît *moins vite* que ses pairs est déjà conservé).
+- **Attrition relative** = attrition du modèle − attrition médiane des modèles de même segment et même âge médian (le signal clé : un modèle qui disparaît *moins vite* que ses pairs est déjà conservé). Valeur signée : négatif = conservé. La composante de score est **`conservation` = −attrition_relative**, pour que toute composante soit orientée « plus haut = plus collector ».
 - **Ratio SORN** (UK) = SORN / (SORN + Licensed) : part déjà mise en collection.
 - **Point d'inflexion** : année où l'attrition passe sous la médiane du segment (début de « collectorisation »).
 - **Rareté absolue** : Stock actuel, seuils < 500 / < 100 / < 20 exemplaires.
 - Phase 2 : taux d'accident normalisé (STATS19/VEH0120), tendance Google Trends 5 ans, volume YouTube.
 
 Score composite v1 (pondérations explicites dans `config/score.yaml`, toutes révisables) :
-`score = 0.35·rareté + 0.25·attrition_relative + 0.20·ratio_SORN + 0.20·point_inflexion_récent`.
+`score = 0.35·rareté + 0.25·conservation + 0.20·ratio_SORN + 0.20·point_inflexion_récent`.
+Chaque composante est normalisée 0–1 et orientée « plus haut = plus collector » (rareté = 1 pour le stock le plus faible ; point d'inflexion récent = 1 si l'inflexion date de moins de N ans, N dans `score.yaml`).
 Chaque composante est exposée individuellement : le site montre le *pourquoi*, pas seulement le rang.
 
-Méthode statistique : courbes de survie Kaplan-Meier par cohorte (VEH0124, RDW) ; ajustement Weibull pour extrapoler le stock à 5/10 ans avec intervalle de confiance.
+Composantes manquantes : une composante non calculable (`ratio_SORN` hors UK ; `conservation` et `point_inflexion` tant que l'historique RDW < 3 ans) est **exclue et les poids restants sont renormalisés à 1**, jamais imputée à 0. Le score expose `components_available` et n'est publié que si la somme des poids disponibles ≥ `min_weight_coverage` (`score.yaml`, 0.60 par défaut). L'agrégat Europe somme les stocks par pays ; `ratio_SORN` y reste UK-only.
+
+Méthode statistique : les sources fournissent des comptes agrégés par cohorte, sans événements individuels ni censure — **pas de Kaplan-Meier**. Courbes de rétention par cohorte : `R(cohorte, âge) = Stock(cohorte, âge) / Stock max observé de la cohorte` (VEH0124, RDW), en documentant le biais des cohortes ouvertes (imports, réimmatriculations). Ajustement Weibull sur ces courbes de rétention agrégées pour extrapoler le stock à 5/10 ans avec intervalle de confiance (phase 3).
 
 ## 6. Livrables du site
 
@@ -163,7 +170,7 @@ Site statique généré depuis `gold/` :
 ## 8. Qualité et contraintes
 
 - Chaque fichier raw est archivé avec checksum ; les transformations sont pures et rejouables.
-- Tests : schéma par millésime de source, invariants (stock ≥ 0, somme licensed+SORN cohérente, cohortes monotones), snapshot tests sur 5 modèles témoins (BMW E46 M3, Peugeot 205 GTI, Honda S2000, Renault Clio Williams, Audi RS2).
+- Tests : schéma par millésime de source, invariants (stock ≥ 0, somme licensed+SORN cohérente, cohortes non croissantes sauf imports, hausse journalisée comme anomalie), snapshot tests sur 5 modèles témoins (BMW E46 M3, Peugeot 205 GTI, Honda S2000, Renault Clio Williams, Audi RS2).
 - Aucune donnée personnelle (RDW : jamais stocker `kenteken`, toujours agréger côté API).
 - Licences des sources documentées dans `docs/SOURCES.md` (OGL v3 UK, CC0 RDW, DL-DE/BY-2-0 KBA, Licence Ouverte FR).
 
