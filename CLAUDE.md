@@ -23,17 +23,23 @@ MkDocs + Plotly) | `make` + GitHub Actions (monthly cron) | GitHub Pages
 
 ## Key Commands
 
-Planned targets (to be created in phase 1; keep this list in sync with the `Makefile`):
+Keep this list in sync with the `Makefile` (targets marked *planned* do not exist yet):
 
 ```bash
 uv sync                          # Install dependencies
-make ingest-uk                   # Download + normalize DfT/DVLA files (VEH0120/0124/0160)
-make ingest-rdw                  # Monthly aggregated RDW snapshot (SoQL, no personal data)
-make normalize                   # Apply mapping/ → data/silver/, fail if coverage < 95 %
-make score                       # Indicators + score v1 → data/gold/
-make site                        # Build static site from data/gold/
-uv run pytest tests/ -v          # Run all tests
+make fetch-uk / make ingest-uk   # Archive DfT/DVLA CSVs (VEH0120/0124/0160) → silver
+make fetch-nl / make ingest-nl   # Monthly aggregated RDW snapshot (SoQL, no personal data) → silver
+make normalize                   # Apply mapping/ → data/silver/fleet_stock.parquet, fail if coverage < 95 %
+make validate                    # Silver invariants
+make score                       # (planned) Indicators + score v1 → data/gold/
+make site                        # (planned) Build static site from data/gold/
+make test / make lint            # pytest / ruff
 ```
+
+**Network caveat:** the Claude Code environment's proxy blocks gov.uk, opendata.rdw.nl, kba.de
+and data.gouv.fr. Source parsers are written against *presumed* schemas documented in
+`docs/sources/<source>.md` with a checklist; `make fetch-*` must be run by the user from a
+connected machine (see README « Récupérer les données »). Never fake a sample.
 
 ## Architecture
 
@@ -114,7 +120,7 @@ tasks/         → todo.md + lessons.md (task tracking)
   `df_VEH0124_AM`/`_NZ` (stock by first-registration year, annual), `df_VEH0160_GB`
   (first registrations). Work at `GenModel` level + manual generation mapping.
 - **NL RDW**: Socrata dataset `m9d7-ebf2`, aggregated server-side with `$select`/`$group`.
-  Snapshot only (no history) → archive a monthly snapshot in `data/raw/rdw/YYYY-MM/`.
+  Snapshot only (no history) → archive a monthly snapshot in `data/raw/nl_rdw/YYYY-MM-DD/`.
 
 ### Phase 2
 - **DE KBA**: FZ 10 / FZ 17 XLSX (multi-line headers, labels change per vintage)

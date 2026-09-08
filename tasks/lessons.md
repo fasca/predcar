@@ -13,3 +13,13 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
 ---
 
 _Aucune leçon enregistrée pour le moment. Ce fichier sera enrichi au fil du développement._
+
+### 2026-09-08 Règles de mapping fourre-tout en conflit avec des cibles
+- **Erreur**: les fourre-tout `OTHER` de Honda et VW listaient `NSX`, `SCIROCCO` et
+  `POLO ?[A-Z]`, en conflit avec les règles cibles → `MappingError` sur toute normalisation.
+  Détecté par la review, pas par les tests (seuls 21 libellés témoins choisis à la main).
+- **Correction**: test systématique qui passe le nom de **chaque** cible dans `apply` et exige
+  une résolution sans conflit ; sorties écrites seulement après la gate de couverture.
+- **Règle**: toute table de règles (mapping, config) a un test qui itère sur **toutes** ses
+  entrées, jamais seulement sur des exemples choisis. Une commande qui écrit plusieurs
+  fichiers les met en attente et n'écrit qu'après la dernière validation.

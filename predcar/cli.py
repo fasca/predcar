@@ -8,10 +8,11 @@ from pathlib import Path
 import polars as pl
 import typer
 
+from predcar import normalize as normalize_mod
 from predcar import raw, schemas
-from predcar.config import load_sources_config
+from predcar.config import load_mapping_config, load_sources_config
 from predcar.ingest import dft, rdw
-from predcar.paths import SILVER_DIR
+from predcar.paths import MAPPING_DIR, SILVER_DIR
 
 app = typer.Typer(help="predcar data pipeline", no_args_is_help=True)
 fetch_app = typer.Typer(help="Download raw files into data/raw/<source>/<date>/")
@@ -58,6 +59,32 @@ def ingest_nl(
     """Parse one RDW snapshot into silver fleet_stock_nl_rdw_<date>.parquet."""
     snapshot = snapshot or raw.latest_snapshot(rdw.SOURCE)
     typer.echo(rdw.ingest(snapshot))
+
+
+@app.command()
+def normalize(
+    min_coverage: float | None = typer.Option(
+        None, help="Override config/mapping.yaml (0 to explore without failing)"
+    ),
+    silver_dir: Path = typer.Option(SILVER_DIR),
+    mapping_dir: Path = typer.Option(MAPPING_DIR),
+) -> None:
+    """Apply mapping/ to every ingested silver file; fail if target-make coverage < threshold."""
+    cfg = load_mapping_config()
+    threshold = cfg.min_coverage if min_coverage is None else min_coverage
+    try:
+        written = normalize_mod.normalize(
+            silver_dir, mapping_dir, threshold, cfg.report_top_unmapped
+        )
+    except normalize_mod.CoverageError as exc:
+        raise typer.Exit(code=2) from _echo_error(exc)
+    for name, path in written.items():
+        typer.echo(f"{name}: {path}")
+
+
+def _echo_error(exc: Exception) -> Exception:
+    typer.echo(f"ERROR: {exc}", err=True)
+    return exc
 
 
 @app.command()

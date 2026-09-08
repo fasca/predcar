@@ -49,6 +49,11 @@ class ScoreConfig(BaseModel):
         return self
 
 
+class MappingConfig(BaseModel):
+    min_coverage: float = Field(gt=0, le=1)
+    report_top_unmapped: int = Field(ge=1)
+
+
 class UkDftSource(BaseModel):
     licence: str
     page_url: HttpUrl
@@ -89,3 +94,8 @@ def load_score_config(path: Path | None = None) -> ScoreConfig:
 def load_sources_config(path: Path | None = None) -> SourcesConfig:
     """Load and validate the data source registry (config/sources.yaml)."""
     return SourcesConfig.model_validate(_load_yaml(path or CONFIG_DIR / "sources.yaml"))
+
+
+def load_mapping_config(path: Path | None = None) -> MappingConfig:
+    """Load and validate the normalization thresholds (config/mapping.yaml)."""
+    return MappingConfig.model_validate(_load_yaml(path or CONFIG_DIR / "mapping.yaml"))

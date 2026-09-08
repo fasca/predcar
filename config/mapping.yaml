@@ -1,0 +1,5 @@
+# Make/model normalization parameters (SPEC §4).
+# Share of the fleet (by count) of *target makes* that must resolve to a model_gen, per country.
+min_coverage: 0.95
+# How many unmapped (country, make, model_raw) rows to list in the coverage report.
+report_top_unmapped: 30
