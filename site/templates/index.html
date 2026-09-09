@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Classement{% endblock %}
+{% block content %}
+<section class="intro">
+  <h1>Quelles voitures de 1990–2015 se raréfient le plus vite en Europe ?</h1>
+  <p>Classement de {{ rows | length }} générations de modèles, calculé uniquement à partir des
+    parcs officiels (parc automobile britannique et néerlandais). Le score composite v1 combine
+    {% for name, w in weights.items() %}{{ component_labels[name] | lower }} ({{ (w * 100) | round | int }} %){% if not loop.last %}, {% endif %}{% endfor %} ;
+    chaque composante est affichée pour montrer le <em>pourquoi</em>, pas seulement le rang
+    (<a href="methodologie.html">méthodologie</a>).</p>
+</section>
+
+<section class="filters" aria-label="Filtres">
+  <label>Segment
+    <select id="f-segment">
+      <option value="">Tous</option>
+      {% for s in segments %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Décennie
+    <select id="f-decade">
+      <option value="">Toutes</option>
+      {% for d in decades %}<option value="{{ d }}">{{ d }}s</option>{% endfor %}
+    </select>
+  </label>
+  <label>Pays avec données
+    <select id="f-country">
+      <option value="">Tous</option>
+      {% for c in countries %}<option value="{{ c }}">{{ country_labels.get(c, c) }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Tri
+    <select id="f-sort">
+      <option value="score">Score collector</option>
+      <option value="attrition-desc">Se raréfient le plus vite</option>
+      <option value="attrition-asc">Se raréfient le moins vite</option>
+      <option value="stock-asc">Parc le plus faible</option>
+    </select>
+  </label>
+  <label class="check"><input type="checkbox" id="f-top50" checked> Top 50 seulement</label>
+  <span id="f-count" class="count"></span>
+</section>
+
+<div class="table-wrap">
+<table id="ranking" class="ranking">
+  <thead>
+    <tr>
+      <th>Rang</th>
+      <th>Modèle</th>
+      <th>Génération</th>
+      <th>Segment</th>
+      <th>Années</th>
+      <th>Pays</th>
+      <th class="num">Parc</th>
+      <th class="num">Attrition/an</th>
+      <th class="num">Score</th>
+      <th>Composantes</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in rows %}
+    <tr data-segment="{{ r.segment }}" data-decade="{{ r.decade if r.decade is not none else '' }}"
+        data-countries="{{ r.countries | join(' ') }}" data-score="{{ r.score }}"
+        data-attrition="{{ r.attrition if r.attrition is not none else '' }}"
+        data-stock="{{ r.stock }}" data-rank="{{ r.rank }}">
+      <td class="rank">{{ r.rank }}</td>
+      <td><a href="{{ models_dir }}/{{ r.slug }}.html">{{ r.make }} {{ r.model_gen }}</a></td>
+      <td>{{ r.generation }}</td>
+      <td>{{ r.segment }}</td>
+      <td class="nowrap">{% if r.target %}{{ r.target.year_from }}–{{ r.target.year_to }}{% endif %}</td>
+      <td class="nowrap">{{ r.countries | join(', ') }}</td>
+      <td class="num">{{ r.stock | fmt_int }}</td>
+      <td class="num">{{ r.attrition | fmt_pct }}</td>
+      <td class="num score">{{ r.score | fmt_num(3) }}</td>
+      <td class="components">
+        {% for c in r.components %}
+        <span class="bar {% if not c.available %}na{% endif %}" title="{{ c.label }} : {% if c.available %}{{ c.value | fmt_num }} × poids {{ c.weight | fmt_num }}{% else %}non disponible{% endif %}">
+          <span class="fill" style="width: {{ ((c.value or 0) * 100) | round | int }}%"></span>
+          <span class="lbl">{{ c.short }}</span>
+        </span>
+        {% endfor %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if unpublished %}
+<details class="unpublished">
+  <summary>{{ unpublished | length }} générations avec données mais score non publié</summary>
+  <p>Le score n'est publié que si les composantes disponibles couvrent au moins
+    {{ (cfg.min_weight_coverage * 100) | round | int }} % des poids (par exemple, un modèle absent
+    du Royaume-Uni n'a que la rareté tant que l'historique néerlandais est trop court).</p>
+  <ul>
+    {% for r in unpublished %}
+    <li><a href="{{ models_dir }}/{{ r.slug }}.html">{{ r.make }} {{ r.model_gen }} {{ r.generation }}</a>
+      — parc {{ r.stock | fmt_int }}, composantes : {{ r.components_available | join(', ') }}
+      ({{ r.weight_coverage | fmt_pct(0) }} des poids)</li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="static/app.js"></script>{% endblock %}

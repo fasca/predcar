@@ -55,5 +55,6 @@ data/raw/**
 data/silver/*.parquet
 data/gold/*.parquet
 data/gold/*.csv
+site/dist/
 .pytest_cache/
 .ruff_cache/

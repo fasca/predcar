@@ -140,9 +140,11 @@ def score(
         "series": gold_dir / "stock_series.parquet",
         "indicators": gold_dir / "indicators.parquet",
         "scores": gold_dir / "scores.parquet",
+        "cohorts": gold_dir / "cohorts.parquet",
         "ranking": gold_dir / "ranking.csv",
     }
     series.write_parquet(written["series"])
+    metrics.cohort_retention(stock, targets).write_parquet(written["cohorts"])
     pl.concat([indicators, eu]).write_parquet(written["indicators"])
     scores.write_parquet(written["scores"])
     # ranking.csv is the public export: only targets that passed the publication gate

@@ -106,4 +106,5 @@ ont `rarity` + `sorn_ratio` = 0.55 et ne sont pas publiés non plus.
 | `stock_series.parquet` | série annuelle utilisée par (cible, pays) : stock, attrition lissée, niveau, tranche d'âge |
 | `indicators.parquet` | indicateurs par (cible, pays) et ligne `EU` |
 | `scores.parquet` | composantes brutes et normalisées, poids couverts, score, rang |
+| `cohorts.parquet` | courbes de rétention par (cible, pays, cohorte d'immatriculation) : `retention = stock / stock maximal observé de la cohorte` (VEH0124, RDW), affichées sur la page modèle du site |
 | `ranking.csv` | export du classement (SPEC §6) : **uniquement les cibles publiées** (score non nul) ; les lignes non publiées restent dans `scores.parquet` à titre de diagnostic |

@@ -59,7 +59,17 @@
 - [ ] Corriger parseurs / règles / indicateurs d'après le diagnostic
 
 ### Étape 5 — Site statique
-- [ ] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel
+- [x] `predcar/site.py` + `site/templates/` : classement filtrable (segment / décennie / pays,
+      tri score / raréfaction), page par cible (composantes et leur pourquoi, parc par pays,
+      attrition, rétention par cohorte, comparaison au segment, sources datées), méthodologie
+      depuis `docs/methodology.md`, `ranking.csv` ; `make site`
+- [x] `gold/cohorts.parquet` (rétention par cohorte) écrit par `make score`
+- [x] `.github/workflows/site.yml` : fetch + pipeline + build + déploiement GitHub Pages,
+      cron trimestriel, déclenchement manuel, push sur `main`
+- [ ] Activer GitHub Pages (Settings → Pages → Source : GitHub Actions) et vérifier le premier
+      déploiement (les URLs DfT sont résolues à chaque run ; un échec = schéma ou couverture)
+- [ ] Conserver l'historique RDW côté CI (committer les snapshots agrégés, ~20 Mo/mois, ou un
+      cache) pour que l'attrition NL existe un jour sans la machine de l'utilisateur
 
 ## Phase 2
 - [ ] KBA (DE) : inventaire des XLSX 2010–2026 et schémas par millésime

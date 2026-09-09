@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Méthodologie{% endblock %}
+{% block content %}
+<h1>Méthodologie — indicateurs et score v1</h1>
+<section class="params">
+  <h2>Paramètres en vigueur (<code>config/score.yaml</code>)</h2>
+  <table>
+    <thead><tr><th>Paramètre</th><th class="num">Valeur</th></tr></thead>
+    <tbody>
+    {% for name, w in weights.items() %}
+      <tr><td>Poids « {{ component_labels[name] | lower }} »</td><td class="num">{{ w | fmt_num }}</td></tr>
+    {% endfor %}
+      <tr><td>Couverture minimale des poids pour publier</td><td class="num">{{ cfg.min_weight_coverage | fmt_num }}</td></tr>
+      <tr><td>Seuils de rareté (parc)</td><td class="num">{{ cfg.rarity.thresholds | join(' / ') }}</td></tr>
+      <tr><td>Lissage de l'attrition (années)</td><td class="num">{{ cfg.attrition.smoothing_years }}</td></tr>
+      <tr><td>Historique minimal (années)</td><td class="num">{{ cfg.attrition.min_history_years }}</td></tr>
+      <tr><td>Tranche d'âge des pairs (années)</td><td class="num">{{ cfg.peers.age_bucket_years }}</td></tr>
+      <tr><td>Pairs distincts minimum</td><td class="num">{{ cfg.peers.min_peers }}</td></tr>
+      <tr><td>Inflexion « récente » si &lt; N années</td><td class="num">{{ cfg.inflection.recent_years }}</td></tr>
+    </tbody>
+  </table>
+</section>
+<article class="prose">
+{{ body | safe }}
+</article>
+{% endblock %}

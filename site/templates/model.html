@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ row.make }} {{ row.model_gen }} {{ row.generation }}{% endblock %}
+{% block content %}
+<nav class="crumbs"><a href="{{ root }}index.html">Classement</a> › {{ row.make }} {{ row.model_gen }} {{ row.generation }}</nav>
+<h1>{{ row.make }} {{ row.model_gen }} <span class="gen">{{ row.generation }}</span></h1>
+<p class="meta">
+  Segment {{ row.segment }}
+  {% if target %} · produite {{ target.year_from }}–{{ target.year_to }}{% endif %}
+  · parc Europe {{ row.stock | fmt_int }} ({{ row.countries | join(' + ') }})
+  · dernière observation {{ row.latest_year | fmt_year }}
+</p>
+
+<section class="score-card">
+  {% if row.published %}
+  <p class="headline">Rang <strong>{{ row.rank }}</strong> · score collector <strong>{{ row.score | fmt_num(3) }}</strong></p>
+  {% else %}
+  <p class="headline unpublished">Score non publié : les composantes disponibles ne couvrent que
+    {{ row.weight_coverage | fmt_pct(0) }} des poids (minimum {{ (min_weight_coverage * 100) | round | int }} %).</p>
+  {% endif %}
+  <table class="components-table">
+    <thead><tr><th>Composante</th><th class="num">Valeur 0–1</th><th class="num">Poids</th><th class="num">Part du score</th><th>Pourquoi</th></tr></thead>
+    <tbody>
+    {% for c in row.components %}
+      <tr class="{% if not c.available %}na{% endif %}">
+        <td>{{ c.label }}</td>
+        <td class="num">{{ c.value | fmt_num }}</td>
+        <td class="num">{{ c.weight | fmt_num }}</td>
+        <td class="num">{{ c.contribution | fmt_num(3) }}</td>
+        <td class="why">
+          {% if c.name == 'rarity' %}parc actuel {{ row.stock | fmt_int }} (1 = le plus faible de la population)
+          {% elif c.name == 'conservation' %}{% if c.available %}attrition relative {{ row.relative_attrition | fmt_pct }} par an vs pairs (négatif = disparaît moins vite){% else %}pas d'historique suffisant ou pas de pairs{% endif %}
+          {% elif c.name == 'sorn_ratio' %}{% if c.available %}{{ row.sorn_ratio | fmt_pct }} du parc britannique est en SORN (hors route, conservé){% else %}non disponible hors Royaume-Uni{% endif %}
+          {% elif c.name == 'recent_inflection_point' %}{% if row.inflection_year %}attrition sous la médiane des pairs depuis {{ row.inflection_year }}{% elif c.available %}pas d'inflexion en cours{% else %}pas d'historique suffisant ou pas de pairs{% endif %}
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="charts">
+  <h2>Parc en circulation par pays</h2>
+  <div id="chart-stock" class="chart"></div>
+  <h2>Attrition annuelle lissée</h2>
+  <div id="chart-attrition" class="chart"></div>
+  <h2>Rétention par cohorte d'immatriculation</h2>
+  {% if has_retention %}
+  <div id="chart-retention" class="chart"></div>
+  <p class="note">Rétention = parc de la cohorte / parc maximal observé de la cohorte (courbes de
+    rétention agrégées, pas de Kaplan-Meier). Les cohortes néerlandaises apparaîtront après plusieurs
+    snapshots mensuels.</p>
+  {% else %}
+  <p class="note">Pas encore assez d'observations par cohorte (il faut au moins deux années sur la même
+    cohorte, ce que seul VEH0124 fournit pour l'instant).</p>
+  {% endif %}
+</section>
+
+<section class="by-country">
+  <h2>Comparaison au segment, par pays</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Pays</th><th>Série</th><th>Niveau</th><th class="num">Parc</th><th class="num">Survie</th><th class="num">Attrition/an</th><th class="num">Médiane des pairs</th><th class="num">Pairs</th><th class="num">Inflexion</th><th class="num">Ratio SORN</th></tr></thead>
+    <tbody>
+    {% for c in by_country %}
+      <tr>
+        <td>{{ c.label }}</td>
+        <td>{{ c.series }}</td>
+        <td>{{ 'génération' if c.level == 'generation' else 'modèle générique' }}</td>
+        <td class="num">{{ c.stock | fmt_int }}</td>
+        <td class="num">{{ c.survival | fmt_pct }}</td>
+        <td class="num">{{ c.attrition | fmt_pct }}</td>
+        <td class="num">{{ c.peer_median | fmt_pct }}</td>
+        <td class="num">{{ c.n_peers }}</td>
+        <td class="num">{{ c.inflection_year | fmt_year }}</td>
+        <td class="num">{{ c.sorn_ratio | fmt_pct }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="note">Pairs = mêmes pays, segment et tranche d'âge ; survie = parc / max(ventes cumulées,
+    parc maximal observé). Détails et limites dans la <a href="{{ root }}methodologie.html">méthodologie</a>.</p>
+</section>
+
+<section class="sources">
+  <h2>Sources</h2>
+  <ul>
+  {% for s in sources %}
+    <li><a href="{{ s.url }}">{{ s.name }}</a> — {{ s.country }}, {{ s.detail }}, dernière observation
+      {{ s.latest_year }}, licence {{ s.licence }}.</li>
+  {% endfor %}
+  </ul>
+  <p class="note">Site généré le {{ built_on.isoformat() }} ; chaque fichier brut est archivé avec son
+    empreinte SHA-256 et la transformation est rejouable.</p>
+</section>
+{% endblock %}
+{% block scripts %}
+<script id="charts-data" type="application/json">{{ charts_json | safe }}</script>
+<script src="{{ plotly_cdn }}" charset="utf-8"></script>
+<script src="{{ root }}static/model.js"></script>
+{% endblock %}

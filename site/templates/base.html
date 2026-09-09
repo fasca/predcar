@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}predcar{% endblock %} — predcar</title>
+  <meta name="description" content="Preuve statistique, sourcée et datée, de la raréfaction des voitures 1990–2015 en Europe, à partir des données ouvertes officielles.">
+  <link rel="stylesheet" href="{{ root }}static/style.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="{{ root }}index.html">predcar</a>
+  <nav>
+    <a href="{{ root }}index.html">Classement</a>
+    <a href="{{ root }}methodologie.html">Méthodologie</a>
+    <a href="{{ root }}ranking.csv" download>Export CSV</a>
+    <a href="https://github.com/fasca/predcar">Code source</a>
+  </nav>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+<footer class="site-footer">
+  <p>Site généré le {{ built_on.isoformat() }} depuis les données ouvertes du DfT (Royaume-Uni, OGL v3)
+    et du RDW (Pays-Bas, CC0){% if latest_year %}, dernière observation {{ latest_year }}{% endif %}.
+    Aucune donnée personnelle, aucun prix de marché, aucun scraping.
+    Tout est reproductible : <a href="https://github.com/fasca/predcar">fasca/predcar</a>.</p>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

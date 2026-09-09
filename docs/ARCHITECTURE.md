@@ -26,11 +26,12 @@ potentiel « collector » dont chaque composante est visible.
                                                                                         ▼
                                                                                   data/gold/
                                                                                   stock_series / indicators
-                                                                                  scores / ranking.csv
+                                                                                  scores / cohorts / ranking.csv
                                                                                         │
-                                                                     make export        │
-                                                                                        ▼
-                                                                                  reports/<date>/   (committé)
+                                                          make export ◄─────────────────┼──────────────► make site
+                                                                │                                             │
+                                                                ▼                                             ▼
+                                                     reports/<date>/ (committé)                 site/dist/ (GitHub Pages)
 ```
 
 Trois couches, comme dans la spec §3 :
@@ -39,7 +40,8 @@ Trois couches, comme dans la spec §3 :
 |---|---|---|
 | `data/raw/` | fichiers sources tels que téléchargés, un dossier par source et par date, `MANIFEST.json` (URL, sha256, taille, date) | manifests oui, payloads non (60 Mo+) |
 | `data/silver/` | Parquet au schéma commun `fleet_stock` / `fleet_new_reg` (`predcar/schemas.py`) | non |
-| `data/gold/` | indicateurs et scores | non |
+| `data/gold/` | indicateurs, scores, courbes de rétention par cohorte | non |
+| `site/dist/` | site statique généré depuis gold (déployé sur GitHub Pages) | non |
 | `reports/<date>/` | preuves d'un run réel (voir §7) | **oui** |
 
 ## 3. Les modules Python (`predcar/`)
@@ -56,7 +58,8 @@ Trois couches, comme dans la spec §3 :
 | `metrics.py` | séries annuelles par famille de source, choix du niveau (génération / modèle), attrition lissée, pairs, attrition relative, inflexion, SORN, ventes cumulées, survie, rareté, agrégat Europe | silver normalisé → indicateurs |
 | `score.py` | composantes 0–1, poids renormalisés, gate de publication, rang | indicateurs → `scores.parquet`, `ranking.csv` |
 | `export.py` | dossier de preuves best-effort pour l'analyse à distance | tout → `reports/<date>/` |
-| `cli.py` | Typer : `fetch uk|nl`, `ingest uk|nl`, `normalize`, `score`, `export`, `validate` | — |
+| `site.py` | site statique : classement filtrable, une page par cible (parc par pays, attrition, rétention par cohorte, composantes du score et leur *pourquoi*, sources datées), méthodologie rendue depuis `docs/methodology.md`, `ranking.csv` ; gabarits Jinja2 dans `site/templates/`, Plotly.js par CDN | gold → `site/dist/` |
+| `cli.py` | Typer : `fetch uk|nl`, `ingest uk|nl`, `normalize`, `score`, `export`, `site`, `validate` | — |
 
 Chaque transformation est une fonction pure : même raw → même silver → même gold.
 
@@ -130,15 +133,36 @@ Une divergence de schéma lève toujours une erreur explicite (`DftSchemaError`,
 
 ## 8. Qualité
 
-- 112 tests pytest : maths des indicateurs, schémas, invariants, parseurs sur fixtures,
-  toutes les cibles du mapping résolues sans conflit, pipeline bout en bout, export.
+- 147 tests pytest : maths des indicateurs, schémas, invariants, parseurs sur fixtures,
+  toutes les cibles du mapping résolues sans conflit, pipeline bout en bout, export, site.
 - ruff (lint + format), CI GitHub Actions sur chaque PR.
 - Reviews automatiques (Codex) traitées et résolues à chaque PR ; leçons dans
   `tasks/lessons.md`.
 
-## 9. Ce qui n'existe pas encore
+## 9. Le site et son déploiement
 
-- Phase 1, étape 5 : site statique (classement, page modèle, méthodologie, export CSV),
-  GitHub Pages, refresh trimestriel par GitHub Actions.
+`make site` rend `site/dist/` **uniquement depuis `data/gold/`** (jamais silver ni raw) :
+
+- `index.html` : classement des cibles publiées, filtres segment / décennie / pays et tri
+  (score, raréfaction la plus rapide ou la plus lente, parc le plus faible) côté client,
+  top 50 par défaut, liste repliée des cibles avec données mais score non publié ;
+- `modeles/<marque-modèle-génération>.html` : une page par cible, publiée ou non — score et
+  chaque composante avec poids, part et *pourquoi*, parc par pays, attrition lissée,
+  rétention par cohorte (VEH0124 ; NL après plusieurs snapshots), comparaison au segment,
+  sources citées avec dernière observation et licence, date de génération ;
+- `methodologie.html` : `docs/methodology.md` rendu, précédé des paramètres réels de
+  `config/score.yaml` ;
+- `ranking.csv` : export du classement (cibles publiées).
+
+`.github/workflows/site.yml` reconstruit tout depuis les sources officielles (fetch, ingest,
+normalize, score, site) et déploie sur GitHub Pages : cron trimestriel (le 20 des mois de
+janvier, avril, juillet, octobre, après les publications DfT), déclenchement manuel, et
+chaque push sur `main`. Le run échoue — plutôt que de publier de faux chiffres — si un schéma
+source change ou si la couverture du mapping passe sous 95 %. Limite : le snapshot RDW
+téléchargé par le workflow n'est pas conservé, l'historique néerlandais se construit sur la
+machine de l'utilisateur (voir `tasks/todo.md`).
+
+## 10. Ce qui n'existe pas encore
+
 - Phase 2 : KBA (DE), immatriculations FR, STATS19, Google Trends, YouTube.
 - Phase 3 : enchères, extrapolation Weibull, alertes.

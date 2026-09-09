@@ -96,6 +96,19 @@ Contenu de `reports/<date>/` :
 Aucun payload brut n'est copié (taille) ; un CSV > 20 Mo est gzippé. Les données sources
 sont agrégées, sans donnée personnelle.
 
+### 7. Générer le site
+
+```bash
+make site                         # site/dist/ : classement filtrable, une page par génération,
+                                  # méthodologie, ranking.csv — ouvrir site/dist/index.html
+```
+
+Le site est **entièrement statique** (HTML + Plotly.js chargé depuis son CDN) et généré
+uniquement depuis `data/gold/`. Sur GitHub, le workflow `.github/workflows/site.yml` le
+reconstruit avec des données fraîches et le déploie sur GitHub Pages à chaque push sur `main`,
+chaque trimestre (cron, après les publications DfT) et à la demande (*Run workflow*). Activer
+Pages une fois : *Settings → Pages → Source : GitHub Actions*.
+
 ## Commandes
 
 | Commande | Effet |
@@ -105,17 +118,19 @@ sont agrégées, sans donnée personnelle.
 | `make normalize` | Applique `mapping/` → `data/silver/fleet_stock.parquet`, gate de couverture |
 | `make score` | Indicateurs (stock, attrition, SORN, inflexion, rareté) + score v1 → `data/gold/` |
 | `make export` | Dossier de preuves `reports/<date>/` à committer pour analyse à distance |
+| `make site` | Site statique `site/dist/` depuis `data/gold/` (classement, pages modèle, méthodologie, CSV) |
 | `make validate` | Invariants silver (stock ≥ 0, clés uniques, statuts) |
 | `make test` / `make lint` | pytest / ruff |
-| `uv run predcar --help` | Toutes les sous-commandes (`fetch`, `ingest`, `normalize`, `score`, `export`, `validate`) |
+| `uv run predcar --help` | Toutes les sous-commandes (`fetch`, `ingest`, `normalize`, `score`, `export`, `site`, `validate`) |
 
 ## Arborescence
 
 ```
 config/     score.yaml (poids, seuils), mapping.yaml (couverture), sources.yaml (registre des sources)
 mapping/    makes.csv, models.csv, target_models.csv — normalisation marque/modèle (docs/mapping.md)
-data/       raw/ (immuable, manifest versionné), silver/ (parquet normalisés), gold/ (scores)
-predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, normalize, metrics, score, export, cli
+data/       raw/ (immuable, manifest versionné), silver/ (parquet normalisés), gold/ (scores, cohortes)
+predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, normalize, metrics, score, export, site, cli
+site/       templates/ (Jinja2), static/ (CSS, JS) → dist/ généré (non versionné)
 docs/       SPEC.md, ARCHITECTURE.md, SOURCES.md, sources/<source>.md (schémas), mapping.md, methodology.md
 tests/      pytest — schémas, invariants, parseurs, mapping, fixtures
 reports/    exports datés (preuves de runs réels, committés)

@@ -1,4 +1,4 @@
-.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score export validate test lint
+.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score export site validate test lint
 
 install:
 	uv sync
@@ -23,6 +23,9 @@ score:               ## Indicators + score v1 → data/gold/ (parquet + ranking.
 
 export:              ## Evidence bundle → reports/<date>/ (commit it so the remote reviewer can analyse real data)
 	uv run predcar export
+
+site:                ## Static site from data/gold/ → site/dist/ (open site/dist/index.html)
+	uv run predcar site
 
 validate:            ## Check silver invariants
 	uv run predcar validate
