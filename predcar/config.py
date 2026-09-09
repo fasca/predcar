@@ -58,6 +58,8 @@ class ScoreConfig(BaseModel):
 class MappingConfig(BaseModel):
     min_coverage: float = Field(gt=0, le=1)
     report_top_unmapped: int = Field(ge=1)
+    # model_raw values meaning "model unknown" in the source itself, excluded from coverage
+    unknown_labels: list[str] = Field(default_factory=list)
 
 
 class UkDftSource(BaseModel):

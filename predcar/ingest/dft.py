@@ -39,7 +39,7 @@ _QUARTER_END = {1: (3, 31), 2: (6, 30), 3: (9, 30), 4: (12, 31)}
 # Raw licence status labels → silver Status. "Total" rows are checked then dropped.
 _STATUS_MAP = {"licensed": schemas.Status.LICENSED, "sorn": schemas.Status.SORN}
 _TOTAL_LABELS = {"total", "all"}
-# Aggregation over the raw columns the silver schema does not keep (Fuel, YearManufacture).
+# Aggregation over the raw columns the silver schema does not keep (Fuel).
 _AGG = [pl.col("count").sum(), pl.col("source").first()]
 
 
@@ -58,6 +58,7 @@ class DftTable:
     period_kind: Literal["quarter", "year"]
     status_column: str | None = None  # required for kind="stock"
     year_first_reg_column: str | None = None
+    year_manufacture_column: str | None = None
 
 
 TABLES: dict[str, DftTable] = {
@@ -85,6 +86,7 @@ TABLES: dict[str, DftTable] = {
         period_kind="year",
         status_column="LicenceStatus",
         year_first_reg_column="YearFirstUsed",
+        year_manufacture_column="YearManufacture",
     ),
     "VEH0124_NZ": DftTable(
         name="VEH0124_NZ",
@@ -102,6 +104,7 @@ TABLES: dict[str, DftTable] = {
         period_kind="year",
         status_column="LicenceStatus",
         year_first_reg_column="YearFirstUsed",
+        year_manufacture_column="YearManufacture",
     ),
     "VEH0160": DftTable(
         name="VEH0160",
@@ -198,8 +201,7 @@ def parse_table(df: pl.DataFrame, table: DftTable) -> pl.DataFrame:
     """Unpivot one wide DfT table into the matching silver schema (cars only, unmapped).
 
     Rows with a suppressed or missing count are dropped and logged. Counts are summed
-    over the columns the silver schema does not keep (Fuel, YearOfManufacture, Model
-    case variants).
+    over the columns the silver schema does not keep (Fuel, Model case variants).
 
     Raises:
         DftSchemaError: on missing id columns, no period columns or unknown status.
@@ -255,6 +257,17 @@ def parse_table(df: pl.DataFrame, table: DftTable) -> pl.DataFrame:
             )
     else:
         long = long.with_columns(pl.lit(None, dtype=pl.Int32).alias("year_first_reg"))
+    # Build year, kept for generation assignment of imported cars (registered in GB years
+    # after they were built); "[x]" → null.
+    if table.year_manufacture_column:
+        long = long.with_columns(
+            pl.col(table.year_manufacture_column)
+            .str.strip_chars()
+            .cast(pl.Int32, strict=False)
+            .alias("year_manufacture")
+        )
+    else:
+        long = long.with_columns(pl.lit(None, dtype=pl.Int32).alias("year_manufacture"))
     long = _with_status(long, table)
     out = long.group_by(schemas.FLEET_STOCK_KEY).agg(_AGG)
     out = out.with_columns(pl.lit(None).alias(c) for c in ("make", "model_gen", "generation"))

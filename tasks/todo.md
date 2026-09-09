@@ -45,7 +45,11 @@
 - [x] `docs/methodology.md` (source de la page Méthodologie du site)
 - [x] Premier run réel (2026-09-08) : 241 cibles avec données, 225 publiées ; les 5 témoins scorés
       avec les 4 composantes
-- [ ] Corriger les défauts relevés par le diagnostic de `reports/2026-09-08/` (voir Review Notes)
+- [x] Corriger les défauts relevés par le diagnostic de `reports/2026-09-08/` (PR #7 : règles
+      ST-LINE / TYPE-R / CLIO 16V / VTR / XSI / HGT / Evo, `year_manufacture`, Δt réel, SORN
+      génération, anomalies post-production, couverture hors `MODEL MISSING`)
+- [ ] Relancer le pipeline et `make export` après fusion de la PR #7, comparer aux valeurs du
+      2026-09-08 (Civic Type R EP3, Skyline R33/R34, Evo, Clio 16V)
 - [ ] Snapshot tests sur les 5 modèles témoins à partir des valeurs réelles
 
 ### Étape 4 bis — Boucle de retour sur données réelles

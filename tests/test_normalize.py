@@ -357,3 +357,89 @@ def test_normalize_fails_below_coverage(fixtures: Path, tmp_path: Path) -> None:
     # exploration mode: same mapping, no gate
     written = n.normalize(silver, mapping, min_coverage=0.0)
     assert set(written) == {"fleet_stock", "fleet_new_reg", "mapping_coverage"}
+
+
+# --------------------------------------------------------------------------- real-data fixes
+
+
+@pytest.mark.parametrize(
+    ("make_raw", "model_raw", "year", "model_gen", "generation"),
+    [
+        ("FORD", "FIESTA ST-LINE TURBO", 2019, "FIESTA", None),  # ST-LINE is a trim, not an ST
+        ("FORD", "FIESTA ST-3 TURBO", 2015, "FIESTA ST", "MK7"),
+        ("FORD", "FOCUS ST170", 2003, "FOCUS ST", "MK1"),
+        ("FORD", "FOCUS STYLE 100", 2009, "FOCUS", None),
+        ("FORD", "PUMA", 2010, "PUMA", None),  # year outside every generation → model only
+        ("HONDA", "CIVIC TYPE-R", 2003, "CIVIC TYPE R", "EP3"),  # DfT writes the hyphen
+        ("HONDA", "CIVIC TYPE-S GT", 2008, "CIVIC", None),
+        ("RENAULT", "CLIO DYNAMIQUE 16V", 2004, "CLIO", None),  # 16V engine trim, not the MK1
+        ("RENAULT", "CLIO 16V", 1993, "CLIO 16V", "MK1"),
+        ("CITROEN", "SAXO VTR", 1999, "SAXO", None),
+        ("CITROEN", "SAXO VTS", 1999, "SAXO VTS", "S0"),
+        ("PEUGEOT", "306 XSI", 1995, "306", None),
+        ("FIAT", "PUNTO HGT 16V", 2001, "PUNTO HGT", None),
+        ("MITSUBISHI", "LANCER EVO VI", 2005, "LANCER EVOLUTION", "V_VI"),  # label beats year
+        ("MITSUBISHI", "LANCER EVO I.V.", None, "LANCER EVOLUTION", "I_IV"),
+        ("MITSUBISHI", "LANCER EVOLUTION GSR", 2005, "LANCER EVOLUTION", "VII_IX"),
+        ("VAUXHALL", "CORSA GSI 16V", 2001, "CORSA GSI", None),
+        ("SAAB", "09-MAR", 2005, "9-3", None),  # Excel-mangled "9-3" in the DfT file
+        ("MERCEDES", "300 SL AUTO", 1986, "SL", "R107"),
+        ("MERCEDES", "190 SL", None, "SL", None),
+    ],
+)
+def test_repo_rules_on_real_labels_from_first_export(
+    make_raw: str, model_raw: str, year: int | None, model_gen: str, generation: str | None
+) -> None:
+    makes = n.load_makes(MAPPING_DIR / n.MAKES_FILE)
+    rules = n.load_models(MAPPING_DIR / n.MODELS_FILE)
+    out = n.apply(
+        _stock([{"make_raw": make_raw, "model_raw": model_raw, "year_first_reg": year}]),
+        makes,
+        rules,
+    )
+    assert (out["model_gen"][0], out["generation"][0]) == (model_gen, generation)
+
+
+def test_generation_uses_build_year_before_first_registration_year() -> None:
+    """A 1999 Skyline imported and first registered in GB in 2010 stays an R34."""
+    rules = [
+        n.ModelRule(
+            make="NISSAN",
+            model_raw_regex=r"^SKYLINE",
+            year_from=1999,
+            year_to=2002,
+            model_gen="SKYLINE GT-R",
+            generation="R34",
+        ),
+        n.ModelRule(
+            make="NISSAN",
+            model_raw_regex=r"^SKYLINE",
+            year_from=2007,
+            year_to=2022,
+            model_gen="SKYLINE GT-R",
+            generation="R35",
+        ),
+    ]
+    df = _stock([{"make_raw": "NISSAN", "model_raw": "SKYLINE GT-R", "year_first_reg": 2010}])
+    assert n.apply(df, {}, rules)["generation"][0] == "R35"  # no build year → registration
+    df = df.with_columns(pl.lit(1999, dtype=pl.Int32).alias("year_manufacture"))
+    assert n.apply(df, {}, rules)["generation"][0] == "R34"
+
+
+def test_coverage_excludes_source_unknown_labels() -> None:
+    df = n.apply(
+        _stock(
+            [
+                {"model_raw": "M3", "year_first_reg": 2003, "count": 90},
+                {"model_raw": "MODEL MISSING", "count": 900},  # source says unknown: never mappable
+                {"model_raw": "X5", "count": 10},
+            ]
+        ),
+        MAKES,
+        RULES,
+    )
+    cov = n.coverage(df, TARGETS, ("MODEL MISSING",))
+    assert cov.select("total", "mapped", "unknown", "coverage").rows() == [(100, 90, 900, 0.9)]
+    assert n.coverage(df, TARGETS)["coverage"][0] == pytest.approx(0.09)
+    report = n.unmapped_report(df, TARGETS, 10, ("MODEL MISSING",))
+    assert report["model_raw"].to_list() == ["X5"]

@@ -22,7 +22,8 @@ la casse, recherche non ancrée : mettre `^`) matche `model_raw` (DfT `Model`, R
 | Cas | `year_from`/`year_to` | Effet |
 |---|---|---|
 | Le libellé seul identifie la génération (`^M3 CSL`, `^S ?2000`) | vides | `model_gen` + `generation`, quelle que soit l'année, y compris VEH0120 sans année |
-| Le libellé couvre plusieurs générations (`^M3\b`) | une ligne par génération, plages **disjointes** | `generation` selon `year_first_reg` ; si l'année est absente → `model_gen` seul |
+| Le libellé couvre plusieurs générations (`^M3\b`) | une ligne par génération, plages **disjointes** | `generation` selon l'année de fabrication si la source la donne (VEH0124), sinon `year_first_reg` ; si l'année est absente → `model_gen` seul |
+| Le libellé couvre plusieurs générations mais certaines années n'en sont aucune (`^PUMA` 2003–2018) | une ligne supplémentaire sans plage ni génération | `model_gen` seul pour ces années, au lieu de rien |
 | Modèle non cible d'une marque cible (`^3[0-9][0-9]` → `3 SERIES`) | vides | `model_gen` seul, sert la couverture |
 
 Règles de cohérence, vérifiées à l'exécution (`MappingError`) :
@@ -42,7 +43,16 @@ Liste cible (~240 générations, 1990–2015, segments `SPORTIVE`, `GTI`, `COUPE
 ## Couverture
 
 Par pays, part (en nombre de véhicules) des lignes des marques cibles qui obtiennent un
-`model_gen`. Seuil dans `config/mapping.yaml` (`min_coverage: 0.95`, SPEC §4). Sous le seuil,
+`model_gen`. Les libellés par lesquels la source déclare elle-même le modèle inconnu
+(`config/mapping.yaml: unknown_labels`, ex. `MODEL MISSING` du DfT, 1 % du parc GB des
+marques cibles) sont comptés à part et exclus du dénominateur : rien ne pourra jamais les
+mapper. Seuil dans `config/mapping.yaml` (`min_coverage: 0.95`, SPEC §4).
+
+Pièges rencontrés sur les libellés réels (2026-09-08), à garder en tête pour toute nouvelle
+règle : une finition qui contient le nom d'une version sportive (`FIESTA ST-LINE`, `GOLF
+R-LINE`, `CLIO DYNAMIQUE 16V`, `CIVIC TYPE-S`), un tiret ou un espace variable (`TYPE-R`,
+`TYPE R`), une version inférieure au nom proche (`SAXO VTR` ≠ `VTS`, `306 XSI` ≠ `S16`,
+`PUNTO HGT` ≠ `GT`), un libellé abîmé par un tableur (`09-MAR` pour `9-3`). Sous le seuil,
 `normalize` échoue et journalise les plus gros groupes non mappés
 (`report_top_unmapped`) : c'est la boucle d'itération sur données réelles.
 

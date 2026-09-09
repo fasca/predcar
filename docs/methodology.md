@@ -20,7 +20,13 @@ générique**, sinon tout le parc du modèle serait crédité à chaque généra
 reste sans donnée. Le niveau utilisé est exposé (`level`).
 
 Les séries infra-annuelles sont ramenées à une valeur par an : **dernière période de
-l'année**.
+l'année** (la date réelle est conservée pour le Δt de l'attrition).
+
+**Génération d'un véhicule** : l'année qui place une voiture dans une génération est son
+**année de fabrication** quand la source la donne (`YearManufacture` de VEH0124), sinon son
+année de première immatriculation. Sans cela, une Skyline de 1999 importée et immatriculée
+en GB en 2010 serait comptée dans la génération de 2010. Le libellé prime quand il porte
+lui-même la génération (`LANCER EVO VI`, `M3 CSL`).
 
 ## 2. Indicateurs
 
@@ -30,9 +36,10 @@ Par (marque, modèle générique, génération, pays) — deux marques peuvent p
 - **Ventes cumulées** : immatriculations neuves VEH0160 du modèle générique sur les années de
   production de la génération (`target_models.csv`). Indisponible avant 2001 et hors GB.
 - **Survival(t)** = Stock(t) / max(ventes cumulées, stock maximal observé).
-- **Attrition annuelle** a(t) = −(ln Stock(t) − ln Stock(t−1)) / Δt, puis moyenne glissante
-  sur `attrition.smoothing_years` (3) valeurs ; définie à partir de la 4e année observée.
-  Indisponible si moins de `attrition.min_history_years` (3) valeurs lissées.
+- **Attrition annuelle** a(t) = −(ln Stock(t) − ln Stock(t−1)) / Δt, Δt en années **réelles**
+  entre les deux dates d'observation (un trimestre Q1 après un Q4 vaut 0,25 an, pas 1),
+  puis moyenne glissante sur `attrition.smoothing_years` (3) valeurs ; définie à partir de la
+  4e observation. Indisponible si moins de `attrition.min_history_years` (3) valeurs lissées.
 - **Pairs** : modèles du même pays, même segment et même tranche d'âge
   (`peers.age_bucket_years` = 5 ans ; âge = année − milieu de production de la génération),
   observations poolées sur les années. Il faut au moins `peers.min_peers` (3) **modèles
@@ -43,8 +50,9 @@ Par (marque, modèle générique, génération, pays) — deux marques peuvent p
   l'attrition lissée est sous la médiane des pairs au même âge ; une année manquante dans la
   série réinitialise la run. Null si la dernière année n'est pas sous la médiane (pas de
   « collectorisation » en cours).
-- **Ratio SORN** (GB uniquement) = SORN / (SORN + Licensed) à la dernière période de VEH0120,
-  niveau modèle générique.
+- **Ratio SORN** (GB uniquement) = SORN / (SORN + Licensed) à la dernière période, au niveau
+  génération quand VEH0124 porte le statut de la génération (cas général), sinon au niveau
+  modèle générique (VEH0120, toutes générations confondues).
 - **Rareté absolue** : stock courant ; étiquette `<20`, `<100`, `<500`, `>=500`
   (`rarity.thresholds`).
 

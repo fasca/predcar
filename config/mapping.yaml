@@ -3,3 +3,6 @@
 min_coverage: 0.95
 # How many unmapped (country, make, model_raw) rows to list in the coverage report.
 report_top_unmapped: 30
+# model_raw values by which the source itself says the model is unknown: never mappable,
+# counted apart and excluded from the coverage denominator.
+unknown_labels: ["MODEL MISSING", "(MISSING)", "ONBEKEND"]

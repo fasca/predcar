@@ -2,7 +2,7 @@
 
 **Preuve statistique, sourcée et datée, de la raréfaction des modèles automobiles 1990–2015 en Europe**, à partir de données publiques officielles, et score de potentiel « collector » qui en découle.
 
-Périmètre MVP : zéro scraping, zéro compte utilisateur, zéro prix de marché. Un pipeline de données reproductible et un site statique. Spécification complète : [`docs/SPEC.md`](docs/SPEC.md).
+Périmètre MVP : zéro scraping, zéro compte utilisateur, zéro prix de marché. Un pipeline de données reproductible et un site statique. Spécification complète : [`docs/SPEC.md`](docs/SPEC.md) · fonctionnement de bout en bout : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · historique des features : [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Stack
 
@@ -84,7 +84,7 @@ Contenu de `reports/<date>/` :
 
 | Fichier | Contenu | Sert à |
 |---|---|---|
-| `manifest.json` | commit git, versions, config, comptes, **erreurs par étape** | savoir ce qui a marché |
+| `manifest.json` | commit git, versions, config, comptes, **état par étape** (`ok` / `absent` / `failed`) et erreurs | savoir ce qui a tourné et ce qui a marché |
 | `raw/<source>/<date>/*.head.csv` | 60 premières lignes verbatim de chaque CSV | valider le layout présumé |
 | `raw/…/*.profile.json` | colonnes, valeurs distinctes des colonnes d'identification, marqueurs `[c]`/`[x]`…, en-têtes de période ; échantillon et types pour le JSON RDW | corriger les parseurs |
 | `silver/summary.json` | lignes, périodes, statuts, comptes par fichier silver | cohérence d'ensemble |
@@ -116,7 +116,7 @@ config/     score.yaml (poids, seuils), mapping.yaml (couverture), sources.yaml 
 mapping/    makes.csv, models.csv, target_models.csv — normalisation marque/modèle (docs/mapping.md)
 data/       raw/ (immuable, manifest versionné), silver/ (parquet normalisés), gold/ (scores)
 predcar/    package : config, raw (archive), schemas (silver + invariants), ingest/, normalize, metrics, score, export, cli
-docs/       SPEC.md, SOURCES.md (URLs + licences), sources/<source>.md (schémas), mapping.md, methodology.md
+docs/       SPEC.md, ARCHITECTURE.md, SOURCES.md, sources/<source>.md (schémas), mapping.md, methodology.md
 tests/      pytest — schémas, invariants, parseurs, mapping, fixtures
 reports/    exports datés (preuves de runs réels, committés)
 tasks/      todo.md, lessons.md
