@@ -288,7 +288,11 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
     ]
     sources = []
     for c in by_country:
-        for s in sorted(set(c["series"].split("+"))):
+        cited = set(c["series"].split("+"))
+        # cumulative sales (survival denominator) come from VEH0160, not from the stock series
+        if c["cumulative_sales"] is not None:
+            cited.add(metrics.SALES_SERIES)
+        for s in sorted(cited):
             info = SERIES_INFO.get(s, {"name": s, "detail": "", "url": "", "licence": ""})
             sources.append({**info, "country": c["label"], "latest_year": c["latest_year"]})
     charts = {

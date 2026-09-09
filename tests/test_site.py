@@ -110,3 +110,22 @@ def test_embedded_json_cannot_close_the_script_tag(gold: tuple[Path, Path], tmp_
         body = page.read_text(encoding="utf-8")
         payload = body.split('<script id="charts-data" type="application/json">')[1]
         assert "</" not in payload.split("</script>")[0]
+
+
+def test_model_page_cites_the_sales_series_behind_survival(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    written = _build(gold, tmp_path / "dist")
+    indicators = pl.read_parquet(gold[0] / "indicators.parquet")
+    with_sales = indicators.filter(pl.col("cumulative_sales").is_not_null()).row(0, named=True)
+    # a target without sales in any country, so its page must not cite VEH0160 at all
+    without = (
+        indicators.group_by("make", "model_gen", "generation")
+        .agg(pl.col("cumulative_sales").is_null().all().alias("no_sales"))
+        .filter(pl.col("no_sales"))
+        .row(0, named=True)
+    )
+    for r, expected in ((with_sales, True), (without, False)):
+        slug = site.slugify(r["make"], r["model_gen"], r["generation"])
+        page = (written["models"] / f"{slug}.html").read_text(encoding="utf-8")
+        assert ("DfT VEH0160" in page) is expected

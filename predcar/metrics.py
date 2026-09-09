@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 GEN_LEVEL_SERIES = ("VEH0124", "RDW")
 MODEL_LEVEL_SERIES = ("VEH0120", "RDW")
 SORN_SERIES = "VEH0120"
+SALES_SERIES = "VEH0160"  # fleet_new_reg: cumulative sales, survival denominator
 EUROPE = "EU"
 TARGET_KEY = ["make", "model_gen", "generation"]
 
