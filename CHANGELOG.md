@@ -33,9 +33,14 @@ de développement n'atteint pas les sources (proxy), voir `docs/ARCHITECTURE.md`
 - Tests : rendu complet du site sur la population synthétique (pages, classement, cibles non
   publiées, méthodologie, JSON embarqué sûr), formats français, rétention par cohorte.
 
+- `tasks/next.md` : fichier de reprise lu en premier par Claude Code au démarrage — actions
+  en attente sur données réelles avec les commandes exactes (run du pipeline, export, commit,
+  push), checklist d'analyse du prochain export, activation de GitHub Pages.
+
 **Modifié**
 - `docs/ARCHITECTURE.md` §9 (site et déploiement), README §7, CLAUDE.md (`make site` n'est
-  plus « planned »), `docs/methodology.md` §7 (`cohorts.parquet`).
+  plus « planned », `tasks/next.md` lu en premier), `docs/methodology.md` §7
+  (`cohorts.parquet`).
 
 **Non validé sur données réelles** : le rendu a été vérifié sur l'export
 `reports/2026-09-08/` (241 pages, 225 classées) ; le premier déploiement Pages et le cron

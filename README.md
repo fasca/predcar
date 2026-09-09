@@ -134,7 +134,7 @@ site/       templates/ (Jinja2), static/ (CSS, JS) → dist/ généré (non vers
 docs/       SPEC.md, ARCHITECTURE.md, SOURCES.md, sources/<source>.md (schémas), mapping.md, methodology.md
 tests/      pytest — schémas, invariants, parseurs, mapping, fixtures
 reports/    exports datés (preuves de runs réels, committés)
-tasks/      todo.md, lessons.md
+tasks/      next.md (à faire en priorité, lu par Claude Code au démarrage), todo.md, lessons.md
 ```
 
 ## Sources (phase 1)

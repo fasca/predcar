@@ -43,9 +43,12 @@ kba.de or data.gouv.fr (proxy); since 2026-09-09 the user's WSL2 environment can
 UK DfT and NL RDW schemas are now *observed* (`docs/sources/<source>.md`, checklists ticked on
 2026-09-08); any new source still follows Source-First. Never fake a sample.
 **Feedback loop:** the user runs `make export` and commits `reports/<date>/` (raw heads and
-profiles, every target-make label, coverage, anomalies, gold CSV). At session start, read the
-latest `reports/*/manifest.json` and fix parsers, mapping rules and indicators from that
-evidence before anything else.
+profiles, every target-make label, coverage, anomalies, gold CSV). At session start, read
+`tasks/next.md` **first**: it lists the pending real-data actions with the exact commands.
+If this environment reaches the sources, run them yourself (pipeline, export, commit, push);
+otherwise read the latest `reports/*/manifest.json` and fix parsers, mapping rules and
+indicators from that evidence before anything else. Keep `tasks/next.md` current: tick what
+is done, remove finished sections, add what a fresh session must do next.
 
 ## Architecture
 
@@ -60,7 +63,7 @@ site/          → templates/ (Jinja2, French UI), static/ (CSS, JS); dist/ is g
 docs/          → SPEC.md (reference), ARCHITECTURE.md, SOURCES.md, sources/<source>.md, mapping.md, methodology.md
 reports/       → Dated evidence bundles from real runs (committed, see make export)
 tests/         → pytest: schema per source vintage, invariants, snapshot tests
-tasks/         → todo.md + lessons.md (task tracking)
+tasks/         → next.md (pending actions, read first), todo.md (plan), lessons.md
 ```
 
 ## Style Guide

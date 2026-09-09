@@ -48,8 +48,9 @@
 - [x] Corriger les défauts relevés par le diagnostic de `reports/2026-09-08/` (PR #7 : règles
       ST-LINE / TYPE-R / CLIO 16V / VTR / XSI / HGT / Evo, `year_manufacture`, Δt réel, SORN
       génération, anomalies post-production, couverture hors `MODEL MISSING`)
-- [ ] Relancer le pipeline et `make export` après fusion de la PR #7, comparer aux valeurs du
-      2026-09-08 (Civic Type R EP3, Skyline R33/R34, Evo, Clio 16V)
+- [ ] Relancer le pipeline et `make export` après fusion des PR #7 et #8, comparer aux valeurs
+      du 2026-09-08 (Civic Type R EP3, Skyline R33/R34, Evo, Clio 16V) — **commandes et
+      checklist dans `tasks/next.md`**
 - [ ] Snapshot tests sur les 5 modèles témoins à partir des valeurs réelles
 
 ### Étape 4 bis — Boucle de retour sur données réelles
