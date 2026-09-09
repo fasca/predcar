@@ -106,6 +106,20 @@ def test_apply_works_without_year_column() -> None:
     assert out.row(0, named=True)["generation"] == "E46"
 
 
+def test_apply_strips_leading_make_label_before_matching() -> None:
+    """RDW labels carry the make (``HONDA S2000``, ``ALFA GIULIETTA``); DfT labels do not."""
+    df = _stock(
+        [
+            {"make_raw": "HONDA", "model_raw": "HONDA S2000"},
+            {"make_raw": "BAYERISCHE MOTOREN WERKE", "model_raw": "BMW M3 CSL"},
+            {"make_raw": "BMW", "model_raw": "BMW"},  # nothing left: label kept, no match
+        ]
+    )
+    out = n.apply(df, MAKES, RULES)
+    assert out["model_gen"].to_list() == ["S2000", "M3", None]
+    assert out["model_raw"].to_list() == ["HONDA S2000", "BMW M3 CSL", "BMW"]  # raw untouched
+
+
 def test_apply_rejects_conflicting_model_gen() -> None:
     rules = RULES + [n.ModelRule(make="BMW", model_raw_regex=r"CSL", model_gen="M3 CSL")]
     with pytest.raises(n.MappingError, match="conflicting"):

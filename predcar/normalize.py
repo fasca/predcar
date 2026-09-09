@@ -5,9 +5,12 @@ Rules live in ``mapping/``:
 * ``makes.csv``  — ``alias,make``: raw make label → canonical make (identity when absent).
 * ``models.csv`` — ``make,model_raw_regex,year_from,year_to,model_gen,generation``: a rule
   matches when the canonical make equals ``make`` and the regex (case-insensitive) matches
-  ``model_raw``. A rule with a year range applies only when ``year_first_reg`` falls in it;
-  a rule without range applies whatever the year (the label alone is discriminant). Rows
-  without a year that only match ranged rules get the ``model_gen`` but no ``generation``.
+  ``model_raw`` **once a leading make label is removed** (RDW writes ``TOYOTA AYGO``,
+  ``ALFA GIULIETTA``; DfT writes ``AYGO``): any alias of the make followed by a space is
+  stripped, unless nothing would remain (``MINI`` / ``MINI``). A rule with a year range
+  applies only when ``year_first_reg`` falls in it; a rule without range applies whatever
+  the year (the label alone is discriminant). Rows without a year that only match ranged
+  rules get the ``model_gen`` but no ``generation``.
 * ``target_models.csv`` — the hand-picked target list; its makes define the coverage gate.
 
 Ambiguous rules (two different model_gen, or two generations, for one row) are a mapping
@@ -146,15 +149,46 @@ def load_targets(path: Path) -> list[TargetModel]:
 # --------------------------------------------------------------------------- apply
 
 
-def _candidates(pairs: pl.DataFrame, rules: list[ModelRule]) -> pl.DataFrame:
-    """For each unique (make, model_raw) pair, every rule whose make and regex match."""
+def make_prefix_patterns(makes: dict[str, str]) -> dict[str, re.Pattern[str]]:
+    """Per canonical make, a regex matching a leading make label (the make or any alias)."""
+    labels: dict[str, set[str]] = {}
+    for alias, make in makes.items():
+        labels.setdefault(make, {make}).add(alias)
+    return {
+        make: re.compile(
+            "^(?:" + "|".join(re.escape(a) for a in sorted(names, key=len, reverse=True)) + r")\s+",
+            re.I,
+        )
+        for make, names in labels.items()
+    }
+
+
+def strip_make_prefix(make: str, model_raw: str, prefixes: dict[str, re.Pattern[str]]) -> str:
+    """``TOYOTA AYGO`` → ``AYGO`` for make TOYOTA; unchanged when nothing would remain."""
+    pattern = prefixes.get(make)
+    if pattern is None:
+        return model_raw
+    stripped = pattern.sub("", model_raw, count=1)
+    return stripped if stripped else model_raw
+
+
+def _candidates(pairs: pl.DataFrame, rules: list[ModelRule], makes: dict[str, str]) -> pl.DataFrame:
+    """For each unique (make, model_raw) pair, every rule whose make and regex match.
+
+    The regex is applied to ``model_raw`` without its leading make label (see
+    ``strip_make_prefix``); the output keeps the original ``model_raw`` as the join key.
+    """
     by_make: dict[str, list[tuple[re.Pattern[str], ModelRule]]] = {}
     for rule in rules:
         by_make.setdefault(rule.make, []).append((re.compile(rule.model_raw_regex, re.I), rule))
+    prefixes = make_prefix_patterns(makes)
     out: list[dict] = []
     for make, model_raw in pairs.iter_rows():
+        if model_raw is None:
+            continue
+        label = strip_make_prefix(make, model_raw, prefixes)
         for pattern, rule in by_make.get(make, []):
-            if model_raw is not None and pattern.search(model_raw):
+            if pattern.search(label):
                 out.append(
                     {
                         "make": make,
@@ -200,7 +234,7 @@ def apply(df: pl.DataFrame, makes: dict[str, str], rules: list[ModelRule]) -> pl
     if not has_year:
         rows = rows.with_columns(pl.lit(None, dtype=pl.Int32).alias("year_first_reg"))
 
-    cands = _candidates(rows.select("make", "model_raw").unique(), rules)
+    cands = _candidates(rows.select("make", "model_raw").unique(), rules, makes)
     joined = rows.select("_rid", "make", "model_raw", "year_first_reg").join(
         cands, on=["make", "model_raw"], how="inner"
     )

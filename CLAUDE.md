@@ -37,10 +37,11 @@ make site                        # (planned) Build static site from data/gold/
 make test / make lint            # pytest / ruff
 ```
 
-**Network caveat:** the Claude Code environment's proxy blocks gov.uk, opendata.rdw.nl, kba.de
-and data.gouv.fr. Source parsers are written against *presumed* schemas documented in
-`docs/sources/<source>.md` with a checklist; `make fetch-*` must be run by the user from a
-connected machine (see README « Récupérer les données »). Never fake a sample.
+**Network caveat:** the first development environment could not reach gov.uk, opendata.rdw.nl,
+kba.de or data.gouv.fr (proxy); since 2026-09-09 the user's WSL2 environment can. Check with
+`curl -sS -o /dev/null -w "%{http_code}" <url>` at session start instead of assuming either way.
+UK DfT and NL RDW schemas are now *observed* (`docs/sources/<source>.md`, checklists ticked on
+2026-09-08); any new source still follows Source-First. Never fake a sample.
 **Feedback loop:** the user runs `make export` and commits `reports/<date>/` (raw heads and
 profiles, every target-make label, coverage, anomalies, gold CSV). At session start, read the
 latest `reports/*/manifest.json` and fix parsers, mapping rules and indicators from that

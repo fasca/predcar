@@ -14,16 +14,17 @@
 - [x] Résolution des URLs depuis la page gov.uk, `predcar fetch uk`
 - [x] Parseur wide → long (unpivot, marqueurs, statuts, Total vérifié), `predcar ingest uk`
 - [x] Tests : périodes, statuts, colonnes manquantes, agrégations, ingestion bout en bout
-- [ ] **Valider le schéma présumé sur un échantillon réel** (`make fetch-uk` sur une machine
-      avec accès à gov.uk), cocher la liste de `docs/sources/dft_uk.md`, consigner l'URL dans
-      `docs/SOURCES.md`, committer le MANIFEST.json
+- [x] **Valider le schéma présumé sur un échantillon réel** (2026-09-08 : VEH0120/VEH0160 conformes,
+      VEH0124 corrigé — pas de `Fuel`, `YearManufacture`, `LicenceStatus` présent), liste de
+      `docs/sources/dft_uk.md` cochée, URLs dans `docs/SOURCES.md`, MANIFEST.json à committer
 - [ ] Ajouter les 5 modèles témoins en snapshot tests sur les données réelles
 
 ### Étape 2 — Ingestion RDW (snapshot agrégé mensuel)
 - [x] Requête SoQL agrégée (jamais `kenteken`), pagination `$limit`/`$offset`, `predcar fetch nl` / `ingest nl`
 - [x] `docs/sources/rdw_nl.md` (schéma présumé + liste de vérification), tests MockTransport
-- [ ] **Valider sur une réponse réelle** (`make fetch-nl` depuis une machine connectée), cocher
-      la liste, committer le MANIFEST.json ; planifier le cron mensuel (GitHub Actions)
+- [x] **Valider sur une réponse réelle** (2026-09-08 : 203 051 lignes, layout conforme, cas
+      `handelsbenaming` absent et `jaar` absent ajoutés), liste cochée, MANIFEST.json à committer
+- [ ] Planifier le cron mensuel (GitHub Actions) pour `make fetch-nl`
 
 ### Étape 3 — Mapping marques/modèles
 - [x] `mapping/target_models.csv` (~240 générations cibles), `makes.csv` (alias), `models.csv`
@@ -31,8 +32,8 @@
 - [x] `predcar normalize` : application, détection d'ambiguïtés, couverture par pays, rapport
       des non-mappés, échec si < `config/mapping.yaml:min_coverage` (0.95)
 - [x] `docs/mapping.md`, tests (règles témoins, pipeline bout en bout)
-- [ ] **Itérer sur données réelles** : `predcar normalize --min-coverage 0`, compléter
-      `models.csv` jusqu'à ≥ 95 % GB et NL
+- [x] **Itérer sur données réelles** (2026-09-08) : retrait du préfixe marque des libellés RDW,
+      11 familles de regex trop larges corrigées, règles ajoutées → GB 97,9 %, NL 98,2 %
 
 ### Étape 4 — Indicateurs et score v1
 - [x] `predcar/metrics.py` : séries annuelles par famille (VEH0120 / VEH0124 / RDW, jamais
@@ -42,13 +43,16 @@
 - [x] `predcar/score.py` : composantes 0–1, poids renormalisés, `min_weight_coverage`,
       `components_available`, rang ; `make score` → gold parquet + `ranking.csv`
 - [x] `docs/methodology.md` (source de la page Méthodologie du site)
-- [ ] Vérifier sur données réelles : nombre de cibles publiées, distribution des composantes,
-      snapshot tests sur les 5 modèles témoins
+- [x] Premier run réel (2026-09-08) : 241 cibles avec données, 225 publiées ; les 5 témoins scorés
+      avec les 4 composantes
+- [ ] Corriger les défauts relevés par le diagnostic de `reports/2026-09-08/` (voir Review Notes)
+- [ ] Snapshot tests sur les 5 modèles témoins à partir des valeurs réelles
 
 ### Étape 4 bis — Boucle de retour sur données réelles
 - [x] `predcar export` → `reports/<date>/` : preuves raw, libellés des marques cibles, couverture,
       anomalies, gold CSV, manifest avec erreurs par étape ; README §6 ; CLAUDE.md
-- [ ] Premier export réel committé par l'utilisateur, puis corriger parseurs / règles / indicateurs
+- [x] Premier export réel produit (`reports/2026-09-08/`, 23 fichiers, 0 erreur) — à committer
+- [ ] Corriger parseurs / règles / indicateurs d'après le diagnostic
 
 ### Étape 5 — Site statique
 - [ ] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel
@@ -66,3 +70,6 @@
 - 2026-09-08 : gov.uk et opendata.rdw.nl inaccessibles depuis l'environnement Claude Code
   (proxy). Le parseur DfT est écrit sur un schéma présumé et documenté ; la validation sur
   échantillon réel est la première tâche à faire depuis une machine connectée.
+- 2026-09-09 : le réseau fonctionne depuis l'environnement Claude Code (WSL2 de l'utilisateur) :
+  premier run complet sur données réelles, export `reports/2026-09-08/` ; diagnostic multi-agents
+  en cours, corrections à suivre.

@@ -115,6 +115,19 @@ def test_parse_rows_accepts_json_numbers() -> None:
     assert out["count"].to_list() == [7]
 
 
+def test_parse_rows_keeps_rows_without_trade_name_under_explicit_label() -> None:
+    rows = [
+        {"merk": "BMW", "handelsbenaming": "M3", "jaar": "2001", "n": "5"},
+        {"merk": "BMW", "jaar": "1957", "n": "1"},  # Socrata omits a null handelsbenaming
+        {"merk": "BMW", "n": "2"},  # no trade name, no year
+    ]
+    out = rdw.parse_rows(rows, PERIOD)
+    missing = out.filter(pl.col("model_raw") == rdw.MODEL_MISSING).sort("year_first_reg")
+    assert missing["count"].to_list() == [2, 1]
+    assert missing["year_first_reg"].to_list() == [None, 1957]
+    assert out["count"].sum() == 8
+
+
 def test_parse_rows_rejects_empty_and_malformed() -> None:
     with pytest.raises(rdw.RdwSchemaError, match="empty"):
         rdw.parse_rows([], PERIOD)
