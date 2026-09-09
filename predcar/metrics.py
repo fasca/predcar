@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass
+from datetime import date
 
 import polars as pl
 
@@ -112,6 +113,7 @@ class TargetSeries:
     series: str
     years: list[int]
     stock: list[int]
+    periods: list[date]  # actual observation dates (a partial year is a shorter Δt)
 
 
 def select_series(
@@ -134,7 +136,12 @@ def select_series(
         best = gen.group_by("series").len().sort("len", descending=True)["series"][0]
         rows = gen.filter(pl.col("series") == best).sort("year")
         return TargetSeries(
-            country, "generation", best, rows["year"].to_list(), rows["stock"].to_list()
+            country,
+            "generation",
+            best,
+            rows["year"].to_list(),
+            rows["stock"].to_list(),
+            rows["period"].to_list(),
         )
     model = base.filter(pl.col("series").is_in(MODEL_LEVEL_SERIES))
     if not model.height or not sole_generation:
@@ -143,21 +150,36 @@ def select_series(
     rows = (
         model.filter(pl.col("series") == best)
         .group_by("year")
-        .agg(pl.col("stock").sum())
+        .agg(pl.col("stock").sum(), pl.col("period").max())
         .sort("year")
     )
-    return TargetSeries(country, "model_gen", best, rows["year"].to_list(), rows["stock"].to_list())
+    return TargetSeries(
+        country,
+        "model_gen",
+        best,
+        rows["year"].to_list(),
+        rows["stock"].to_list(),
+        rows["period"].to_list(),
+    )
 
 
-def attrition(years: list[int], stock: list[int], smoothing_years: int) -> list[float | None]:
-    """Annual attrition −Δln(Stock)/Δt per year, then rolling mean over ``smoothing_years``.
+def attrition(
+    periods: list[int] | list[date], stock: list[int], smoothing_years: int
+) -> list[float | None]:
+    """Annual attrition −Δln(Stock)/Δt per observation, then rolling mean over
+    ``smoothing_years`` observations.
 
-    The first year and any year adjacent to a zero stock get None. The smoothed value at
-    year i is the mean of the last ``smoothing_years`` raw values when all are defined.
+    ``periods`` are years (Δt in whole years) or observation dates (Δt in fractional
+    years, so a partial current year — e.g. a Q1 quarter after a Q4 — is not read as a
+    full year of losses). The first observation and any observation adjacent to a zero
+    stock get None. The smoothed value at i is the mean of the last ``smoothing_years``
+    raw values when all are defined.
     """
     raw: list[float | None] = [None]
-    for i in range(1, len(years)):
-        s0, s1, dt = stock[i - 1], stock[i], years[i] - years[i - 1]
+    for i in range(1, len(periods)):
+        s0, s1 = stock[i - 1], stock[i]
+        p0, p1 = periods[i - 1], periods[i]
+        dt = (p1 - p0).days / 365.25 if isinstance(p1, date) else p1 - p0
         raw.append(-(math.log(s1) - math.log(s0)) / dt if s0 > 0 and s1 > 0 and dt > 0 else None)
     smoothed: list[float | None] = []
     for i in range(len(raw)):
@@ -184,8 +206,15 @@ def rarity_tier(stock: int, thresholds: list[int]) -> str:
 
 
 def sorn_ratio(annual: pl.DataFrame, target: TargetModel, country: str) -> float | None:
-    """SORN / (SORN + licensed) at the latest period of the SORN-carrying series (model_gen)."""
-    rows = _for_target(annual, target, country).filter(pl.col("series") == SORN_SERIES)
+    """SORN / (SORN + licensed) at the latest period, generation level when a SORN-carrying
+    generation series exists (VEH0124), else model_gen level (VEH0120, all generations)."""
+    base = _for_target(annual, target, country)
+    gen = base.filter(
+        (pl.col("generation") == target.generation)
+        & pl.col("series").is_in(GEN_LEVEL_SERIES)
+        & (pl.col("sorn") > 0)
+    )
+    rows = gen if gen.height else base.filter(pl.col("series") == SORN_SERIES)
     if not rows.height:
         return None
     latest = rows.filter(pl.col("year") == rows["year"].max())
@@ -267,7 +296,7 @@ def compute_indicators(
             ts = select_series(annual, t, c, generations_per_model[(t.make, t.model_gen)] == 1)
             if ts is None:
                 continue
-            att = attrition(ts.years, ts.stock, cfg.attrition.smoothing_years)
+            att = attrition(ts.periods, ts.stock, cfg.attrition.smoothing_years)
             picked.append((t, ts, att))
             for y, s, a in zip(ts.years, ts.stock, att, strict=True):
                 series_rows.append(

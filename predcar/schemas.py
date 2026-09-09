@@ -22,6 +22,7 @@ FLEET_STOCK_SCHEMA: dict[str, pl.DataType] = {
     "model_gen": pl.Utf8,
     "generation": pl.Utf8,
     "year_first_reg": pl.Int32,
+    "year_manufacture": pl.Int32,  # build year when the source has it (VEH0124); else null
     "status": pl.Utf8,
     "count": pl.Int64,
     "source": pl.Utf8,
@@ -50,6 +51,7 @@ FLEET_STOCK_KEY = [
     "model_gen_raw",
     "model_raw",
     "year_first_reg",
+    "year_manufacture",
     "status",
     "source_file",
 ]

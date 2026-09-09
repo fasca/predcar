@@ -491,3 +491,33 @@ def test_ranking_export_excludes_unpublished_rows(tmp_path: Path) -> None:
     assert ranking.height == scores.filter(pl.col("score").is_not_null()).height
     assert "LONELY" not in ranking["model_gen"].to_list()
     assert "make" in ranking.columns
+
+
+# --------------------------------------------------------------------------- real-data fixes
+
+
+def test_attrition_uses_real_time_between_observations() -> None:
+    """A Q1 point after a Q4 point is a quarter, not a year: the same loss over 3 months is
+    an annual rate four times higher, and a 2-year gap halves it."""
+    periods = [date(2020, 12, 31), date(2021, 12, 31), date(2022, 3, 31)]
+    out = metrics.attrition(periods, [1000, 900, 810], smoothing_years=1)
+    assert out[1] == pytest.approx(-math.log(0.9), rel=1e-3)
+    assert out[2] == pytest.approx(-math.log(0.9) / (90 / 365.25), rel=1e-3)
+    assert metrics.attrition([2020, 2022], [1000, 810], 1)[1] == pytest.approx(-math.log(0.81) / 2)
+
+
+def test_sorn_ratio_prefers_generation_level() -> None:
+    annual = metrics.annual_stock(
+        _stock(
+            [
+                # VEH0124: generation G1 of model A, with SORN
+                _row(generation="G1", count=90),
+                _row(generation="G1", status="sorn", count=10),
+                # VEH0120: whole model A (all generations), much more SORN
+                _row(source_file="df_VEH0120_GB.csv", count=500),
+                _row(source_file="df_VEH0120_GB.csv", status="sorn", count=500),
+            ]
+        )
+    )
+    assert metrics.sorn_ratio(annual, _target("A", "G1"), "GB") == pytest.approx(0.1)
+    assert metrics.sorn_ratio(annual, _target("A", "G2"), "GB") == pytest.approx(0.5)  # fallback

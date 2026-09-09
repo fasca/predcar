@@ -110,10 +110,12 @@ publié qu'avec au moins 60 % de poids couverts. Tout paramètre est dans
 
 ## 7. La boucle de retour sur données réelles
 
-L'environnement Claude Code passe par un proxy qui bloque gov.uk, opendata.rdw.nl, kba.de et
-data.gouv.fr. Conséquence : les parseurs, les regex et la distribution des indicateurs ont été
-écrits sur des **schémas présumés**, documentés avec des listes de vérification dans
-`docs/sources/`. Le cycle prévu :
+L'environnement Claude Code **dans le cloud** (claude.ai/code) passe par un proxy qui bloque
+gov.uk, opendata.rdw.nl, kba.de et data.gouv.fr ; Claude Code lancé **depuis un terminal sur
+la machine de l'utilisateur** (WSL2, 2026-09-08) accède aux sources. Les parseurs, les regex
+et la distribution des indicateurs ont d'abord été écrits sur des schémas présumés, puis
+validés et corrigés sur le premier run réel (`reports/2026-09-08/`, `CHANGELOG.md`). Le cycle
+prévu, quel que soit l'endroit où tourne le pipeline :
 
 1. l'utilisateur lance, depuis une machine connectée, `make fetch-uk ingest-uk fetch-nl
    ingest-nl`, `uv run predcar normalize --min-coverage 0`, `make score`, `make export` ;

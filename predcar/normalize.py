@@ -231,14 +231,22 @@ def apply(df: pl.DataFrame, makes: dict[str, str], rules: list[ModelRule]) -> pl
         .replace_strict(makes, default=pl.col("make_raw"), return_dtype=pl.Utf8)
         .alias("make")
     )
+    # The year that places a car in a generation is its build year when the source has it
+    # (imports are registered years after they were built); else its first-registration year.
     if not has_year:
-        rows = rows.with_columns(pl.lit(None, dtype=pl.Int32).alias("year_first_reg"))
+        rows = rows.with_columns(pl.lit(None, dtype=pl.Int32).alias("_gen_year"))
+    elif "year_manufacture" in df.columns:
+        rows = rows.with_columns(
+            pl.coalesce(pl.col("year_manufacture"), pl.col("year_first_reg")).alias("_gen_year")
+        )
+    else:
+        rows = rows.with_columns(pl.col("year_first_reg").alias("_gen_year"))
 
     cands = _candidates(rows.select("make", "model_raw").unique(), rules, makes)
-    joined = rows.select("_rid", "make", "model_raw", "year_first_reg").join(
+    joined = rows.select("_rid", "make", "model_raw", "_gen_year").join(
         cands, on=["make", "model_raw"], how="inner"
     )
-    year = pl.col("year_first_reg")
+    year = pl.col("_gen_year")
     applicable = pl.col("year_from").is_null() | (
         year.is_not_null() & (year >= pl.col("year_from")) & (year <= pl.col("year_to"))
     )
@@ -256,8 +264,8 @@ def apply(df: pl.DataFrame, makes: dict[str, str], rules: list[ModelRule]) -> pl
     )
     if ambiguous.height:
         sample = (
-            ambiguous.join(rows.select("_rid", "make", "model_raw", "year_first_reg"), on="_rid")
-            .select("make", "model_raw", "year_first_reg", "model_gens", "generations")
+            ambiguous.join(rows.select("_rid", "make", "model_raw", "_gen_year"), on="_rid")
+            .select("make", "model_raw", "_gen_year", "model_gens", "generations")
             .head(5)
             .to_dicts()
         )
@@ -268,39 +276,55 @@ def apply(df: pl.DataFrame, makes: dict[str, str], rules: list[ModelRule]) -> pl
         pl.col("generations").list.first().alias("generation"),
     )
     out = (
-        rows.drop("model_gen", "generation")
+        rows.drop("model_gen", "generation", "_gen_year")
         .join(resolved, on="_rid", how="left")
         .sort("_rid")
         .drop("_rid")
     )
-    if not has_year:
-        out = out.drop("year_first_reg")
     return out.select(df.columns)
 
 
 # --------------------------------------------------------------------------- coverage
 
 
-def coverage(df: pl.DataFrame, targets: list[TargetModel]) -> pl.DataFrame:
-    """Per country: share of the target-make fleet (by count) resolved to a model_gen."""
+def coverage(
+    df: pl.DataFrame, targets: list[TargetModel], unknown_labels: tuple[str, ...] = ()
+) -> pl.DataFrame:
+    """Per country: share of the target-make fleet (by count) resolved to a model_gen.
+
+    Rows whose ``model_raw`` is one of ``unknown_labels`` (the source itself says the model
+    is unknown, e.g. DfT ``MODEL MISSING``) can never be mapped: they are counted in
+    ``unknown`` and excluded from the denominator.
+    """
     target_makes = sorted({t.make for t in targets})
     scoped = df.filter(pl.col("make").is_in(target_makes))
+    unknown = pl.col("model_raw").is_in(list(unknown_labels))
     return (
         scoped.group_by("country")
         .agg(
-            pl.col("count").sum().alias("total"),
-            pl.col("count").filter(pl.col("model_gen").is_not_null()).sum().alias("mapped"),
+            pl.col("count").filter(~unknown).sum().alias("total"),
+            pl.col("count")
+            .filter(pl.col("model_gen").is_not_null() & ~unknown)
+            .sum()
+            .alias("mapped"),
+            pl.col("count").filter(unknown).sum().alias("unknown"),
         )
         .with_columns((pl.col("mapped") / pl.col("total")).alias("coverage"))
         .sort("country")
     )
 
 
-def unmapped_report(df: pl.DataFrame, targets: list[TargetModel], top: int) -> pl.DataFrame:
+def unmapped_report(
+    df: pl.DataFrame, targets: list[TargetModel], top: int, unknown_labels: tuple[str, ...] = ()
+) -> pl.DataFrame:
     """Largest unmapped (country, make, model_raw) groups of target makes, to extend models.csv."""
     target_makes = sorted({t.make for t in targets})
     return (
-        df.filter(pl.col("make").is_in(target_makes) & pl.col("model_gen").is_null())
+        df.filter(
+            pl.col("make").is_in(target_makes)
+            & pl.col("model_gen").is_null()
+            & ~pl.col("model_raw").is_in(list(unknown_labels))
+        )
         .group_by("country", "make", "model_raw")
         .agg(pl.col("count").sum())
         .sort("count", descending=True)
@@ -328,6 +352,7 @@ def normalize(
     mapping_dir: Path = MAPPING_DIR,
     min_coverage: float = 0.95,
     report_top: int = 30,
+    unknown_labels: tuple[str, ...] = (),
 ) -> dict[str, Path]:
     """Map every ingested silver file and write ``fleet_stock.parquet`` / ``fleet_new_reg.parquet``.
 
@@ -349,20 +374,21 @@ def normalize(
             logger.warning("%s: no ingested file in %s, skipped", table, silver_dir)
             continue
         mapped = apply(pl.concat([pl.read_parquet(p) for p in files]), makes, rules)
-        cov = coverage(mapped, targets)
-        for country, total, n_mapped, share in cov.iter_rows():
+        cov = coverage(mapped, targets, unknown_labels)
+        for country, total, n_mapped, n_unknown, share in cov.iter_rows():
             logger.info(
-                "%s %s: %.1f%% of target-make fleet mapped (%d/%d)",
+                "%s %s: %.1f%% of target-make fleet mapped (%d/%d, %d unknown-model excluded)",
                 table,
                 country,
                 100 * share,
                 n_mapped,
                 total,
+                n_unknown,
             )
         coverage_frames.append(cov.with_columns(pl.lit(table).alias("table")))
         staged[table] = mapped
         if table == "fleet_stock":
-            report = unmapped_report(mapped, targets, report_top)
+            report = unmapped_report(mapped, targets, report_top, unknown_labels)
             if report.height:
                 logger.info("top unmapped target-make rows:\n%s", report)
             below = cov.filter(pl.col("coverage") < min_coverage)

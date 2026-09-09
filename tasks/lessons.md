@@ -62,3 +62,15 @@ _Aucune leçon enregistrée pour le moment. Ce fichier sera enrichi au fil du d�
   après chaque édition de `models.csv`.
 - **Règle**: une règle de mapping se teste d'abord contre la liste réelle des libellés
   (`reports/<date>/silver/labels_target_makes.csv`), pas contre des exemples choisis.
+
+### 2026-09-09 Une finition peut contenir le nom d'une version sportive
+- **Erreur**: `\bST\b` acceptait `ST-LINE`, `.*16 ?V` acceptait `DYNAMIQUE 16V`, `VTR` était
+  rangé avec `VTS` : des millions de véhicules ordinaires comptés comme sportifs, et
+  inversement `TYPE-R` (tiret) raté → Civic Type R EP3 = 1 exemplaire.
+- **Correction**: lookahead négatif sur les finitions (`(?!-?LINE)`), séparateur variable
+  (`[- ]?`), versions inférieures rangées dans le fourre-tout ; test paramétré sur les libellés
+  réels du premier export.
+- **Règle**: pour chaque cible, lire les 5 plus gros libellés mappés **et** les libellés qui
+  contiennent le mot-clé mais sont mappés ailleurs (`reports/<date>/silver/labels_target_makes.csv`)
+  avant de considérer une règle comme juste ; l'année d'immatriculation n'est pas l'année
+  de fabrication pour un import.

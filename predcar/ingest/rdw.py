@@ -181,6 +181,7 @@ def parse_rows(rows: list[dict], period: date) -> pl.DataFrame:
             pl.col(COL_MAKE).str.strip_chars().str.to_uppercase().alias("make_raw"),
             pl.col(COL_MODEL).str.strip_chars().str.to_uppercase().alias("model_raw"),
             pl.lit(None, dtype=pl.Utf8).alias("model_gen_raw"),
+            pl.lit(None, dtype=pl.Int32).alias("year_manufacture"),
             pl.lit(None, dtype=pl.Utf8).alias("status"),
             pl.lit(COUNTRY).alias("country"),
             pl.lit(period).alias("period"),

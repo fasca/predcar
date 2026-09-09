@@ -123,9 +123,13 @@ def test_veh0124_cohorts_sum_over_manufacture_year(fixtures: Path) -> None:
 
     assert set(out["status"].to_list()) == {"licensed", "sorn"}
     e46_2001 = out.filter((pl.col("model_raw") == "M3 E46") & (pl.col("year_first_reg") == 2001))
-    licensed = e46_2001.filter(pl.col("status") == "licensed").sort("period")
-    assert licensed["count"].to_list() == [342, 320]  # 2022: 320+22 ; 2023: 300+20
-    assert e46_2001.filter(pl.col("status") == "sorn").sort("period")["count"].to_list() == [38, 40]
+    # the build year is kept (one row per year_first_reg × year_manufacture × period)
+    assert sorted(e46_2001["year_manufacture"].unique().to_list()) == [2000, 2001]
+    per_period = (
+        e46_2001.group_by("period", "status").agg(pl.col("count").sum()).sort("period", "status")
+    )
+    assert per_period.filter(pl.col("status") == "licensed")["count"].to_list() == [342, 320]
+    assert per_period.filter(pl.col("status") == "sorn")["count"].to_list() == [38, 40]
     # [z] / [low] markers dropped, never imputed as 0
     assert out.filter(pl.col("year_first_reg") == 1995).height == 0
     assert out.filter(pl.col("year_first_reg") == 2002).height == 1
@@ -137,13 +141,14 @@ def test_veh0124_cohorts_sum_over_manufacture_year(fixtures: Path) -> None:
 def test_veh0124_total_check_is_per_cohort(fixtures: Path) -> None:
     """A SORN cell suppressed on one cohort must not invalidate the Total of another."""
     df = dft.read_wide_csv(fixtures / "df_VEH0124_AM.csv")
-    totals = pl.DataFrame(
-        [
-            ["Cars", "BMW", "M3", "M3 E46", "2001", "2001", "Total", "360", "380"],
-            ["Cars", "BMW", "M3", "M3 E46", "2002", "2002", "Total", "999", "999"],
-        ],
-        schema=df.columns,
-        orient="row",
+    # Totals are per cohort *and* build year, like every other row of the table.
+    e46 = df.filter((pl.col("Model") == "M3 E46") & (pl.col("YearFirstUsed") == "2001"))
+    totals = (
+        e46.with_columns(pl.col("2023").cast(pl.Int64), pl.col("2022").cast(pl.Int64))
+        .group_by("BodyType", "Make", "GenModel", "Model", "YearFirstUsed", "YearManufacture")
+        .agg(pl.col("2023").sum().cast(pl.Utf8), pl.col("2022").sum().cast(pl.Utf8))
+        .with_columns(pl.lit("Total").alias("LicenceStatus"))
+        .select(df.columns)
     )
     out = dft.parse_table(pl.concat([df, totals]), dft.TABLES["VEH0124_AM"])
     assert "total" not in out["status"].to_list()

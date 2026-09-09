@@ -152,6 +152,31 @@ def _row(**kw) -> dict:
     return {**base, **kw}
 
 
+def test_anomalies_ignore_production_ramp_up_and_label_generations() -> None:
+    """A model still in production naturally rises; VEH0120 label-derived generations are
+    not cohorts. Neither is an anomaly."""
+    from predcar.normalize import TargetModel
+
+    stock = schemas.conform(
+        pl.DataFrame(
+            [
+                _row(period=date(2020, 12, 31), count=100),  # produced 2019-2021: ramp-up
+                _row(period=date(2021, 12, 31), count=1000),
+                _row(period=date(2022, 12, 31), count=1200),  # year_to + 1: still filling in
+                _row(period=date(2023, 12, 31), count=1500),  # after production: a real rise
+                _row(source_file="df_VEH0120_GB.csv", period=date(2020, 12, 31), count=1),
+                _row(source_file="df_VEH0120_GB.csv", period=date(2021, 12, 31), count=1000),
+            ]
+        ),
+        schemas.FLEET_STOCK_SCHEMA,
+    )
+    target = TargetModel(
+        make="M", model_gen="A", generation="G1", segment="COUPE", year_from=2019, year_to=2021
+    )
+    out = export.anomalies(stock, [target])
+    assert out.select("anomaly", "series", "year").rows() == [("cohort_rise", "VEH0124", 2023)]
+
+
 def test_anomalies_flag_cohort_rises_and_jumps() -> None:
     stock = schemas.conform(
         pl.DataFrame(

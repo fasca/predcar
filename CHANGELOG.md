@@ -9,6 +9,44 @@ de développement n'atteint pas les sources (proxy), voir `docs/ARCHITECTURE.md`
 
 ## Non publié
 
+### 2026-09-09 — PR #7 : corrections d'après le premier export réel
+**Corrigé (diagnostic de `reports/2026-09-08/`)**
+- Mapping : `FIESTA ST-LINE` / `FOCUS ST-LINE` ne sont plus des ST (1,3 M et 1,0 M véhicules
+  mal classés) ; `CIVIC TYPE-R` (tiret) rejoint la Civic Type R (2,8 M véhicules ratés, EP3
+  comptée à 1 exemplaire) ; `CLIO DYNAMIQUE 16V` et consorts ne sont plus des Clio 16V MK1
+  (12 M véhicules) ; `SAXO VTR`, `XSARA VTR`, `C2 VTR` ne sont plus des VTS ; `306 XSI` n'est
+  plus une S16 ; `PUNTO HGT` n'est plus une Punto GT ; `CORSA GSI` n'est plus une VXR ; les
+  Lancer Evo prennent leur génération du numéro dans le libellé (`EVO VI`) et non de l'année
+  d'immatriculation en GB ; libellés RDW et DfT exotiques (`09-MAR` = 9-3, `380 SL`, `AMG A 35`,
+  `8D AUDI A4`, `2CV6`, campers) ; repli sans génération pour les années hors plage (Puma).
+  Couverture recalculée sur les libellés réels : GB 99,0 %, NL 98,5 %.
+- Génération des imports : `year_manufacture` (VEH0124 `YearManufacture`) conservé dans le
+  schéma silver et utilisé avant l'année de première immatriculation pour placer une voiture
+  dans sa génération (une Skyline de 1999 immatriculée en GB en 2010 restait une R34).
+- Attrition : Δt en années réelles entre dates d'observation (le trimestre Q1 2026 après le
+  Q4 2025 comptait pour une année entière de pertes).
+- Ratio SORN au niveau génération (VEH0124 porte le statut), repli modèle générique.
+- Anomalies : seulement les vraies cohortes (VEH0124, RDW) après la fin de production ; les
+  montées en charge d'un modèle neuf et les générations déduites du libellé (VEH0120) ne sont
+  plus signalées (1 123 « anomalies » dont l'immense majorité était du bruit).
+- Couverture : les libellés `MODEL MISSING` / `(MISSING)` / `ONBEKEND` sont comptés à part et
+  exclus du dénominateur (`config/mapping.yaml: unknown_labels`).
+- Export : `manifest.json.stages` (`ok` / `absent` / `failed`) ; `uv run` dans le cycle documenté.
+
+**Ajouté**
+- `CHANGELOG.md`, `docs/ARCHITECTURE.md`, liens dans le README, règle « une entrée par PR ».
+
+### 2026-09-09 — commit direct sur `main` (session Claude Code locale) : premier run réel
+**Modifié**
+- VEH0124 : schéma réel (pas de `Fuel`, `YearManufacture`, `LicenceStatus` Licensed/SORN
+  présent), marqueur `[z]` massif, `[x]` dans les années → seau « année inconnue ».
+- RDW : lignes sans `handelsbenaming` → `(MISSING)`, lignes sans année ; préfixe marque
+  retiré des libellés (`TOYOTA AYGO` → `AYGO`), familles BMW (`3ER REIHE`).
+- `models.csv` : 11 familles de regex trop larges corrigées (`\b`), règles ajoutées ; couverture
+  GB 97,9 %, NL 98,2 % ; 241 cibles avec données, 225 publiées.
+- Docs des sources cochées sur les fichiers réels, `docs/SOURCES.md` avec URLs vérifiées,
+  `reports/2026-09-08/` committé, leçons dans `tasks/lessons.md`.
+
 ### 2026-09-08 — PR #6 : export des résultats pour analyse à distance
 **Ajouté**
 - `predcar export` / `make export` : dossier de preuves `reports/<date>/` léger et
@@ -94,7 +132,9 @@ de développement n'atteint pas les sources (proxy), voir `docs/ARCHITECTURE.md`
   l'année de première immatriculation uniquement ; courbes de rétention agrégées à la place
   de Kaplan-Meier.
 
-### Non validé sur données réelles (à ce jour)
-- Layout des CSV DfT (`docs/sources/dft_uk.md`), réponse de l'API RDW
-  (`docs/sources/rdw_nl.md`), regex de `mapping/models.csv`, distribution des composantes
-  du score. Premier `make export` réel attendu.
+### Validé sur données réelles (2026-09-08) et reste à vérifier
+- Validé : layout des CSV DfT, réponse de l'API RDW, couverture du mapping, 241 cibles scorées
+  avec les quatre composantes.
+- À vérifier au prochain run : effet de `year_manufacture` sur les générations des imports
+  (Skyline, Evo, Supra), distribution des composantes après correction des règles, stock des
+  cibles témoins (Civic Type R EP3 attendu en centaines, plus 1).

@@ -56,7 +56,9 @@ Liste de vérification, cochée sur les fichiers du 2026-09-08 :
 - **Snapshot complet** : l'ingestion exige les quatre fichiers présents sur disque **et** dans
   `MANIFEST.json` ; un fetch partiel n'est jamais ingéré. Un snapshot est immuable : refetch le
   même jour → erreur, jamais d'écrasement.
-- **Agrégation** : somme sur `Fuel` (VEH0120, VEH0160) et `YearManufacture` (VEH0124) ; `make_raw`, `model_gen_raw`
+- **Année de fabrication** (VEH0124) : `YearManufacture` conservée dans `year_manufacture` (`[x]` → null) ;
+  c'est elle qui place une voiture importée dans sa génération (`docs/mapping.md`).
+- **Agrégation** : somme sur `Fuel` (VEH0120, VEH0160) ; `make_raw`, `model_gen_raw`
   (`GenModel`), `model_raw` (`Model`) sont conservés en majuscules, tels que fournis.
 - **Colonnes de normalisation** (`make`, `model_gen`, `generation`) : nulles à cette étape,
   remplies en phase 1 étape 3 (mapping).

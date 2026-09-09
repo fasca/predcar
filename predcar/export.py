@@ -28,7 +28,7 @@ from pathlib import Path
 import polars as pl
 
 from predcar import __version__, metrics, raw
-from predcar.normalize import TARGETS_FILE, load_targets
+from predcar.normalize import TARGETS_FILE, TargetModel, load_targets
 from predcar.paths import CONFIG_DIR, GOLD_DIR, MAPPING_DIR, RAW_DIR, ROOT, SILVER_DIR
 
 logger = logging.getLogger(__name__)
@@ -266,7 +266,10 @@ def export_silver(bundle: Bundle, silver_dir: Path, mapping_dir: Path) -> None:
 
 
 def anomalies(
-    stock: pl.DataFrame, rise_threshold: float = 0.05, jump_threshold: float = 1.0
+    stock: pl.DataFrame,
+    targets: list[TargetModel] | None = None,
+    rise_threshold: float = 0.05,
+    jump_threshold: float = 1.0,
 ) -> pl.DataFrame:
     """Data-quality signals on the annual series (never rejections, SPEC §8).
 
@@ -274,8 +277,15 @@ def anomalies(
       year over year (imports / re-registrations, to document).
     * ``stock_jump``: |Δln stock| above ``jump_threshold`` between consecutive years
       (likely a source glitch or a label change).
+
+    Only genuine cohorts are examined: generation-level series (VEH0124, RDW; never the
+    label-derived generation rows of VEH0120) and, when ``targets`` is given, only years
+    after the generation's production (``year_to`` + 1), so a new model's ramp-up is never
+    reported as an anomaly.
     """
-    annual = metrics.annual_stock(stock)
+    annual = metrics.annual_stock(stock).filter(
+        pl.col("series").is_in(metrics.GEN_LEVEL_SERIES) & pl.col("generation").is_not_null()
+    )
     keys = ["country", "series", "make", "model_gen", "generation"]
     df = (
         annual.sort(*keys, "year")
@@ -293,9 +303,33 @@ def anomalies(
             .alias("abs_dln"),
         )
     )
-    rises = df.filter(
-        pl.col("generation").is_not_null() & (pl.col("change") > rise_threshold)
-    ).with_columns(pl.lit("cohort_rise").alias("anomaly"))
+    if targets is not None:
+        # Compare consecutive years on the full series, then keep only post-production years.
+        ends = pl.DataFrame(
+            [
+                {
+                    "make": t.make,
+                    "model_gen": t.model_gen,
+                    "generation": t.generation,
+                    "year_to": t.year_to,
+                }
+                for t in targets
+            ],
+            schema={
+                "make": pl.Utf8,
+                "model_gen": pl.Utf8,
+                "generation": pl.Utf8,
+                "year_to": pl.Int32,
+            },
+        )
+        df = (
+            df.join(ends, on=["make", "model_gen", "generation"], how="inner")
+            .filter(pl.col("year") > pl.col("year_to") + 1)
+            .drop("year_to")
+        )
+    rises = df.filter(pl.col("change") > rise_threshold).with_columns(
+        pl.lit("cohort_rise").alias("anomaly")
+    )
     jumps = df.filter(pl.col("abs_dln") > jump_threshold).with_columns(
         pl.lit("stock_jump").alias("anomaly")
     )
@@ -305,11 +339,12 @@ def anomalies(
     )
 
 
-def export_gold(bundle: Bundle, silver_dir: Path, gold_dir: Path) -> None:
+def export_gold(bundle: Bundle, silver_dir: Path, gold_dir: Path, mapping_dir: Path) -> None:
     stock_path = silver_dir / "fleet_stock.parquet"
     if stock_path.is_file():
         with bundle.step("gold/anomalies"):
-            anom = anomalies(pl.read_parquet(stock_path))
+            targets = load_targets(mapping_dir / TARGETS_FILE)
+            anom = anomalies(pl.read_parquet(stock_path), targets)
             bundle.write_csv("gold/anomalies.csv", anom)
             bundle.counts["anomalies"] = anom.height
     if not gold_dir.is_dir():
@@ -372,7 +407,7 @@ def export(
     for name, run in (
         ("raw", lambda: export_raw(bundle, raw_dir)),
         ("silver", lambda: export_silver(bundle, silver_dir, mapping_dir)),
-        ("gold", lambda: export_gold(bundle, silver_dir, gold_dir)),
+        ("gold", lambda: export_gold(bundle, silver_dir, gold_dir, mapping_dir)),
     ):
         before = len(bundle.files)
         with bundle.step(name):
