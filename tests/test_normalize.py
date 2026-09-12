@@ -141,6 +141,29 @@ def test_apply_rejects_conflicting_generation() -> None:
         n.apply(_stock([{"model_raw": "M3", "year_first_reg": 2003}]), MAKES, rules)
 
 
+def test_label_rule_wins_over_ranged_rule() -> None:
+    """A label that names its own generation beats the year range (docs/methodology.md §1)."""
+    out = n.apply(
+        _stock(
+            [
+                {"model_raw": "M3 CSL", "year_first_reg": 1995},  # label E46 vs ranged E36
+                {"model_raw": "M3 CSL", "year_first_reg": None},  # label only
+                {"model_raw": "M3", "year_first_reg": 1995},  # no label rule → ranged E36
+            ]
+        ),
+        MAKES,
+        RULES,
+    )
+    assert out["generation"].to_list() == ["E46", "E46", "E36"]
+
+
+def test_unranged_fallback_without_generation_does_not_beat_ranged_rule() -> None:
+    """A make-level catch-all carries no generation and must not shadow the ranged rules."""
+    rules = RULES + [n.ModelRule(make="BMW", model_raw_regex=r"^M3\b", model_gen="M3")]
+    out = n.apply(_stock([{"model_raw": "M3", "year_first_reg": 2003}]), MAKES, rules)
+    assert out["model_gen"].to_list() == ["M3"] and out["generation"].to_list() == ["E46"]
+
+
 # --------------------------------------------------------------------------- rules
 
 

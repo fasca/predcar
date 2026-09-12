@@ -48,15 +48,18 @@
 - [x] Corriger les défauts relevés par le diagnostic de `reports/2026-09-08/` (PR #7 : règles
       ST-LINE / TYPE-R / CLIO 16V / VTR / XSI / HGT / Evo, `year_manufacture`, Δt réel, SORN
       génération, anomalies post-production, couverture hors `MODEL MISSING`)
-- [ ] Relancer le pipeline et `make export` après fusion de la PR #7, comparer aux valeurs du
-      2026-09-08 (Civic Type R EP3, Skyline R33/R34, Evo, Clio 16V)
+- [x] Relancer le pipeline et `make export` après fusion de la PR #7, comparer aux valeurs du
+      2026-09-08 (2026-09-12 : `reports/2026-09-12/`, CSV DfT identiques au bit près, EP3 2 →
+      4 139, Skyline R32/R33/R34 16/34/24 → 162/206/117, Evo V_VI 38 → 256, Fiesta ST MK7
+      36 784 → 21 997, couverture GB 99,0 % / NL 98,4 %, anomalies 1 123 → 82)
 - [ ] Snapshot tests sur les 5 modèles témoins à partir des valeurs réelles
 
 ### Étape 4 bis — Boucle de retour sur données réelles
 - [x] `predcar export` → `reports/<date>/` : preuves raw, libellés des marques cibles, couverture,
       anomalies, gold CSV, manifest avec erreurs par étape ; README §6 ; CLAUDE.md
 - [x] Premier export réel produit (`reports/2026-09-08/`, 23 fichiers, 0 erreur) — à committer
-- [ ] Corriger parseurs / règles / indicateurs d'après le diagnostic
+- [x] Corriger parseurs / règles / indicateurs d'après le diagnostic (2026-09-12 : précédence
+      des règles de libellé dans `normalize.apply`, cf. `tasks/lessons.md`)
 
 ### Étape 5 — Site statique
 - [ ] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel
@@ -77,3 +80,7 @@
 - 2026-09-09 : le réseau fonctionne depuis l'environnement Claude Code (WSL2 de l'utilisateur) :
   premier run complet sur données réelles, export `reports/2026-09-08/` ; diagnostic multi-agents
   en cours, corrections à suivre.
+- 2026-09-12 : réseau OK depuis l'environnement Claude Code aussi. Cycle complet relancé après la
+  PR #7 → `reports/2026-09-12/` (référence post-correctifs). Machine à 2 Go de RAM : le pipeline
+  est *eager*, `ingest uk` a pris 21 min et `validate` 26 min avec 8 Go de swap. À surveiller si
+  le volume augmente (phase 2, KBA).

@@ -1,0 +1,71 @@
+{
+  "exported_at": "2026-09-12T14:40:51+00:00",
+  "git": {
+    "sha": "6678be04dfcb826ab9dc4777bc495fef96fb5cf0",
+    "branch": "claude/rerun-post-pr7",
+    "dirty": true
+  },
+  "versions": {
+    "predcar": "0.1.0",
+    "python": "3.12.14",
+    "platform": "Linux-6.1.0-50-cloud-amd64-x86_64-with-glibc2.36",
+    "polars": "1.44.1",
+    "duckdb": "1.5.5",
+    "pydantic": "2.13.5",
+    "typer": "0.27.2",
+    "httpx": "0.28.1"
+  },
+  "config": {
+    "score.yaml": "# Score v1 parameters — every weight and threshold lives here, never in code (SPEC §5).\nversion: 1\n\nweights:\n  rarity: 0.35\n  conservation: 0.25          # = -relative_attrition, normalized 0-1 (rank)\n  sorn_ratio: 0.20            # UK only\n  recent_inflection_point: 0.20\n\n# Minimum sum of available weights to publish a score (missing components are\n# excluded and the remaining weights renormalized to 1, never imputed as 0).\nmin_weight_coverage: 0.60\n\nrarity:\n  # Current stock tiers (SPEC §5): < 500 / < 100 / < 20 units, exposed as a label\n  thresholds: [500, 100, 20]\n\nattrition:\n  smoothing_years: 3          # rolling mean window on annual attrition\n  min_history_years: 3        # conservation / inflection unavailable below this many attrition points\n\npeers:\n  age_bucket_years: 5         # peers = same segment, same (age // bucket)\n  min_peers: 3                # relative attrition unavailable with fewer peer observations\n\ninflection:\n  recent_years: 5             # inflection counts as \"recent\" if < N years ago\n",
+    "mapping.yaml": "# Make/model normalization parameters (SPEC §4).\n# Share of the fleet (by count) of *target makes* that must resolve to a model_gen, per country.\nmin_coverage: 0.95\n# How many unmapped (country, make, model_raw) rows to list in the coverage report.\nreport_top_unmapped: 30\n# model_raw values by which the source itself says the model is unknown: never mappable,\n# counted apart and excluded from the coverage denominator.\nunknown_labels: [\"MODEL MISSING\", \"(MISSING)\", \"ONBEKEND\"]\n",
+    "sources.yaml": "# Data source registry. URLs are verified by HTTP request and recorded in docs/SOURCES.md.\nuk_dft:\n  licence: OGL-3.0\n  # Landing page listing the CSV assets; asset URLs change at every release and are\n  # resolved at fetch time by scanning this page for the file names below.\n  page_url: https://www.gov.uk/government/statistical-data-sets/vehicle-licensing-statistics-data-files\n  files:\n    - df_VEH0120_GB.csv\n    - df_VEH0124_AM.csv\n    - df_VEH0124_NZ.csv\n    - df_VEH0160_GB.csv\n\nnl_rdw:\n  licence: CC0-1.0\n  dataset_id: m9d7-ebf2\n  api_url: https://opendata.rdw.nl/resource/m9d7-ebf2.json\n"
+  },
+  "stages": {
+    "raw": "ok",
+    "silver": "ok",
+    "gold": "ok"
+  },
+  "counts": {
+    "labels_target_makes": 106665,
+    "unmapped_rows": 26711,
+    "unmapped_count": 56339116,
+    "anomalies": 82,
+    "gold_indicators_rows": 703,
+    "gold_scores_rows": 242,
+    "gold_stock_series_rows": 3013
+  },
+  "errors": {
+    "raw/nl_rdw/2026-09-08/gekentekende_voertuigen_agg.json": "listed in manifest but missing on disk",
+    "raw/nl_rdw/2026-09-08/query.json": "listed in manifest but missing on disk",
+    "raw/uk_dft/2026-09-08/df_VEH0120_GB.csv": "listed in manifest but missing on disk",
+    "raw/uk_dft/2026-09-08/df_VEH0124_AM.csv": "listed in manifest but missing on disk",
+    "raw/uk_dft/2026-09-08/df_VEH0124_NZ.csv": "listed in manifest but missing on disk",
+    "raw/uk_dft/2026-09-08/df_VEH0160_GB.csv": "listed in manifest but missing on disk"
+  },
+  "files": [
+    "gold/anomalies.csv",
+    "gold/indicators.csv",
+    "gold/ranking.csv",
+    "gold/scores.csv",
+    "gold/stock_series.csv",
+    "raw/nl_rdw/2026-09-08/MANIFEST.json",
+    "raw/nl_rdw/2026-09-12/MANIFEST.json",
+    "raw/nl_rdw/2026-09-12/gekentekende_voertuigen_agg.json.profile.json",
+    "raw/nl_rdw/2026-09-12/query.json.profile.json",
+    "raw/uk_dft/2026-09-08/MANIFEST.json",
+    "raw/uk_dft/2026-09-12/MANIFEST.json",
+    "raw/uk_dft/2026-09-12/df_VEH0120_GB.csv.head.csv",
+    "raw/uk_dft/2026-09-12/df_VEH0120_GB.csv.profile.json",
+    "raw/uk_dft/2026-09-12/df_VEH0124_AM.csv.head.csv",
+    "raw/uk_dft/2026-09-12/df_VEH0124_AM.csv.profile.json",
+    "raw/uk_dft/2026-09-12/df_VEH0124_NZ.csv.head.csv",
+    "raw/uk_dft/2026-09-12/df_VEH0124_NZ.csv.profile.json",
+    "raw/uk_dft/2026-09-12/df_VEH0160_GB.csv.head.csv",
+    "raw/uk_dft/2026-09-12/df_VEH0160_GB.csv.profile.json",
+    "silver/coverage.csv",
+    "silver/labels_target_makes.csv",
+    "silver/other_makes.csv",
+    "silver/summary.json",
+    "silver/unmapped_target_makes.csv"
+  ]
+}

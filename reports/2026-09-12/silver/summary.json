@@ -1,0 +1,170 @@
+[
+  {
+    "file": "fleet_new_reg.parquet",
+    "rows": 5036062,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2001-03-31",
+    "period_max": "2026-03-31",
+    "countries": [
+      "GB"
+    ],
+    "count_sum": 56125652,
+    "distinct_make_raw": 495,
+    "distinct_model_raw": 49123,
+    "mapped_share": 0.8649738982096814
+  },
+  {
+    "file": "fleet_new_reg_uk_dft.parquet",
+    "rows": 5036062,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2001-03-31",
+    "period_max": "2026-03-31",
+    "countries": [
+      "GB"
+    ],
+    "count_sum": 56125652,
+    "distinct_make_raw": 495,
+    "distinct_model_raw": 49123,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock.parquet",
+    "rows": 14900001,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "1994-12-31",
+    "period_max": "2026-09-12",
+    "countries": [
+      "GB",
+      "NL"
+    ],
+    "statuses": [
+      "None",
+      "licensed",
+      "sorn"
+    ],
+    "count_sum": 3122714415,
+    "distinct_make_raw": 1734,
+    "distinct_model_raw": 133533,
+    "mapped_share": 0.8708955548213332
+  },
+  {
+    "file": "fleet_stock_nl_rdw_2026-09-12.parquet",
+    "rows": 200711,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2026-09-12",
+    "period_max": "2026-09-12",
+    "countries": [
+      "NL"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 10802627,
+    "distinct_make_raw": 1448,
+    "distinct_model_raw": 83179,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_uk_dft.parquet",
+    "rows": 14699290,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "1994-12-31",
+    "period_max": "2026-03-31",
+    "countries": [
+      "GB"
+    ],
+    "statuses": [
+      "licensed",
+      "sorn"
+    ],
+    "count_sum": 3111911788,
+    "distinct_make_raw": 491,
+    "distinct_model_raw": 53155,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "mapping_coverage.parquet",
+    "rows": 3,
+    "columns": [
+      "country",
+      "total",
+      "mapped",
+      "unknown",
+      "coverage",
+      "table"
+    ],
+    "countries": [
+      "GB",
+      "NL"
+    ]
+  }
+]

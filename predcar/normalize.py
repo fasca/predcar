@@ -252,8 +252,20 @@ def apply(df: pl.DataFrame, makes: dict[str, str], rules: list[ModelRule]) -> pl
     )
     # A ranged rule whose range excludes a known year is not a candidate at all.
     excluded = pl.col("year_from").is_not_null() & year.is_not_null() & ~applicable
-    joined = joined.filter(~excluded).with_columns(
-        pl.when(applicable).then(pl.col("cand_generation")).otherwise(None).alias("gen_ok")
+    # A rule whose label alone names the generation (no year range) beats a ranged rule:
+    # "M3 CSL" is an E46 even when the recorded year points at the E9X range, and
+    # "LANCER EVOLUTION IX" is a VII_IX whatever the year (docs/methodology.md §1).
+    label_rule = pl.col("year_from").is_null() & pl.col("cand_generation").is_not_null()
+    joined = (
+        joined.filter(~excluded)
+        .with_columns(label_rule.alias("_label_rule"))
+        .with_columns(pl.col("_label_rule").any().over("_rid").alias("_has_label_rule"))
+        .with_columns(
+            pl.when(applicable & (~pl.col("_has_label_rule") | pl.col("_label_rule")))
+            .then(pl.col("cand_generation"))
+            .otherwise(None)
+            .alias("gen_ok")
+        )
     )
     resolved = joined.group_by("_rid").agg(
         pl.col("cand_model_gen").unique().alias("model_gens"),
