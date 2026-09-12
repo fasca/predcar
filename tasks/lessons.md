@@ -74,3 +74,14 @@ _Aucune leçon enregistrée pour le moment. Ce fichier sera enrichi au fil du d�
   contiennent le mot-clé mais sont mappés ailleurs (`reports/<date>/silver/labels_target_makes.csv`)
   avant de considérer une règle comme juste ; l'année d'immatriculation n'est pas l'année
   de fabrication pour un import.
+
+### 2026-09-12 Les PR ouvertes n'ont pas été regardées en début de session
+- **Erreur**: l'étape 5 (site statique) a été implémentée de zéro alors que la **PR #8 la
+  faisait déjà** depuis le 2026-09-09. L'état a été déduit de `tasks/todo.md` (case non cochée)
+  et de l'absence de `site/` sur `main` — deux signaux qui ne disent rien du travail en cours
+  dans une branche. Résultat : un doublon, un choix de stack présenté à l'utilisateur sans
+  l'information qui comptait, et du travail à jeter ou à fusionner à la main.
+- **Correction**: `gh pr list --state open` (et `git branch -r`) font partie de l'état initial,
+  au même titre que `git log` et `tasks/todo.md`.
+- **Règle**: avant de planifier la moindre tâche, lister les PR et branches distantes ouvertes.
+  Une case non cochée dans `todo.md` signifie « pas sur `main` », pas « personne ne l'a fait ».
