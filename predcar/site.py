@@ -144,6 +144,20 @@ class Gold:
 
 
 TABLES = ("scores", "indicators", "stock_series")
+# Identity columns are always text, and several model names *look* numeric: "147", "205 GTI",
+# "911", "306 S16". Type inference on a sample reads "147" as an integer and then fails on
+# "147 GTA" — so never let it guess these.
+_STRING_COLUMNS = (
+    "make",
+    "model_gen",
+    "generation",
+    "segment",
+    "country",
+    "level",
+    "series",
+    "rarity_tier",
+    "components_available",
+)
 # Year-like and count-like columns: the Parquet writes them as Int32, CSV inference reads
 # Int64. Cast so a build reads the same types whichever source it was given.
 _INT32_COLUMNS = (
@@ -174,10 +188,14 @@ def _read_table(gold_dir: Path, name: str) -> pl.DataFrame:
             f"{parquet} and {csv} are both missing: run `predcar score`, "
             f"or point --gold-dir at a bundle exported by `make export`"
         )
-    df = pl.read_csv(csv)
+    # Read the header as text: pl.read_csv infers types even with n_rows=0, which is the
+    # very failure being avoided here.
+    with csv.open(encoding="utf-8") as fh:
+        header = fh.readline().strip().split(",")
+    df = pl.read_csv(csv, schema_overrides={c: pl.String for c in _STRING_COLUMNS if c in header})
     casts = [pl.col(c).cast(pl.Int32) for c in _INT32_COLUMNS if c in df.columns]
-    # A fully empty column is inferred as Null; rarity_tier is one today. Keep it a string
-    # so downstream formatting and comparisons behave as with Parquet.
+    # A fully empty column is inferred as Null; keep it a string so formatting and comparisons
+    # behave as they do with Parquet.
     casts += [
         pl.col(c).cast(pl.String) for c, dt in df.schema.items() if dt == pl.Null and c != "rank"
     ]

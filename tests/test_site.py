@@ -252,3 +252,19 @@ def test_single_observation_cohort_is_named_not_drawn_at_100_percent() -> None:
     assert [t["label"] for t in traces] == ["Royaume-Uni 2003"]
     assert skipped == ["Pays-Bas (RDW)"]
     assert all(len(t["years"]) >= 2 for t in traces)
+
+
+def test_csv_identity_columns_survive_numeric_looking_model_names(tmp_path: Path) -> None:
+    """ "147" then "147 GTA": type inference reads the first rows as integers and then fails.
+
+    This is the CSV twin of the mapping lesson about numeric labels (205 GTI, 306 S16, 911).
+    """
+    gold = tmp_path / "gold"
+    gold.mkdir()
+    rows = [{"make": "ALFA ROMEO", "model_gen": "147", "generation": "937", "stock": 10}] * 120
+    rows.append({"make": "ALFA ROMEO", "model_gen": "147 GTA", "generation": "937", "stock": 3})
+    pl.DataFrame(rows).write_csv(gold / "cohorts.csv")
+
+    df = site._read_table(gold, "cohorts")
+    assert df.schema["model_gen"] == pl.String
+    assert df["model_gen"].to_list()[-1] == "147 GTA"

@@ -64,6 +64,8 @@ class Bundle:
         # stage → "ok" | "absent" (nothing to export) | "failed" (see errors)
         self.stages: dict[str, str] = {}
         self.counts: dict[str, int | float | None] = {}
+        # snapshots archived as a manifest without their payload (normal for DfT CSVs)
+        self.manifest_only: list[str] = []
 
     def path(self, *parts: str) -> Path:
         p = self.out_dir.joinpath(*parts)
@@ -195,16 +197,26 @@ def _uncompressed(snapshot: Path, name: str, path: Path) -> Iterator[Path]:
 
 
 def export_raw(bundle: Bundle, raw_dir: Path) -> None:
-    """Verbatim heads + profiles of every archived raw file, plus its manifest."""
+    """Verbatim heads + profiles of every archived raw file, plus its manifest.
+
+    A snapshot whose payloads are all absent is reported as ``manifest_only``, not as an error:
+    that is the normal state of a past DfT snapshot on any clone, since those CSVs are
+    deliberately kept out of git and can be re-downloaded. A snapshot that has *some* of its
+    payloads is a genuinely damaged archive, and each missing file is an error.
+    """
     if not raw_dir.is_dir():
         return
+    manifest_only: list[str] = []
     for source_dir in sorted(p for p in raw_dir.iterdir() if p.is_dir()):
         for snapshot in sorted(p for p in source_dir.iterdir() if p.is_dir()):
             manifest = raw.read_manifest(snapshot)
             rel = f"raw/{source_dir.name}/{snapshot.name}"
             bundle.write_json(f"{rel}/MANIFEST.json", manifest)
-            for name in manifest:
-                path = raw.resolve(snapshot, name)
+            present = {name: raw.resolve(snapshot, name) for name in manifest}
+            if manifest and not any(present.values()):
+                manifest_only.append(f"{source_dir.name}/{snapshot.name}")
+                continue
+            for name, path in present.items():
                 if path is None:
                     bundle.errors[f"{rel}/{name}"] = "listed in manifest but missing on disk"
                     continue
@@ -218,6 +230,8 @@ def export_raw(bundle: Bundle, raw_dir: Path) -> None:
                         bundle.write_json(f"{rel}/{name}.profile.json", profile_csv(plain))
                     elif name.lower().endswith(".json") and name != raw.MANIFEST_NAME:
                         bundle.write_json(f"{rel}/{name}.profile.json", profile_json(plain))
+    if manifest_only:
+        bundle.manifest_only = manifest_only
 
 
 # --------------------------------------------------------------------------- silver
@@ -490,6 +504,9 @@ def export(
         "stages": bundle.stages,
         "counts": bundle.counts,
         "errors": bundle.errors,
+        # Archived as a manifest only, payload not on disk: expected for the DfT CSVs, which
+        # stay out of git and are re-downloadable. Not an error, but worth stating.
+        "manifest_only": bundle.manifest_only,
         "files": sorted(bundle.files),
     }
     bundle.write_json("manifest.json", manifest)

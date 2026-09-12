@@ -53,7 +53,7 @@
   },
   {
     "file": "fleet_stock.parquet",
-    "rows": 14900001,
+    "rows": 14899954,
     "columns": [
       "country",
       "period",
@@ -71,7 +71,7 @@
       "source_file"
     ],
     "period_min": "1994-12-31",
-    "period_max": "2026-09-12",
+    "period_max": "2026-09-08",
     "countries": [
       "GB",
       "NL"
@@ -81,14 +81,14 @@
       "licensed",
       "sorn"
     ],
-    "count_sum": 3122714415,
+    "count_sum": 3122711185,
     "distinct_make_raw": 1734,
-    "distinct_model_raw": 133533,
-    "mapped_share": 0.8708955548213332
+    "distinct_model_raw": 133520,
+    "mapped_share": 0.8708960489408821
   },
   {
-    "file": "fleet_stock_nl_rdw_2026-09-12.parquet",
-    "rows": 200711,
+    "file": "fleet_stock_nl_rdw_2026-09-08.parquet",
+    "rows": 200664,
     "columns": [
       "country",
       "period",
@@ -105,17 +105,17 @@
       "source",
       "source_file"
     ],
-    "period_min": "2026-09-12",
-    "period_max": "2026-09-12",
+    "period_min": "2026-09-08",
+    "period_max": "2026-09-08",
     "countries": [
       "NL"
     ],
     "statuses": [
       "None"
     ],
-    "count_sum": 10802627,
+    "count_sum": 10799397,
     "distinct_make_raw": 1448,
-    "distinct_model_raw": 83179,
+    "distinct_model_raw": 83164,
     "mapped_share": 0.0
   },
   {

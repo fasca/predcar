@@ -205,3 +205,41 @@ def test_anomalies_flag_cohort_rises_and_jumps() -> None:
     )
     out = export.anomalies(stock)
     assert out.select("anomaly", "year").rows() == [("cohort_rise", 2021), ("stock_jump", 2023)]
+
+
+def test_snapshot_archived_as_manifest_only_is_not_an_error(fixtures: Path, tmp_path: Path) -> None:
+    """A past DfT snapshot on a fresh clone has only its manifest: that is the normal state.
+
+    Counting it as an error filled every bundle with noise that would hide a real failure.
+    """
+    dirs = _pipeline(fixtures, tmp_path)
+    old = dirs["raw"] / "uk_dft" / "2026-06-30"
+    old.mkdir(parents=True)
+    for table in dft.TABLES.values():
+        (old / table.filename).write_bytes((fixtures / table.filename).read_bytes())
+        raw.register_file(old, table.filename, "https://example.org/" + table.filename)
+    for table in dft.TABLES.values():  # payloads gone, manifest kept — as git leaves them
+        (old / table.filename).unlink()
+
+    out = export.export(
+        tmp_path / "out", dirs["raw"], dirs["silver"], dirs["gold"], MAPPING_DIR, CONFIG_DIR
+    )
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert manifest["errors"] == {}
+    assert manifest["manifest_only"] == ["uk_dft/2026-06-30"]
+    assert manifest["stages"]["raw"] == "ok"
+
+
+def test_partially_missing_payload_is_still_an_error(fixtures: Path, tmp_path: Path) -> None:
+    """Some payloads present and some gone is a damaged archive, not a pruned one."""
+    dirs = _pipeline(fixtures, tmp_path)
+    snapshot = dirs["raw"] / "uk_dft" / "2026-09-08"
+    victim = dft.TABLES["VEH0160"].filename
+    (snapshot / victim).unlink()
+
+    out = export.export(
+        tmp_path / "out", dirs["raw"], dirs["silver"], dirs["gold"], MAPPING_DIR, CONFIG_DIR
+    )
+    manifest = json.loads((out / "manifest.json").read_text())
+    assert f"raw/uk_dft/2026-09-08/{victim}" in manifest["errors"]
+    assert manifest["manifest_only"] == []
