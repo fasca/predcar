@@ -55,7 +55,7 @@ Trois couches, comme dans la spec §3 :
 | `normalize.py` | applique `mapping/` : alias de marque, règles regex + plages d'années → `make`, `model_gen`, `generation` ; règles contradictoires = erreur ; couverture par pays et gate à 95 % ; rien n'est écrit si la gate échoue | silver ingérés → `fleet_stock.parquet`, `fleet_new_reg.parquet`, `mapping_coverage.parquet` |
 | `metrics.py` | séries annuelles par famille de source, choix du niveau (génération / modèle), attrition lissée, pairs, attrition relative, inflexion, SORN, ventes cumulées, survie, rareté, agrégat Europe | silver normalisé → indicateurs |
 | `score.py` | composantes 0–1, poids renormalisés, gate de publication, rang | indicateurs → `scores.parquet`, `ranking.csv` |
-| `export.py` | dossier de preuves best-effort pour l'analyse à distance | tout → `reports/<date>/` |
+| `export.py` | dossier de preuves best-effort pour l'analyse à distance ; `latest_report()` donne le bundle le plus récent (utilisé par les tests) | tout → `reports/<date>/` |
 | `cli.py` | Typer : `fetch uk|nl`, `ingest uk|nl`, `normalize`, `score`, `export`, `validate` | — |
 
 Chaque transformation est une fonction pure : même raw → même silver → même gold.
@@ -130,8 +130,11 @@ Une divergence de schéma lève toujours une erreur explicite (`DftSchemaError`,
 
 ## 8. Qualité
 
-- 112 tests pytest : maths des indicateurs, schémas, invariants, parseurs sur fixtures,
-  toutes les cibles du mapping résolues sans conflit, pipeline bout en bout, export.
+- 200 tests pytest : maths des indicateurs, schémas, invariants, parseurs sur fixtures,
+  toutes les cibles du mapping résolues sans conflit, pipeline bout en bout, export, et
+  **le bundle de preuves committé rejoué dans les règles courantes** (`tests/test_real_labels.py`,
+  `tests/test_witnesses.py`) : couverture réelle, cibles atteignables, finitions qui ne
+  débordent pas sur les versions sportives, 5 témoins bornés. Pas de réseau, pas de `data/`.
 - ruff (lint + format), CI GitHub Actions sur chaque PR.
 - Reviews automatiques (Codex) traitées et résolues à chaque PR ; leçons dans
   `tasks/lessons.md`.
