@@ -37,7 +37,7 @@ Trois couches, comme dans la spec §3 :
 
 | Couche | Contenu | Versionné dans git ? |
 |---|---|---|
-| `data/raw/` | fichiers sources tels que téléchargés, un dossier par source et par date, `MANIFEST.json` (URL, sha256, taille, date) | manifests oui, payloads non (60 Mo+) |
+| `data/raw/` | fichiers sources tels que téléchargés, un dossier par source et par date, `MANIFEST.json` (URL, sha256, taille, date) | manifests oui ; payloads non (60 Mo+) **sauf les snapshots RDW**, committés gzippés (~1,2 Mo/mois) car la source n'a pas d'historique amont |
 | `data/silver/` | Parquet au schéma commun `fleet_stock` / `fleet_new_reg` (`predcar/schemas.py`) | non |
 | `data/gold/` | indicateurs et scores | non |
 | `reports/<date>/` | preuves d'un run réel (voir §7) | **oui** |

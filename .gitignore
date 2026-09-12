@@ -47,11 +47,14 @@ htmlcov/
 .coverage
 
 # Raw payloads are archived locally with a MANIFEST.json (sha256) that IS versioned;
-# the payloads themselves are too large for git.
+# the payloads themselves are too large for git — except the RDW snapshots. The RDW dataset
+# has no upstream history, so a month that is not kept here is lost for good; gzipped it is
+# ~1.2 MB/month, and predcar.raw reads a .gz archive transparently.
 data/raw/**
 !data/raw/.gitkeep
 !data/raw/**/
 !data/raw/**/MANIFEST.json
+!data/raw/nl_rdw/**/*.json.gz
 data/silver/*.parquet
 data/gold/*.parquet
 data/gold/*.csv

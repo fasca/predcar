@@ -21,6 +21,9 @@ import platform
 import re
 import shutil
 import subprocess
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from importlib import metadata
 from pathlib import Path
@@ -175,6 +178,22 @@ def profile_json(path: Path) -> dict:
     }
 
 
+@contextmanager
+def _uncompressed(snapshot: Path, name: str, path: Path) -> Iterator[Path]:
+    """Yield a plain, readable path for an archived payload, gzipped or not.
+
+    A gzipped payload is materialised in a temporary file so the profilers keep working on a
+    real path; the temporary file is removed on exit.
+    """
+    if path.suffix != raw.GZIP_SUFFIX:
+        yield path
+        return
+    with tempfile.TemporaryDirectory() as tmp:
+        plain = Path(tmp) / name
+        plain.write_bytes(raw.read_bytes(snapshot, name))
+        yield plain
+
+
 def export_raw(bundle: Bundle, raw_dir: Path) -> None:
     """Verbatim heads + profiles of every archived raw file, plus its manifest."""
     if not raw_dir.is_dir():
@@ -185,18 +204,20 @@ def export_raw(bundle: Bundle, raw_dir: Path) -> None:
             rel = f"raw/{source_dir.name}/{snapshot.name}"
             bundle.write_json(f"{rel}/MANIFEST.json", manifest)
             for name in manifest:
-                path = snapshot / name
-                if not path.is_file():
+                path = raw.resolve(snapshot, name)
+                if path is None:
                     bundle.errors[f"{rel}/{name}"] = "listed in manifest but missing on disk"
                     continue
-                with bundle.step(f"{rel}/{name}"):
-                    if path.suffix.lower() == ".csv":
-                        with path.open(encoding="utf-8", errors="replace") as fh:
+                with bundle.step(f"{rel}/{name}"), _uncompressed(snapshot, name, path) as plain:
+                    # The branch follows the manifest name, not the stored path: an archived
+                    # payload may be gzipped (see predcar.raw).
+                    if name.lower().endswith(".csv"):
+                        with plain.open(encoding="utf-8", errors="replace") as fh:
                             head = "".join(next(fh, "") for _ in range(HEAD_LINES))
                         bundle.write_text(f"{rel}/{name}.head.csv", head)
-                        bundle.write_json(f"{rel}/{name}.profile.json", profile_csv(path))
-                    elif path.suffix.lower() == ".json" and name != raw.MANIFEST_NAME:
-                        bundle.write_json(f"{rel}/{name}.profile.json", profile_json(path))
+                        bundle.write_json(f"{rel}/{name}.profile.json", profile_csv(plain))
+                    elif name.lower().endswith(".json") and name != raw.MANIFEST_NAME:
+                        bundle.write_json(f"{rel}/{name}.profile.json", profile_json(plain))
 
 
 # --------------------------------------------------------------------------- silver

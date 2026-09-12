@@ -11,6 +11,30 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-12 — PR : cron mensuel RDW et archives brutes compressées
+**Ajouté**
+- `.github/workflows/rdw-snapshot.yml` : tous les 1ᵉʳ du mois (03h17 UTC) + `workflow_dispatch`.
+  Il archive un snapshot agrégé, **vérifie qu'il est exploitable** (`ingest nl` avant tout
+  commit, pour ne jamais versionner une réponse tronquée), le compresse et committe
+  `MANIFEST.json` + `*.json.gz` sur `main`.
+- `predcar compress nl` / `make compress-nl` et `raw.compress()`, `raw.resolve()`,
+  `raw.read_bytes()` : une archive brute peut être stockée gzippée. Le manifest garde le
+  sha256 du contenu **décompressé**, donc compresser ne change pas l'identité d'un fichier —
+  `raw.verify()` et `rdw.ingest()` relisent l'un ou l'autre de façon transparente.
+- `.gitignore` : les snapshots RDW gzippés sont versionnés (exception documentée).
+
+**Pourquoi versionner ce payload-là** — le RDW est un instantané *sans historique amont* : un
+mois qui n'est pas conservé est perdu pour toujours, et c'est précisément l'historique que le
+projet cherche à construire. Un cron qui ne committerait que le `MANIFEST.json` archiverait
+l'empreinte de données qu'on n'a plus. Gzippé, un mois pèse 1,2 Mo (contre 16,7 Mo brut) — soit
+~14 Mo/an, acceptable. Les CSV DfT restent hors de git : 66 Mo et re-téléchargeables depuis
+gov.uk avec tout leur historique.
+
+**Modifié**
+- `export.py` retrouve un payload archivé qu'il soit compressé ou non (`raw.resolve`), et
+  profile la version décompressée ; la branche CSV/JSON suit le nom du manifest, pas le
+  suffixe du fichier stocké.
+
 ### 2026-09-12 — PR : snapshot tests des 5 témoins et filet anti-régression
 **Ajouté**
 - `tests/witnesses.py` : les 5 modèles témoins de SPEC §8 (BMW M3 E46, Peugeot 205 GTI,

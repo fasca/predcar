@@ -1,4 +1,4 @@
-.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score export validate test lint
+.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl compress-nl normalize score export validate test lint
 
 install:
 	uv sync
@@ -14,6 +14,9 @@ fetch-nl:            ## Archive one aggregated RDW snapshot into data/raw/nl_rdw
 
 ingest-nl:           ## Parse latest raw RDW snapshot into data/silver/fleet_stock_nl_rdw_<date>.parquet
 	uv run predcar ingest nl
+
+compress-nl:         ## Gzip the archived RDW payload so the month can be committed (~1.2 MB)
+	uv run predcar compress nl
 
 normalize:           ## Apply mapping/ → data/silver/fleet_stock.parquet, fail if coverage < 95 %
 	uv run predcar normalize
