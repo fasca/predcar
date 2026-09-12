@@ -1,0 +1,57 @@
+---
+/** The methodology page is rendered from docs/methodology.md: one source of truth, so the
+ * site can never drift from the document the pipeline is specified by. */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+import { marked } from "marked";
+
+import Base from "../layouts/Base.astro";
+import { bundleDate } from "../lib/gold.ts";
+
+const doc = fileURLToPath(new URL("../../../docs/methodology.md", import.meta.url));
+const source = readFileSync(doc, "utf-8");
+// Drop everything before the first "## ": the doc's title and preamble address the
+// repository ("cette page est la source de…"), the page supplies its own intro.
+const body = source.slice(Math.max(source.indexOf("\n## "), 0));
+const html = marked.parse(body, { gfm: true, async: false }) as string;
+---
+
+<Base
+  title="Méthodologie"
+  description="Chaque formule, chaque source, chaque limite du score collector de predcar."
+>
+  <h1>Méthodologie</h1>
+  <p class="lede">
+    Cette page est générée depuis <code>docs/methodology.md</code> dans le dépôt : le site ne peut
+    pas diverger du document qui spécifie le pipeline. Données rafraîchies le {bundleDate}.
+  </p>
+  <div class="doc" set:html={html} />
+</Base>
+
+<style is:global>
+  .doc { max-width: 48rem; }
+  .doc h2 { margin-top: 2.25rem; }
+  .doc h3 { margin-top: 1.5rem; font-size: 1.05rem; }
+  .doc code {
+    background: var(--accent-soft);
+    padding: .1em .3em;
+    border-radius: 3px;
+    font-size: .9em;
+  }
+  .doc pre {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: .8rem 1rem;
+    overflow-x: auto;
+  }
+  .doc pre code { background: none; padding: 0; }
+  .doc table { margin: 1rem 0; }
+  .doc blockquote {
+    margin: 1rem 0;
+    padding-left: 1rem;
+    border-left: 3px solid var(--line);
+    color: var(--muted);
+  }
+</style>

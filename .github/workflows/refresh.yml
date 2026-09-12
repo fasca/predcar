@@ -1,0 +1,66 @@
+# Quarterly refresh (SPEC §7, step 5): re-runs the whole pipeline on freshly published DfT
+# data, commits the evidence bundle, which in turn triggers the Pages build. Manual runs are
+# allowed so a refresh can follow a DfT release without waiting for the cron.
+name: Refresh trimestriel du pipeline
+
+on:
+  schedule:
+    # 04:23 UTC on the 20th of Jan/Apr/Jul/Oct — DfT publishes a few days after quarter end.
+    - cron: "23 4 20 1,4,7,10 *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+
+      - name: Télécharger et ingérer les sources
+        run: |
+          set -euo pipefail
+          uv run predcar fetch uk
+          uv run predcar ingest uk
+          uv run predcar fetch nl
+          uv run predcar ingest nl
+
+      - name: Normaliser, valider, scorer
+        # normalize fails below the coverage gate: a refresh must never publish a ranking
+        # built on a fleet the mapping no longer recognises.
+        run: |
+          set -euo pipefail
+          uv run predcar normalize
+          uv run predcar validate
+          uv run predcar score
+
+      - name: Exporter le bundle de preuves
+        run: uv run predcar export
+
+      - name: Rejouer les tests sur le nouveau bundle
+        # test_real_labels / test_witnesses assert against the latest bundle: this is where a
+        # DfT relabelling or a coverage drift surfaces, before anything is published.
+        run: uv run pytest tests/ -q
+
+      - name: Committer le bundle et le snapshot RDW
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/ data/raw/*/*/MANIFEST.json
+          if git diff --cached --quiet; then
+            echo "Rien de neuf à committer."
+            exit 0
+          fi
+          git commit -m "Refresh trimestriel $(date -u +%Y-%m-%d) (automatique)"
+          git push origin HEAD:main

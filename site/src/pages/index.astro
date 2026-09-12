@@ -1,0 +1,129 @@
+---
+import Base from "../layouts/Base.astro";
+import { bundleDate, makes, ranking, segments } from "../lib/gold.ts";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const fmt = new Intl.NumberFormat("fr-FR");
+// Decade of the generation's production, derived from the earliest observed year is not in
+// the ranking table, so the filter uses the target's generation label plus its segment only.
+const rows = ranking;
+const top = rows.length;
+---
+
+<Base
+  title="Classement"
+  description="Quels modèles 1990–2015 disparaissent le plus vite des routes européennes, mesuré sur les données officielles UK et NL."
+>
+  <h1>Quels modèles disparaissent le plus vite&nbsp;?</h1>
+  <p class="lede">
+    {fmt.format(top)} générations 1990–2015 classées par potentiel « collector », à partir du parc
+    officiel britannique (DfT/DVLA) et néerlandais (RDW). Le score combine rareté, conservation
+    relative à des modèles comparables, part du parc déjà retirée de la route mais conservée
+    (SORN) et récence du point d'inflexion. <a href={`${base}/methodologie`}>Chaque composante est
+    détaillée</a> et visible ligne par ligne.
+  </p>
+
+  <div class="controls">
+    <label>
+      Segment
+      <select id="f-segment">
+        <option value="">Tous</option>
+        {segments.map((s) => <option value={s}>{s}</option>)}
+      </select>
+    </label>
+    <label>
+      Marque
+      <select id="f-make">
+        <option value="">Toutes</option>
+        {makes.map((m) => <option value={m}>{m}</option>)}
+      </select>
+    </label>
+    <label>
+      Recherche
+      <input id="f-q" type="search" placeholder="ex. Clio, M3, Skyline" />
+    </label>
+    <label>
+      Affichage
+      <select id="f-limit">
+        <option value="50">Top 50</option>
+        <option value="100">Top 100</option>
+        <option value="0">Tout</option>
+      </select>
+    </label>
+    <p id="f-count" class="n" style="margin:0;color:var(--muted);font-size:.85rem"></p>
+  </div>
+
+  <table id="ranking">
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th>Modèle</th>
+        <th class="hide-sm">Segment</th>
+        <th class="num">Parc EU</th>
+        <th class="num">Score</th>
+        <th class="num hide-sm">Rareté</th>
+        <th class="num hide-sm">Conservation</th>
+        <th class="num hide-sm">SORN</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((r) => (
+        <tr data-segment={r.segment} data-make={r.make} data-rank={r.rank}
+            data-q={`${r.make} ${r.modelGen} ${r.generation}`.toLowerCase()}>
+          <td class="num">{r.rank}</td>
+          <td>
+            <a href={`${base}/modeles/${r.slug}`}>{r.make} {r.modelGen}</a>
+            <span style="color:var(--muted)"> {r.generation}</span>
+          </td>
+          <td class="hide-sm">{r.segment}</td>
+          <td class="num">{r.stock === null ? "—" : fmt.format(r.stock)}</td>
+          <td class="num"><strong>{r.score.toFixed(3)}</strong></td>
+          <td class="num hide-sm">{r.rarity === null ? "—" : r.rarity.toFixed(2)}</td>
+          <td class="num hide-sm">{r.conservation === null ? "—" : r.conservation.toFixed(2)}</td>
+          <td class="num hide-sm">{r.sornRatio === null ? "—" : r.sornRatio.toFixed(2)}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <p class="note">
+    Le classement ne contient que les cibles dont au moins 60&nbsp;% du poids du score est
+    couvert par des composantes réellement mesurées. Une composante manquante n'est jamais
+    remplacée par 0 : elle est exclue et les poids restants sont renormalisés. Données du
+    {bundleDate}.
+  </p>
+
+  <script is:inline>
+    const rowsEl = Array.from(document.querySelectorAll("#ranking tbody tr"));
+    const seg = document.getElementById("f-segment");
+    const make = document.getElementById("f-make");
+    const q = document.getElementById("f-q");
+    const limit = document.getElementById("f-limit");
+    const count = document.getElementById("f-count");
+
+    function apply() {
+      const needle = q.value.trim().toLowerCase();
+      const max = Number(limit.value);
+      let shown = 0;
+      for (const tr of rowsEl) {
+        const ok =
+          (!seg.value || tr.dataset.segment === seg.value) &&
+          (!make.value || tr.dataset.make === make.value) &&
+          (!needle || tr.dataset.q.includes(needle));
+        const visible = ok && (max === 0 || shown < max);
+        tr.hidden = !visible;
+        if (ok) shown += visible ? 1 : 0;
+      }
+      const total = rowsEl.filter(
+        (tr) =>
+          (!seg.value || tr.dataset.segment === seg.value) &&
+          (!make.value || tr.dataset.make === make.value) &&
+          (!needle || tr.dataset.q.includes(needle)),
+      ).length;
+      count.textContent = `${shown} affichés sur ${total} correspondants`;
+    }
+
+    for (const el of [seg, make, q, limit]) el.addEventListener("input", apply);
+    apply();
+  </script>
+</Base>

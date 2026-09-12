@@ -136,9 +136,25 @@ Une divergence de schéma lève toujours une erreur explicite (`DftSchemaError`,
 - Reviews automatiques (Codex) traitées et résolues à chaque PR ; leçons dans
   `tasks/lessons.md`.
 
-## 9. Ce qui n'existe pas encore
+## 9. Le site (`site/`)
 
-- Phase 1, étape 5 : site statique (classement, page modèle, méthodologie, export CSV),
-  GitHub Pages, refresh trimestriel par GitHub Actions.
+Astro, sans framework client ni bibliothèque de graphiques : les courbes sont du SVG généré
+au build. Trois pages — classement (filtres segment / marque / recherche côté client), page
+modèle (parc par pays, courbe de rétention, détail des composantes, sources), méthodologie —
+plus `classement.csv`.
+
+Point important : **le site ne lit pas `data/gold/`, il lit le dernier `reports/<date>/gold/`**,
+qui est versionné. Un build ne demande donc ni réseau, ni `data/`, ni run de pipeline, et ce
+que le site affiche est toujours quelque chose que le dépôt peut prouver ; la date du bundle
+est la date de rafraîchissement affichée. La page méthodologie est rendue depuis
+`docs/methodology.md` : une seule source de vérité.
+
+Deux workflows : `pages.yml` (build + déploiement GitHub Pages à chaque push touchant
+`site/`, `reports/` ou la méthodologie) et `refresh.yml` (cron trimestriel qui rejoue tout le
+pipeline, relance les tests sur le nouveau bundle, puis le committe — ce qui déclenche le
+déploiement).
+
+## 10. Ce qui n'existe pas encore
+
 - Phase 2 : KBA (DE), immatriculations FR, STATS19, Google Trends, YouTube.
 - Phase 3 : enchères, extrapolation Weibull, alertes.

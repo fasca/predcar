@@ -1,0 +1,32 @@
+---
+/** One score component, shown as a labelled bar. A missing component is stated as missing,
+ * never drawn as 0: it is excluded from the score and the remaining weights are renormalized
+ * (docs/methodology.md §5). */
+interface Props {
+  label: string;
+  value: number | null;
+  weight: number;
+  hint?: string;
+}
+const { label, value, weight, hint } = Astro.props;
+const pct = value === null ? 0 : Math.round(value * 100);
+---
+
+<tr>
+  <th scope="row">
+    {label}
+    <span class="n" style="display:block;color:var(--muted);font-weight:400;font-size:.8rem">
+      poids {weight.toLocaleString("fr-FR", { style: "percent" })}{hint ? ` · ${hint}` : ""}
+    </span>
+  </th>
+  <td>
+    {value === null ? (
+      <span class="missing">non disponible — exclue, poids renormalisés</span>
+    ) : (
+      <span class="bar">
+        <span class="track"><span class="fill" style={`width:${pct}%`}></span></span>
+        <span class="val">{value.toFixed(2)}</span>
+      </span>
+    )}
+  </td>
+</tr>

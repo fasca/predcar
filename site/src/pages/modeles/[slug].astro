@@ -1,0 +1,169 @@
+---
+import Base from "../../layouts/Base.astro";
+import Component from "../../components/Component.astro";
+import LineChart from "../../components/LineChart.astro";
+import { bundleDate, indicatorsOf, peersOf, ranking, seriesOf } from "../../lib/gold.ts";
+
+export function getStaticPaths() {
+  return ranking.map((row) => ({ params: { slug: row.slug }, props: { row } }));
+}
+
+const { row } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const fmt = new Intl.NumberFormat("fr-FR");
+const pct = (v: number | null) =>
+  v === null ? "—" : v.toLocaleString("fr-FR", { style: "percent", maximumFractionDigits: 1 });
+
+const ind = indicatorsOf(row.make, row.modelGen, row.generation);
+const byCountry = Object.fromEntries(ind.map((i) => [i.country, i]));
+const eu = byCountry.EU;
+const gb = byCountry.GB;
+
+const points = seriesOf(row.make, row.modelGen, row.generation);
+const COLORS: Record<string, string> = { GB: "#8c2f1f", NL: "#2f5d8c" };
+const lines = ["GB", "NL"]
+  .map((c) => ({
+    label: `${c} (${[...new Set(points.filter((p) => p.country === c).map((p) => p.series))].join(", ")})`,
+    color: COLORS[c],
+    points: points.filter((p) => p.country === c),
+  }))
+  .filter((l) => l.points.length > 0);
+
+// Survival = stock relative to the earliest observed year of the same series, i.e. an
+// aggregated retention curve, not Kaplan-Meier (no individual events upstream).
+// A single-snapshot series (RDW today) has no retention curve to show: one point normalized
+// to 100 would read as "nothing has been lost", which is not what the data says.
+const cohort = lines
+  .filter((l) => l.points.length > 1)
+  .map((l) => ({
+    label: l.label,
+    color: l.color,
+    points: l.points.map((p) => ({ year: p.year, stock: (p.stock / l.points[0].stock) * 100 })),
+  }));
+const cohortSkipped = lines.filter((l) => l.points.length <= 1).map((l) => l.label);
+
+const peers = peersOf(row).sort((a, b) => a.rank - b.rank);
+const peerRank = peers.filter((p) => p.rank < row.rank).length + 1;
+
+const WEIGHTS: Record<string, number> = {
+  rarity: 0.35,
+  conservation: 0.25,
+  sorn_ratio: 0.2,
+  recent_inflection_point: 0.2,
+};
+---
+
+<Base
+  title={`${row.make} ${row.modelGen} ${row.generation}`}
+  description={`Parc, survie et score collector de la ${row.make} ${row.modelGen} ${row.generation}.`}
+>
+  <p style="margin-top:1.5rem"><a href={`${base}/`}>← Classement</a></p>
+  <h1>{row.make} {row.modelGen} <span style="color:var(--muted)">{row.generation}</span></h1>
+  <p class="lede">
+    Segment {row.segment} · rang <strong>{row.rank}</strong> sur {ranking.length} générations
+    publiées, et {peerRank}<sup>e</sup> des {peers.length + 1} du segment {row.segment}.
+  </p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="k">Parc Europe</div>
+      <div class="v">{eu?.stock === null || eu === undefined ? "—" : fmt.format(eu.stock)}</div>
+      <div class="n">{eu?.latestYear ? `au ${eu.latestYear}` : ""}</div>
+    </div>
+    <div class="card">
+      <div class="k">Score collector</div>
+      <div class="v">{row.score.toFixed(3)}</div>
+      <div class="n">{row.componentsAvailable.length} composantes sur 4</div>
+    </div>
+    <div class="card">
+      <div class="k">Attrition annuelle</div>
+      <div class="v">{eu?.attrition === null || eu === undefined ? "—" : pct(eu.attrition)}</div>
+      <div class="n">lissée sur 3 ans</div>
+    </div>
+    <div class="card">
+      <div class="k">Part SORN (GB)</div>
+      <div class="v">{gb ? pct(gb.sornRatio) : "—"}</div>
+      <div class="n">retirée de la route, conservée</div>
+    </div>
+  </div>
+
+  <h2>Parc par pays</h2>
+  {lines.length ? (
+    <LineChart lines={lines} caption="Nombre de véhicules par année d'observation. L'axe démarre à zéro." />
+  ) : (
+    <p class="missing">Aucune série de stock disponible pour cette génération.</p>
+  )}
+
+  <h2>Courbe de survie par cohorte</h2>
+  {cohort.length ? (
+    <LineChart
+      lines={cohort}
+      caption="Part du parc restante, base 100 à la première année observée de la série. Rétention agrégée, pas de Kaplan-Meier : les sources ne donnent pas d'événements individuels."
+    />
+  ) : (
+    <p class="missing">Pas assez de points pour une courbe de survie.</p>
+  )}
+  {cohortSkipped.length > 0 && (
+    <p class="n" style="color:var(--muted);font-size:.88rem">
+      Séries écartées faute d'historique : {cohortSkipped.join(", ")}. Le RDW est un instantané
+      mensuel : son historique commence à notre premier snapshot.
+    </p>
+  )}
+
+  <h2>Détail du score</h2>
+  <table>
+    <tbody>
+      <Component label="Rareté" value={row.rarity} weight={WEIGHTS.rarity} hint="parc faible = haut" />
+      <Component
+        label="Conservation"
+        value={row.conservation}
+        weight={WEIGHTS.conservation}
+        hint="disparaît moins vite que ses pairs"
+      />
+      <Component
+        label="Ratio SORN"
+        value={row.sornRatio}
+        weight={WEIGHTS.sorn_ratio}
+        hint="GB uniquement · déjà entre 0 et 1, reprise telle quelle"
+      />
+      <Component
+        label="Point d'inflexion récent"
+        value={row.recentInflectionPoint}
+        weight={WEIGHTS.recent_inflection_point}
+        hint={row.inflectionYear ? `inflexion en ${row.inflectionYear}` : "aucune inflexion détectée"}
+      />
+    </tbody>
+  </table>
+  <p class="n" style="color:var(--muted);font-size:.88rem">
+    Couverture de poids : {pct(row.weightCoverage)}. Attrition relative aux pairs :
+    {row.relativeAttrition === null ? " —" : ` ${row.relativeAttrition.toFixed(4)}`} (négatif =
+    disparaît moins vite que son segment et sa tranche d'âge).
+  </p>
+
+  <h2>Sources et méthode</h2>
+  <table>
+    <thead>
+      <tr><th>Pays</th><th>Série</th><th>Niveau</th><th class="num">Parc</th><th class="num">Survie</th><th class="num">Années</th><th class="num">Pairs</th></tr>
+    </thead>
+    <tbody>
+      {ind.map((i) => (
+        <tr>
+          <td>{i.country}</td>
+          <td>{i.series}</td>
+          <td>{i.level === "generation" ? "génération" : i.level === "europe" ? "agrégat" : "modèle générique"}</td>
+          <td class="num">{i.stock === null ? "—" : fmt.format(i.stock)}</td>
+          <td class="num">{i.survival === null ? "—" : pct(i.survival)}</td>
+          <td class="num">{i.historyYears ?? "—"}</td>
+          <td class="num">{i.nPeers ?? "—"}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <p class="note">
+    VEH0120 et VEH0124 décrivent le même parc britannique : ils ne sont jamais additionnés. Le
+    niveau « génération » vient de l'année de fabrication quand la source la donne, sinon de
+    l'année de première immatriculation. Données rafraîchies le {bundleDate} —
+    <a href={`${base}/methodologie`}>méthodologie complète</a>.
+  </p>
+</Base>

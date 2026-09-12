@@ -1,0 +1,51 @@
+---
+import { bundleDate } from "../lib/gold.ts";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — predcar</title>
+    {description && <meta name="description" content={description} />}
+  </head>
+  <body>
+    <header class="site">
+      <div class="wrap">
+        <a class="brand" href={`${base}/`}>predcar</a>
+        <nav>
+          <a href={`${base}/`}>Classement</a>
+          <a href={`${base}/methodologie`}>Méthodologie</a>
+          <a href={`${base}/classement.csv`}>Export CSV</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <slot />
+    </main>
+
+    <footer class="site">
+      <div class="wrap">
+        <p>
+          Données : <a href="https://www.gov.uk/government/statistical-data-sets/vehicle-licensing-statistics-data-files">DfT/DVLA</a>
+          (Royaume-Uni, <abbr title="Open Government Licence v3.0">OGL v3</abbr>) et
+          <a href="https://opendata.rdw.nl/Voertuigen/Open-Data-RDW-Gekentekende_voertuigen/m9d7-ebf2">RDW</a>
+          (Pays-Bas, CC0). Rafraîchies le <strong>{bundleDate}</strong>.
+        </p>
+        <p>
+          Aucun prix, aucune donnée personnelle, aucun scraping. Chaque chiffre est reproductible
+          depuis le dépôt — voir la <a href={`${base}/methodologie`}>méthodologie</a>.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

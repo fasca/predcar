@@ -9,8 +9,7 @@ Python data pipeline producing a **sourced, dated statistical proof** of the rar
 **MVP scope (v2):** zero scraping, zero user accounts, zero market prices. A reproducible
 Parquet pipeline + a static site.
 
-**Stack:** Python 3.12 | Polars | DuckDB | Pydantic | Typer | uv | static site (Astro or
-MkDocs + Plotly) | `make` + GitHub Actions (monthly cron) | GitHub Pages
+**Stack:** Python 3.12 | Polars | DuckDB | Pydantic | Typer | uv | static site (Astro) | `make` + GitHub Actions (monthly cron) | GitHub Pages
 **UI Language:** French | **Code Language:** English
 
 ## Communication
@@ -33,7 +32,7 @@ make normalize                   # Apply mapping/ → data/silver/fleet_stock.pa
 make validate                    # Silver invariants
 make score                       # Indicators + score v1 → data/gold/ (docs/methodology.md)
 make export                      # Evidence bundle reports/<date>/ — committed by the user, analysed here
-make site                        # (planned) Build static site from data/gold/
+make site / make site-dev        # Build (or serve) the static site from the latest reports/<date>/gold/
 make test / make lint            # pytest / ruff
 ```
 
@@ -56,7 +55,7 @@ data/gold/     → Aggregates, indicators, scores (input of the site)
 mapping/       → makes.csv, models.csv, target_models.csv (make/model normalization)
 config/        → score.yaml (ALL score weights and thresholds)
 predcar/       → Python package: ingestion, normalization, metrics, Typer CLI
-site/          → Static site generator sources
+site/          → Astro static site, built from the latest reports/<date>/gold/
 docs/          → SPEC.md (reference), ARCHITECTURE.md, SOURCES.md, sources/<source>.md, mapping.md, methodology.md
 reports/       → Dated evidence bundles from real runs (committed, see make export)
 tests/         → pytest: schema per source vintage, invariants, snapshot tests

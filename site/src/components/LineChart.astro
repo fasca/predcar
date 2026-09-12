@@ -1,0 +1,70 @@
+---
+/** Build-time inline SVG line chart: no client JS, no charting dependency, and it prints.
+ * One line per series; a series with fewer than two points is drawn as a single dot. */
+interface Line {
+  label: string;
+  color: string;
+  points: { year: number; stock: number }[];
+}
+interface Props {
+  lines: Line[];
+  caption?: string;
+  height?: number;
+}
+const { lines, caption, height = 220 } = Astro.props;
+
+const W = 640;
+const H = height;
+const PAD = { top: 12, right: 12, bottom: 26, left: 48 };
+
+const all = lines.flatMap((l) => l.points);
+const years = all.map((p) => p.year);
+const stocks = all.map((p) => p.stock);
+const minYear = Math.min(...years);
+const maxYear = Math.max(...years);
+// Start the stock axis at 0: a truncated axis exaggerates a decline, and the decline is
+// exactly what this site claims to measure.
+const maxStock = Math.max(...stocks, 1);
+
+const spanX = Math.max(maxYear - minYear, 1);
+const x = (year: number) => PAD.left + ((year - minYear) / spanX) * (W - PAD.left - PAD.right);
+const y = (stock: number) => H - PAD.bottom - (stock / maxStock) * (H - PAD.top - PAD.bottom);
+
+const yTicks = [0, maxStock / 2, maxStock];
+const xTicks = minYear === maxYear ? [minYear] : [minYear, Math.round((minYear + maxYear) / 2), maxYear];
+const fmt = new Intl.NumberFormat("fr-FR");
+---
+
+<figure class="chart">
+  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={caption ?? "Évolution du stock"}>
+    {yTicks.map((t) => (
+      <g>
+        <line class="axis" x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} />
+        <text class="tick" x={PAD.left - 6} y={y(t) + 3} text-anchor="end">{fmt.format(Math.round(t))}</text>
+      </g>
+    ))}
+    {xTicks.map((t) => (
+      <text class="tick" x={x(t)} y={H - PAD.bottom + 15} text-anchor="middle">{t}</text>
+    ))}
+    {lines.map((l) =>
+      l.points.length > 1 ? (
+        <polyline
+          fill="none"
+          stroke={l.color}
+          stroke-width="2"
+          stroke-linejoin="round"
+          points={l.points.map((p) => `${x(p.year)},${y(p.stock)}`).join(" ")}
+        />
+      ) : (
+        <circle cx={x(l.points[0].year)} cy={y(l.points[0].stock)} r="3.5" fill={l.color} />
+      ),
+    )}
+    {lines.map((l, i) => (
+      <g>
+        <rect x={PAD.left + i * 130} y={PAD.top - 6} width="10" height="3" fill={l.color} />
+        <text class="label" x={PAD.left + i * 130 + 15} y={PAD.top}>{l.label}</text>
+      </g>
+    ))}
+  </svg>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

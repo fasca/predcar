@@ -62,7 +62,9 @@
       des règles de libellé dans `normalize.apply`, cf. `tasks/lessons.md`)
 
 ### Étape 5 — Site statique
-- [ ] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel
+- [x] Classement, page modèle, méthodologie, export CSV ; GitHub Pages ; cron trimestriel
+      (2026-09-12 : Astro dans `site/`, 230 pages générées depuis `reports/<date>/gold/`,
+      `pages.yml` + `refresh.yml`)
 
 ## Phase 2
 - [ ] KBA (DE) : inventaire des XLSX 2010–2026 et schémas par millésime

@@ -1,4 +1,4 @@
-.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score export validate test lint
+.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl normalize score export validate site site-dev test lint
 
 install:
 	uv sync
@@ -26,6 +26,12 @@ export:              ## Evidence bundle → reports/<date>/ (commit it so the re
 
 validate:            ## Check silver invariants
 	uv run predcar validate
+
+site:                ## Build the static site from the latest reports/<date>/gold/ into site/dist/
+	cd site && npm ci && npm run build
+
+site-dev:            ## Serve the site locally with hot reload
+	cd site && npm install && npm run dev
 
 test:
 	uv run pytest tests/ -v

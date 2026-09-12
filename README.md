@@ -96,6 +96,19 @@ Contenu de `reports/<date>/` :
 Aucun payload brut n'est copié (taille) ; un CSV > 20 Mo est gzippé. Les données sources
 sont agrégées, sans donnée personnelle.
 
+## Site
+
+```bash
+make site        # build → site/dist/ (Node 22+, npm ci)
+make site-dev    # serveur local avec rechargement
+```
+
+Le site est généré depuis le **dernier `reports/<date>/gold/` committé**, pas depuis
+`data/gold/` : pas besoin de relancer le pipeline pour le construire, et la date du bundle est
+la date de rafraîchissement affichée. Déploiement automatique sur GitHub Pages
+(`.github/workflows/pages.yml`) ; le pipeline est rejoué chaque trimestre par
+`.github/workflows/refresh.yml`.
+
 ## Commandes
 
 | Commande | Effet |

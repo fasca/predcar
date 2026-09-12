@@ -1,0 +1,54 @@
+# Builds the static site from the latest committed evidence bundle and publishes it to
+# GitHub Pages. No pipeline run and no network access to the sources are needed: the site
+# reads reports/<date>/gold/, which is versioned.
+name: Site — build et déploiement Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "reports/**"
+      - "docs/methodology.md"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - uses: actions/configure-pages@v5
+        id: pages
+      - name: Construire le site
+        run: cd site && npm ci && npm run build
+        env:
+          PREDCAR_SITE: ${{ steps.pages.outputs.origin }}
+          PREDCAR_BASE: ${{ steps.pages.outputs.base_path }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

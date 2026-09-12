@@ -11,6 +11,34 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-12 — PR : étape 5, site statique Astro et déploiement GitHub Pages
+**Ajouté**
+- `site/` : projet Astro (aucun framework client, aucune bibliothèque de graphiques — les
+  courbes sont du SVG généré au build). 230 pages : classement filtrable (segment, marque,
+  recherche, top 50/100/tout), une page par génération publiée (parc par pays, courbe de
+  rétention, détail des 4 composantes, sources et niveau de série), méthodologie, et
+  `classement.csv`.
+- `make site` / `make site-dev`.
+- `.github/workflows/pages.yml` : build + déploiement Pages à chaque push touchant `site/`,
+  `reports/` ou `docs/methodology.md`, plus `workflow_dispatch`.
+- `.github/workflows/refresh.yml` : cron trimestriel (20 janv./avr./juil./oct.) qui rejoue le
+  pipeline complet, **relance les tests sur le nouveau bundle** avant de le committer — un
+  relabellisage DfT ou une dérive de couverture échoue là, pas en production — puis pousse,
+  ce qui déclenche le déploiement.
+
+**Décision de conception — le site lit `reports/<date>/gold/`, pas `data/gold/`.** Le bundle
+de preuves est versionné : un build ne demande donc ni réseau, ni `data/`, ni run de pipeline,
+et ce que le site affiche est toujours quelque chose que le dépôt peut prouver. La date du
+bundle est la date de rafraîchissement affichée en pied de page (SPEC §6). La page
+méthodologie est rendue depuis `docs/methodology.md` : le site ne peut pas diverger du
+document qui spécifie le pipeline.
+
+**Honnêteté des graphiques** — l'axe des stocks démarre à zéro (un axe tronqué exagérerait le
+déclin, qui est précisément ce que le site prétend mesurer) ; une série à un seul point (le
+RDW aujourd'hui) est **exclue** de la courbe de rétention au lieu d'être normalisée à 100, ce
+qui se lirait « rien n'a été perdu » ; une composante absente est écrite « non disponible —
+exclue, poids renormalisés », jamais dessinée à 0.
+
 ### 2026-09-12 — PR : re-run réel post-PR #7 et précédence des règles de libellé
 **Corrigé**
 - `normalize.apply` : une règle dont le **libellé porte lui-même la génération** (pas de plage
