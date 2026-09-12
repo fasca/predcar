@@ -71,8 +71,10 @@ accepte un critère de complétude plutôt que de dupliquer la recherche du dern
 - `docs/ARCHITECTURE.md`, `README.md` §7, `CLAUDE.md`, `docs/methodology.md` §7 alignés.
 
 **Vérifié sur données réelles** — rendu depuis `reports/2026-09-12/` : 242 cibles, 228 classées,
-aucun lien interne cassé, et les 5 témoins conformes au bundle (parc et rang) : M3 E46 4 864
-(rang 72), S2000 3 801 (64), 205 GTI 1 990 (43), Clio Williams 142 (100), RS2 34 (4).
+aucun lien interne cassé, et les 5 témoins conformes au bundle (parc et rang) : M3 E46 4 863
+(rang 72), S2000 3 801 (64), 205 GTI 1 989 (43), Clio Williams 142 (100), RS2 34 (4) — les
+parcs à −1 viennent du snapshot RDW du 2026-09-08 rejoué à la place de celui du 12, jamais
+committé (voir l'entrée du run réel).
 **Restent à observer sur GitHub** : le premier déploiement Pages (opt-in *Settings → Pages →
 Source : GitHub Actions* requis) et les deux crons. La courbe de rétention par cohorte
 n'apparaîtra qu'au premier bundle exporté après cette PR, `cohorts.csv` n'existant dans aucun
