@@ -11,6 +11,41 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-12 — PR : snapshot tests des 5 témoins et filet anti-régression
+**Ajouté**
+- `tests/witnesses.py` : les 5 modèles témoins de SPEC §8 (BMW M3 E46, Peugeot 205 GTI,
+  Honda S2000, Renault Clio Williams, Audi RS2) avec leurs libellés réels, leurs libellés
+  pièges et des bornes de stock larges (≈ ×5/÷5 autour du run de référence).
+- `tests/test_witnesses.py` (45 cas) : deux couches indépendantes — *mapping* (les libellés
+  réels du bundle rejoués dans les règles **courantes**, les finitions ne doivent pas tomber
+  sur la cible) et *gold* (bornes de stock, invariant **EU = GB + NL**, série de niveau
+  génération, 4 composantes de score, stock GB décroissant).
+- `tests/test_real_labels.py` (13 cas) : filet générique sur **tous** les libellés réels —
+  aucun conflit de règle, couverture ≥ 95 % par pays rejouée hors code de production, toute
+  cible atteignable depuis un libellé réel (allowlist documentée : `FORD / RACING PUMA`), et
+  une table `KEYWORD_RULES` qui encode chaque bug déjà survenu (ST-LINE, TYPE-R, 16V, VTR,
+  XSI, Evo).
+- `predcar.export.latest_report()` et `paths.REPORTS_DIR` : accès au bundle le plus récent.
+- Fixtures de session partagées dans `tests/conftest.py` (`report`, `real_labels`,
+  `real_labels_mapped`, `gold`, `stock_frame`) ; `tests/test_normalize.py` réutilise
+  `stock_frame` au lieu de sa copie locale.
+
+**Conception** — aucune nouvelle fixture figée : `reports/<date>/` est déjà versionné, donc la
+CI y a accès sans réseau ni `data/`. Le bundle sert de **corpus d'entrée** (`model_raw`), jamais
+d'oracle de mapping : ses colonnes `model_gen` / `generation` datent des règles du jour de
+l'export. Seuls `gold/*.csv` servent d'oracle, en bornes larges insensibles à une republication
+trimestrielle. Les tests tournent dans la CI existante, sans marqueur ni `skipif`.
+
+**Vérifié par mutation** — en réintroduisant chaque bug historique, les tests échouent bien :
+`TYPE[- ]?R` → `TYPE R` (2 échecs), lookahead `(?!-?LINE)` retiré (2 échecs), `year_manufacture`
+ignoré (2 échecs), précédence des libellés retirée (1 échec). 142 → 200 tests.
+
+**Limite assumée** — `labels_target_makes.csv` ne porte pas d'année : le filet générique ne peut
+pas couvrir le bug « année d'immatriculation au lieu d'année de fabrication ». Il est couvert par
+`test_witnesses.py::test_generation_uses_build_year` (seule la M3 est discriminée par l'année,
+les 4 autres témoins portent leur génération dans le libellé — le contraste est asserté) et par
+`test_normalize.py::test_generation_uses_build_year_before_first_registration_year`.
+
 ### 2026-09-12 — PR : re-run réel post-PR #7 et précédence des règles de libellé
 **Corrigé**
 - `normalize.apply` : une règle dont le **libellé porte lui-même la génération** (pas de plage

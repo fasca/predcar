@@ -17,7 +17,8 @@
 - [x] **Valider le schéma présumé sur un échantillon réel** (2026-09-08 : VEH0120/VEH0160 conformes,
       VEH0124 corrigé — pas de `Fuel`, `YearManufacture`, `LicenceStatus` présent), liste de
       `docs/sources/dft_uk.md` cochée, URLs dans `docs/SOURCES.md`, MANIFEST.json à committer
-- [ ] Ajouter les 5 modèles témoins en snapshot tests sur les données réelles
+- [x] Ajouter les 5 modèles témoins en snapshot tests sur les données réelles (2026-09-12 :
+      `tests/witnesses.py`, `tests/test_witnesses.py`, `tests/test_real_labels.py`)
 
 ### Étape 2 — Ingestion RDW (snapshot agrégé mensuel)
 - [x] Requête SoQL agrégée (jamais `kenteken`), pagination `$limit`/`$offset`, `predcar fetch nl` / `ingest nl`
@@ -52,7 +53,8 @@
       2026-09-08 (2026-09-12 : `reports/2026-09-12/`, CSV DfT identiques au bit près, EP3 2 →
       4 139, Skyline R32/R33/R34 16/34/24 → 162/206/117, Evo V_VI 38 → 256, Fiesta ST MK7
       36 784 → 21 997, couverture GB 99,0 % / NL 98,4 %, anomalies 1 123 → 82)
-- [ ] Snapshot tests sur les 5 modèles témoins à partir des valeurs réelles
+- [x] Snapshot tests sur les 5 modèles témoins à partir des valeurs réelles (bornes calées sur
+      `reports/2026-09-12/`, vérifiés par mutation des bugs historiques)
 
 ### Étape 4 bis — Boucle de retour sur données réelles
 - [x] `predcar export` → `reports/<date>/` : preuves raw, libellés des marques cibles, couverture,
