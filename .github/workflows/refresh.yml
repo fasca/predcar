@@ -1,0 +1,87 @@
+# Quarterly refresh (SPEC §7, step 5): re-runs the whole pipeline on freshly published DfT
+# data, commits the evidence bundle, then deploys the site from it. Manual runs are allowed so
+# a refresh can follow a DfT release without waiting for the cron.
+name: Refresh trimestriel du pipeline
+
+on:
+  schedule:
+    # 04:23 UTC on the 20th of Jan/Apr/Jul/Oct — DfT publishes a few days after quarter end.
+    - cron: "23 4 20 1,4,7,10 *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      committed: ${{ steps.commit.outputs.committed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+
+      - name: Télécharger et ingérer les sources
+        run: |
+          set -euo pipefail
+          uv run predcar fetch uk
+          uv run predcar ingest uk
+          uv run predcar fetch nl
+          uv run predcar ingest nl
+
+      - name: Normaliser, valider, scorer
+        # normalize fails below the coverage gate: a refresh must never publish a ranking
+        # built on a fleet the mapping no longer recognises.
+        run: |
+          set -euo pipefail
+          uv run predcar normalize
+          uv run predcar validate
+          uv run predcar score
+
+      - name: Exporter le bundle de preuves
+        run: uv run predcar export
+
+      - name: Rejouer les tests sur le nouveau bundle
+        # test_real_labels / test_witnesses assert against the latest bundle: this is where a
+        # DfT relabelling or a coverage drift surfaces, before anything is published.
+        run: uv run pytest tests/ -q
+
+      - name: Compresser le snapshot RDW pour le versionner
+        # The RDW has no upstream history: committing the manifest without its payload would
+        # archive the fingerprint of data nobody has any more.
+        run: uv run predcar compress nl
+
+      - name: Committer le bundle et le snapshot RDW
+        id: commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/ data/raw/*/*/MANIFEST.json data/raw/nl_rdw/*/*.json.gz
+          if git diff --cached --quiet; then
+            echo "Rien de neuf à committer."
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git commit -m "Refresh trimestriel $(date -u +%Y-%m-%d) (automatique)"
+          git push origin HEAD:main
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+  # A push made with the default GITHUB_TOKEN does not trigger other workflows, so the
+  # deployment is called here instead of being left to pages.yml's push trigger.
+  deploy:
+    needs: refresh
+    if: needs.refresh.outputs.committed == 'true'
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

@@ -29,7 +29,7 @@
         <td class="why">
           {% if c.name == 'rarity' %}parc actuel {{ row.stock | fmt_int }} (1 = le plus faible de la population)
           {% elif c.name == 'conservation' %}{% if c.available %}attrition relative {{ row.relative_attrition | fmt_pct }} par an vs pairs (négatif = disparaît moins vite){% else %}pas d'historique suffisant ou pas de pairs{% endif %}
-          {% elif c.name == 'sorn_ratio' %}{% if c.available %}{{ row.sorn_ratio | fmt_pct }} du parc britannique est en SORN (hors route, conservé){% else %}non disponible hors Royaume-Uni{% endif %}
+          {% elif c.name == 'sorn_ratio' %}{% if c.available %}{{ row.sorn_ratio | fmt_pct }} du parc britannique est en SORN (hors route, conservé) ; déjà entre 0 et 1 et orienté « plus haut = plus collector », ce ratio est repris <em>tel quel</em> comme composante — la valeur 0–1 de cette ligne est donc le même nombre{% else %}non disponible hors Royaume-Uni{% endif %}
           {% elif c.name == 'recent_inflection_point' %}{% if row.inflection_year %}attrition sous la médiane des pairs depuis {{ row.inflection_year }}{% elif c.available %}pas d'inflexion en cours{% else %}pas d'historique suffisant ou pas de pairs{% endif %}
           {% endif %}
         </td>
@@ -48,11 +48,16 @@
   {% if has_retention %}
   <div id="chart-retention" class="chart"></div>
   <p class="note">Rétention = parc de la cohorte / parc maximal observé de la cohorte (courbes de
-    rétention agrégées, pas de Kaplan-Meier). Les cohortes néerlandaises apparaîtront après plusieurs
-    snapshots mensuels.</p>
+    rétention agrégées, pas de Kaplan-Meier).</p>
   {% else %}
   <p class="note">Pas encore assez d'observations par cohorte (il faut au moins deux années sur la même
     cohorte, ce que seul VEH0124 fournit pour l'instant).</p>
+  {% endif %}
+  {% if retention_skipped %}
+  <p class="note">Série{{ 's' if retention_skipped | length > 1 }} écartée{{ 's' if retention_skipped | length > 1 }} de cette courbe :
+    {{ retention_skipped | join(', ') }} — une seule observation par cohorte. Normalisée par
+    elle-même, elle afficherait 100 %, ce qui se lirait « rien n'a encore disparu ». Les cohortes
+    néerlandaises apparaîtront après plusieurs snapshots mensuels.</p>
   {% endif %}
 </section>
 

@@ -34,7 +34,7 @@ make normalize                   # Apply mapping/ → data/silver/fleet_stock.pa
 make validate                    # Silver invariants
 make score                       # Indicators + score v1 → data/gold/ (docs/methodology.md)
 make export                      # Evidence bundle reports/<date>/ — committed by the user, analysed here
-make site                        # Static site from data/gold/ → site/dist/ (Jinja2 + Plotly CDN, GitHub Pages)
+make site                        # Static site from the latest reports/<date>/gold/ → site/dist/ (Jinja2 + Plotly CDN)
 make test / make lint            # pytest / ruff
 ```
 
@@ -45,26 +45,28 @@ UK DfT and NL RDW schemas are now *observed* (`docs/sources/<source>.md`, checkl
 2026-09-08); any new source still follows Source-First. Never fake a sample.
 **Feedback loop:** the user runs `make export` and commits `reports/<date>/` (raw heads and
 profiles, every target-make label, coverage, anomalies, gold CSV). At session start, read
-`tasks/next.md` **first**: it lists the pending real-data actions with the exact commands.
-If this environment reaches the sources, run them yourself (pipeline, export, commit, push);
-otherwise read the latest `reports/*/manifest.json` and fix parsers, mapping rules and
-indicators from that evidence before anything else. Keep `tasks/next.md` current: tick what
-is done, remove finished sections, add what a fresh session must do next.
+`tasks/todo.md` and `tasks/lessons.md`, then the latest `reports/*/manifest.json`. If this
+environment reaches the sources, run the pipeline yourself (pipeline, export, commit, push);
+otherwise fix parsers, mapping rules and indicators from that evidence before anything else.
+**An unchecked box in `tasks/todo.md` means "not on `main`", not "nobody did it"**: run
+`git branch -r` and `gh pr list --state open` before planning — open branches have already
+carried finished work more than once.
 
 ## Architecture
 
 ```
 data/raw/      → Immutable downloads, <source>/<YYYY-MM-DD>/<file>, with checksum
 data/silver/   → Normalized Parquet, common schemas (fleet_stock, fleet_new_reg)
-data/gold/     → Aggregates, indicators, scores, cohort retention (the site's only input)
+data/gold/     → Aggregates, indicators, scores, cohort retention (exported to reports/)
 mapping/       → makes.csv, models.csv, target_models.csv (make/model normalization)
 config/        → score.yaml (ALL score weights and thresholds)
 predcar/       → Python package: ingestion, normalization, metrics, score, export, site, Typer CLI
 site/          → templates/ (Jinja2, French UI), static/ (CSS, JS); dist/ is generated, never committed
+               → built from the latest committed reports/<date>/gold/, not from data/gold/
 docs/          → SPEC.md (reference), ARCHITECTURE.md, SOURCES.md, sources/<source>.md, mapping.md, methodology.md
 reports/       → Dated evidence bundles from real runs (committed, see make export)
 tests/         → pytest: schema per source vintage, invariants, snapshot tests
-tasks/         → next.md (pending actions, read first), todo.md (plan), lessons.md
+tasks/         → todo.md (plan), lessons.md (rules learned from corrections)
 ```
 
 ## Style Guide

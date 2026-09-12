@@ -27,7 +27,7 @@ score:               ## Indicators + score v1 → data/gold/ (parquet + ranking.
 export:              ## Evidence bundle → reports/<date>/ (commit it so the remote reviewer can analyse real data)
 	uv run predcar export
 
-site:                ## Static site from data/gold/ → site/dist/ (open site/dist/index.html)
+site:                ## Static site from the latest reports/<date>/gold/ → site/dist/
 	uv run predcar site
 
 validate:            ## Check silver invariants

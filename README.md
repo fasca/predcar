@@ -13,7 +13,7 @@ Python 3.12 · [uv](https://docs.astral.sh/uv/) · Polars · DuckDB · Pydantic 
 ```bash
 git clone https://github.com/fasca/predcar.git && cd predcar
 uv sync            # crée .venv avec Python 3.12 et toutes les dépendances
-make test          # 80+ tests, doit être vert
+make test          # 220 tests, doit être vert
 ```
 
 ## Récupérer les données (à faire depuis votre machine)
@@ -104,10 +104,17 @@ make site                         # site/dist/ : classement filtrable, une page 
 ```
 
 Le site est **entièrement statique** (HTML + Plotly.js chargé depuis son CDN) et généré
-uniquement depuis `data/gold/`. Sur GitHub, le workflow `.github/workflows/site.yml` le
-reconstruit avec des données fraîches et le déploie sur GitHub Pages à chaque push sur `main`,
-chaque trimestre (cron, après les publications DfT) et à la demande (*Run workflow*). Activer
-Pages une fois : *Settings → Pages → Source : GitHub Actions*.
+depuis le **dernier bundle de preuves committé** (`reports/<date>/gold/`), pas depuis
+`data/gold/` : un déploiement ne demande donc ni réseau ni répertoire `data/`, et ce que le
+site affiche est reproductible depuis le dépôt seul. La date affichée est celle du bundle.
+Pour rendre un run local frais : `make site --gold-dir data/gold` (ou
+`uv run predcar site --gold-dir data/gold`).
+
+Deux workflows GitHub : `pages.yml` construit et déploie sur Pages (push touchant `site/`,
+`reports/`, `docs/methodology.md`, ou *Run workflow*) ; `refresh.yml` rejoue le pipeline chaque
+trimestre après les publications DfT, **relance les tests sur le nouveau bundle avant de le
+committer**, puis appelle le déploiement. Activer Pages une fois :
+*Settings → Pages → Source : GitHub Actions*.
 
 ## Commandes
 
@@ -118,7 +125,7 @@ Pages une fois : *Settings → Pages → Source : GitHub Actions*.
 | `make normalize` | Applique `mapping/` → `data/silver/fleet_stock.parquet`, gate de couverture |
 | `make score` | Indicateurs (stock, attrition, SORN, inflexion, rareté) + score v1 → `data/gold/` |
 | `make export` | Dossier de preuves `reports/<date>/` à committer pour analyse à distance |
-| `make site` | Site statique `site/dist/` depuis `data/gold/` (classement, pages modèle, méthodologie, CSV) |
+| `make site` | Site statique `site/dist/` depuis le dernier `reports/<date>/gold/` (classement, pages modèle, méthodologie, CSV) |
 | `make validate` | Invariants silver (stock ≥ 0, clés uniques, statuts) |
 | `make test` / `make lint` | pytest / ruff |
 | `uv run predcar --help` | Toutes les sous-commandes (`fetch`, `ingest`, `normalize`, `score`, `export`, `site`, `validate`) |
@@ -134,7 +141,7 @@ site/       templates/ (Jinja2), static/ (CSS, JS) → dist/ généré (non vers
 docs/       SPEC.md, ARCHITECTURE.md, SOURCES.md, sources/<source>.md (schémas), mapping.md, methodology.md
 tests/      pytest — schémas, invariants, parseurs, mapping, fixtures
 reports/    exports datés (preuves de runs réels, committés)
-tasks/      next.md (à faire en priorité, lu par Claude Code au démarrage), todo.md, lessons.md
+tasks/      todo.md (plan par étapes), lessons.md (règles tirées des corrections)
 ```
 
 ## Sources (phase 1)

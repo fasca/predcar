@@ -83,7 +83,7 @@ def annual_stock(stock: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-_COHORTS_SCHEMA = {
+COHORTS_SCHEMA = {
     "make": pl.Utf8,
     "model_gen": pl.Utf8,
     "generation": pl.Utf8,
@@ -104,7 +104,7 @@ def cohort_retention(stock: pl.DataFrame, targets: list[TargetModel]) -> pl.Data
     cohort year (VEH0124, RDW); end-of-year values as in :func:`annual_stock`.
     """
     if not targets:
-        return pl.DataFrame(schema=_COHORTS_SCHEMA)
+        return pl.DataFrame(schema=COHORTS_SCHEMA)
     keys = ["country", "series", "make", "model_gen", "generation", "cohort", "year"]
     wanted = pl.DataFrame(
         [{"make": t.make, "model_gen": t.model_gen, "generation": t.generation} for t in targets]
@@ -132,8 +132,8 @@ def cohort_retention(stock: pl.DataFrame, targets: list[TargetModel]) -> pl.Data
         df.with_columns(
             pl.when(peak > 0).then(pl.col("stock") / peak).otherwise(None).alias("retention")
         )
-        .select(list(_COHORTS_SCHEMA))
-        .cast(_COHORTS_SCHEMA)
+        .select(list(COHORTS_SCHEMA))
+        .cast(COHORTS_SCHEMA)
         .sort(keys)
     )
 

@@ -418,22 +418,28 @@ def _versions() -> dict[str, str]:
     return out
 
 
-def latest_report(reports_dir: Path = REPORTS_DIR) -> Path | None:
+def latest_report(reports_dir: Path = REPORTS_DIR, requires: str | None = None) -> Path | None:
     """Return the most recent ``reports/<YYYY-MM-DD>/`` bundle, or None when there is none.
 
-    Mirrors ``raw.latest_snapshot`` but returns None instead of raising: callers (tests)
-    decide whether a missing bundle is an error.
+    Mirrors ``raw.latest_snapshot`` but returns None instead of raising: callers (tests, the
+    site) decide whether a missing bundle is an error.
 
     Args:
         reports_dir: directory holding the dated bundles.
+        requires: relative path that must exist inside the bundle (e.g. ``gold/ranking.csv``).
+            Bundles lacking it are skipped rather than rejected, so a partial export — one
+            whose `score` step failed — never shadows the last complete one.
 
     Returns:
-        Path of the latest bundle directory, or None.
+        Path of the latest matching bundle directory, or None.
     """
     if not reports_dir.is_dir():
         return None
-    days = sorted(d for d in reports_dir.iterdir() if d.is_dir() and _DAY_RE.fullmatch(d.name))
-    return days[-1] if days else None
+    days = sorted(
+        (d for d in reports_dir.iterdir() if d.is_dir() and _DAY_RE.fullmatch(d.name)),
+        reverse=True,
+    )
+    return next((d for d in days if requires is None or (d / requires).is_file()), None)
 
 
 def export(

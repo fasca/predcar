@@ -71,12 +71,16 @@
       attrition, rétention par cohorte, comparaison au segment, sources datées), méthodologie
       depuis `docs/methodology.md`, `ranking.csv` ; `make site`
 - [x] `gold/cohorts.parquet` (rétention par cohorte) écrit par `make score`
-- [x] `.github/workflows/site.yml` : fetch + pipeline + build + déploiement GitHub Pages,
-      cron trimestriel, déclenchement manuel, push sur `main`
+- [x] Le site est construit depuis le **dernier `reports/<date>/gold/` committé** (CSV), pas
+      depuis `data/gold/` : un déploiement ne demande ni réseau ni `data/`, et la date de refresh
+      affichée est celle du bundle (`site.resolve_gold_dir`, `export.latest_report(requires=…)`)
+- [x] `.github/workflows/pages.yml` (build + déploiement Pages) et `refresh.yml` (cron
+      trimestriel : pipeline, export, **tests rejoués sur le nouveau bundle**, commit, puis
+      appel explicite du déploiement — un push par `GITHUB_TOKEN` ne déclenche aucun workflow)
+- [x] Conserver l'historique RDW côté CI : `rdw-snapshot.yml` (cron mensuel) committe le
+      payload gzippé (~1,2 Mo/mois) et son `MANIFEST.json` ; septembre 2026 archivé
 - [ ] Activer GitHub Pages (Settings → Pages → Source : GitHub Actions) et vérifier le premier
-      déploiement (les URLs DfT sont résolues à chaque run ; un échec = schéma ou couverture)
-- [ ] Conserver l'historique RDW côté CI (committer les snapshots agrégés, ~20 Mo/mois, ou un
-      cache) pour que l'attrition NL existe un jour sans la machine de l'utilisateur
+      déploiement — **action utilisateur**, opt-in unique sans lequel `deploy-pages` échoue
 
 ## Phase 2
 - [ ] KBA (DE) : inventaire des XLSX 2010–2026 et schémas par millésime

@@ -128,10 +128,16 @@ def export(
 
 @app.command()
 def site(
-    gold_dir: Path = typer.Option(GOLD_DIR),
+    gold_dir: Path | None = typer.Option(
+        None, help="Default: gold/ of the latest committed reports/<date>/ bundle"
+    ),
     out_dir: Path = typer.Option(SITE_DIST_DIR, help="Emptied before rendering"),
 ) -> None:
-    """Static site (ranking, model pages, methodology, CSV) from data/gold/ → site/dist/."""
+    """Static site (ranking, model pages, methodology, CSV) → site/dist/.
+
+    Reads the latest committed evidence bundle by default, so a build needs neither the
+    network nor a local data/ directory. Pass --gold-dir data/gold to render a fresh run.
+    """
     try:
         written = site_mod.build(gold_dir, out_dir)
     except site_mod.SiteError as exc:

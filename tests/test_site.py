@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from pathlib import Path
 
@@ -129,3 +130,125 @@ def test_model_page_cites_the_sales_series_behind_survival(
         slug = site.slugify(r["make"], r["model_gen"], r["generation"])
         page = (written["models"] / f"{slug}.html").read_text(encoding="utf-8")
         assert ("DfT VEH0160" in page) is expected
+
+
+# ----------------------------------------------------------------- building from a bundle
+
+
+def _bundle(root: Path, day: str, gold_dir: Path, *, complete: bool = True) -> Path:
+    """Write a ``reports/<day>/gold/`` bundle of CSVs, as ``predcar export`` does."""
+    out = root / day / "gold"
+    out.mkdir(parents=True)
+    # export.py exports every gold/*.parquet, cohorts.parquet included.
+    for parquet in sorted(gold_dir.glob("*.parquet")):
+        name = parquet.stem
+        df = pl.read_parquet(parquet)
+        # export.py joins list columns with "|" — CSV has no nested type.
+        lists = [c for c, dt in df.schema.items() if dt == pl.List(pl.String)]
+        df.with_columns(pl.col(c).list.join("|") for c in lists).write_csv(out / f"{name}.csv")
+    if complete:
+        (out / "ranking.csv").write_text("rank,make\n1,X\n", encoding="utf-8")
+    return out
+
+
+def test_resolve_gold_dir_picks_the_latest_complete_bundle(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """A newer bundle whose score step failed must not shadow the last usable one."""
+    reports = tmp_path / "reports"
+    _bundle(reports, "2026-06-30", gold[0])
+    _bundle(reports, "2026-09-12", gold[0], complete=False)  # no gold/ranking.csv
+    (reports / "not-a-date").mkdir()
+
+    resolved, bundle_date = site.resolve_gold_dir(None, reports)
+    assert resolved == reports / "2026-06-30" / "gold"
+    assert bundle_date == date(2026, 6, 30)
+
+
+def test_resolve_gold_dir_without_any_bundle_says_what_to_run(tmp_path: Path) -> None:
+    with pytest.raises(site.SiteError, match="make export"):
+        site.resolve_gold_dir(None, tmp_path / "reports")
+
+
+def test_build_from_a_csv_bundle_matches_the_parquet_build(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """The CSV of a bundle and the Parquet of a run must render the same pages."""
+    reports = tmp_path / "reports"
+    _bundle(reports, "2026-09-12", gold[0])
+    from_parquet = tmp_path / "from-parquet"
+    from_csv = tmp_path / "from-csv"
+    _build(gold, from_parquet)
+    site.build(
+        None,
+        from_csv,
+        gold[1],
+        SITE_DIR / "templates",
+        SITE_DIR / "static",
+        DOCS_DIR / "methodology.md",
+        CFG,
+        built_on=date(2026, 9, 9),
+        reports_dir=reports,
+    )
+    pages = sorted(p.name for p in (from_parquet / "modeles").iterdir())
+    assert pages == sorted(p.name for p in (from_csv / "modeles").iterdir())
+    for name in ("index.html", *pages[:3]):
+        rel = name if name == "index.html" else f"modeles/{name}"
+        assert (from_parquet / rel).read_text() == (from_csv / rel).read_text(), rel
+
+
+def test_bundle_date_is_the_refresh_date(gold: tuple[Path, Path], tmp_path: Path) -> None:
+    """SPEC §6 asks for the date of the data, not the date of the rendering run."""
+    reports = tmp_path / "reports"
+    _bundle(reports, "2026-09-12", gold[0])
+    out = tmp_path / "dist"
+    site.build(
+        None,
+        out,
+        gold[1],
+        SITE_DIR / "templates",
+        SITE_DIR / "static",
+        DOCS_DIR / "methodology.md",
+        CFG,
+        reports_dir=reports,
+    )
+    assert "2026-09-12" in (out / "index.html").read_text(encoding="utf-8")
+
+
+def test_csv_reading_never_imputes_a_missing_component_as_zero(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """An empty CSV field is null; a 0 would silently enter the weighted score."""
+    reports = tmp_path / "reports"
+    bundle = _bundle(reports, "2026-09-12", gold[0])
+    scores = site._read_table(bundle, "scores")
+    reference = pl.read_parquet(gold[0] / "scores.parquet")
+    for column in ("score", "conservation", "relative_attrition", "inflection_year"):
+        assert scores[column].null_count() == reference[column].null_count(), column
+    assert scores.schema["components_available"] == pl.List(pl.String)
+
+
+def test_no_page_links_to_an_absolute_path(gold: tuple[Path, Path], tmp_path: Path) -> None:
+    """GitHub Pages serves the site under /<repo>/: absolute paths would 404 there."""
+    out = tmp_path / "dist"
+    _build(gold, out)
+    pattern = re.compile(r'(?:href|src)="/')
+    for page in [out / "index.html", out / "methodologie.html", *(out / "modeles").iterdir()]:
+        assert not pattern.search(page.read_text(encoding="utf-8")), page.name
+
+
+def test_single_observation_cohort_is_named_not_drawn_at_100_percent() -> None:
+    """A lone point normalized by itself reads 100 % — "nothing lost yet". Never drawn."""
+    cohorts = pl.DataFrame(
+        {
+            "country": ["GB", "GB", "NL"],
+            "series": ["VEH0124", "VEH0124", "RDW"],
+            "cohort": [2003, 2003, 2003],
+            "year": [2024, 2025, 2026],
+            "retention": [1.0, 0.9, 1.0],
+        }
+    )
+    traces, skipped = site._cohort_traces(cohorts)
+    assert [t["label"] for t in traces] == ["Royaume-Uni 2003"]
+    assert skipped == ["Pays-Bas (RDW)"]
+    assert all(len(t["years"]) >= 2 for t in traces)

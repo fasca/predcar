@@ -23,8 +23,15 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from predcar import metrics
 from predcar.config import ScoreConfig, load_score_config
+from predcar.export import latest_report
 from predcar.normalize import TARGETS_FILE, TargetModel, load_targets
-from predcar.paths import DOCS_DIR, GOLD_DIR, MAPPING_DIR, SITE_DIR, SITE_DIST_DIR
+from predcar.paths import (
+    DOCS_DIR,
+    MAPPING_DIR,
+    REPORTS_DIR,
+    SITE_DIR,
+    SITE_DIST_DIR,
+)
 from predcar.score import COMPONENTS
 
 logger = logging.getLogger(__name__)
@@ -136,25 +143,75 @@ class Gold:
     targets: dict[tuple[str, str, str], TargetModel]
 
 
+TABLES = ("scores", "indicators", "stock_series")
+# Year-like and count-like columns: the Parquet writes them as Int32, CSV inference reads
+# Int64. Cast so a build reads the same types whichever source it was given.
+_INT32_COLUMNS = (
+    "latest_year",
+    "history_years",
+    "n_peers",
+    "inflection_year",
+    "rank",
+    "year",
+    "age_bucket",
+    "cohort",
+)
+
+
+def _read_table(gold_dir: Path, name: str) -> pl.DataFrame:
+    """Read one gold table, from Parquet when present, else from the bundle's CSV.
+
+    ``data/gold/`` holds Parquet (a local pipeline run); a committed ``reports/<date>/gold/``
+    holds the CSV of the same tables. Empty CSV fields are read as null, never as 0 — a
+    missing component is excluded from the score, not imputed (``docs/methodology.md`` §5).
+    """
+    parquet = gold_dir / f"{name}.parquet"
+    if parquet.is_file():
+        return pl.read_parquet(parquet)
+    csv = gold_dir / f"{name}.csv"
+    if not csv.is_file():
+        raise SiteError(
+            f"{parquet} and {csv} are both missing: run `predcar score`, "
+            f"or point --gold-dir at a bundle exported by `make export`"
+        )
+    df = pl.read_csv(csv)
+    casts = [pl.col(c).cast(pl.Int32) for c in _INT32_COLUMNS if c in df.columns]
+    # A fully empty column is inferred as Null; rarity_tier is one today. Keep it a string
+    # so downstream formatting and comparisons behave as with Parquet.
+    casts += [
+        pl.col(c).cast(pl.String) for c, dt in df.schema.items() if dt == pl.Null and c != "rank"
+    ]
+    if "components_available" in df.columns and df.schema["components_available"] != pl.List:
+        # ranking.csv / scores.csv store the list joined by "|" (see score.py).
+        casts.append(
+            pl.col("components_available")
+            .fill_null("")
+            .str.split("|")
+            .alias("components_available")
+        )
+    return df.with_columns(casts) if casts else df
+
+
 def load_gold(gold_dir: Path, mapping_dir: Path) -> Gold:
-    """Read ``data/gold/`` (``cohorts.parquet`` optional) and the target list."""
-    paths = {n: gold_dir / f"{n}.parquet" for n in ("scores", "indicators", "stock_series")}
-    missing = [str(p) for p in paths.values() if not p.is_file()]
-    if missing:
-        raise SiteError(f"missing gold tables {missing}: run `predcar score` first")
-    cohorts_path = gold_dir / "cohorts.parquet"
+    """Read the gold tables of ``gold_dir`` (``cohorts`` optional) and the target list.
+
+    Accepts either a pipeline output directory (``data/gold/``, Parquet) or the ``gold/``
+    directory of a committed evidence bundle (``reports/<date>/gold/``, CSV).
+    """
+    tables = {name: _read_table(gold_dir, name) for name in TABLES}
+    has_cohorts = any((gold_dir / f"cohorts.{ext}").is_file() for ext in ("parquet", "csv"))
     cohorts = (
-        pl.read_parquet(cohorts_path)
-        if cohorts_path.is_file()
-        else pl.DataFrame(schema=metrics._COHORTS_SCHEMA)
+        _read_table(gold_dir, "cohorts")
+        if has_cohorts
+        else pl.DataFrame(schema=metrics.COHORTS_SCHEMA)
     )
     targets = {
         (t.make, t.model_gen, t.generation): t for t in load_targets(mapping_dir / TARGETS_FILE)
     }
     return Gold(
-        scores=pl.read_parquet(paths["scores"]),
-        indicators=pl.read_parquet(paths["indicators"]),
-        series=pl.read_parquet(paths["stock_series"]),
+        scores=tables["scores"],
+        indicators=tables["indicators"],
+        series=tables["stock_series"],
         cohorts=cohorts,
         targets=targets,
     )
@@ -239,26 +296,38 @@ def _series_traces(series: pl.DataFrame, column: str) -> list[dict]:
     return traces
 
 
-def _cohort_traces(cohorts: pl.DataFrame) -> list[dict]:
-    """Retention curves by (country, cohort) with at least two observations."""
-    traces = []
+def _cohort_traces(cohorts: pl.DataFrame) -> tuple[list[dict], list[str]]:
+    """Retention curves by (country, cohort), and the names of the series left out.
+
+    A cohort observed once — every RDW cohort, until monthly snapshots accumulate — is
+    **excluded** rather than drawn: a single point normalized by itself would read 100 %,
+    that is "nothing has been lost yet". The excluded series are named on the page instead of
+    disappearing silently.
+
+    Returns:
+        The drawable traces, and a sorted list of ``"<country> <series>"`` labels skipped.
+    """
+    traces: list[dict] = []
+    skipped: set[str] = set()
     grouped = cohorts.group_by("country", "cohort").agg(
         pl.col("year").sort().alias("years"),
         pl.col("retention").sort_by("year").alias("values"),
         pl.col("series").first(),
     )
     for r in grouped.sort("country", "cohort").iter_rows(named=True):
+        country = COUNTRY_LABELS.get(r["country"], r["country"])
         if len(r["years"]) < 2:
+            skipped.add(f"{country} ({r['series']})")
             continue
         traces.append(
             {
                 "country": r["country"],
-                "label": f"{COUNTRY_LABELS.get(r['country'], r['country'])} {r['cohort']}",
+                "label": f"{country} {r['cohort']}",
                 "years": r["years"],
                 "values": r["values"],
             }
         )
-    return traces
+    return traces, sorted(skipped)
 
 
 def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
@@ -295,10 +364,11 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
         for s in sorted(cited):
             info = SERIES_INFO.get(s, {"name": s, "detail": "", "url": "", "licence": ""})
             sources.append({**info, "country": c["label"], "latest_year": c["latest_year"]})
+    retention, retention_skipped = _cohort_traces(cohorts)
     charts = {
         "stock": _series_traces(series, "stock"),
         "attrition": _series_traces(series, "attrition"),
-        "retention": _cohort_traces(cohorts),
+        "retention": retention,
     }
     return {
         "row": row,
@@ -306,7 +376,8 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
         "by_country": by_country,
         "sources": sources,
         "charts_json": json.dumps(charts, ensure_ascii=False).replace("</", "<\\/"),
-        "has_retention": bool(charts["retention"]),
+        "has_retention": bool(retention),
+        "retention_skipped": retention_skipped,
         "min_weight_coverage": cfg.min_weight_coverage,
     }
 
@@ -335,8 +406,44 @@ def render_methodology(path: Path) -> str:
     return markdown.markdown(text, extensions=["tables", "fenced_code", "toc"])
 
 
+RANKING_CSV = "ranking.csv"
+_BUNDLE_RANKING = f"gold/{RANKING_CSV}"
+
+
+def resolve_gold_dir(
+    gold_dir: Path | None = None, reports_dir: Path = REPORTS_DIR
+) -> tuple[Path, date | None]:
+    """Pick the gold directory to render, and the date the data was exported.
+
+    With no explicit ``gold_dir``, the site is built from the most recent committed evidence
+    bundle (``reports/<date>/gold/``). That keeps a deployment free of network access and of a
+    local ``data/`` directory, and makes what the site shows reproducible from the repository
+    alone. A bundle without ``gold/ranking.csv`` — an export whose score step failed — is
+    skipped rather than shadowing the last complete one.
+
+    Args:
+        gold_dir: explicit directory to read; skips bundle lookup.
+        reports_dir: directory holding the dated bundles.
+
+    Returns:
+        The directory to read, and the bundle date when it came from one (else None).
+
+    Raises:
+        SiteError: when no usable bundle exists and no directory was given.
+    """
+    if gold_dir is not None:
+        return gold_dir, None
+    bundle = latest_report(reports_dir, requires=_BUNDLE_RANKING)
+    if bundle is None:
+        raise SiteError(
+            f"no evidence bundle with {_BUNDLE_RANKING} under {reports_dir}: "
+            f"run `make export` and commit it, or pass --gold-dir data/gold"
+        )
+    return bundle / "gold", date.fromisoformat(bundle.name)
+
+
 def build(
-    gold_dir: Path = GOLD_DIR,
+    gold_dir: Path | None = None,
     out_dir: Path = SITE_DIST_DIR,
     mapping_dir: Path = MAPPING_DIR,
     templates_dir: Path = SITE_DIR / "templates",
@@ -344,6 +451,7 @@ def build(
     methodology_path: Path = DOCS_DIR / "methodology.md",
     cfg: ScoreConfig | None = None,
     built_on: date | None = None,
+    reports_dir: Path = REPORTS_DIR,
 ) -> dict[str, Path]:
     """Render the whole site into ``out_dir`` (emptied first).
 
@@ -352,7 +460,9 @@ def build(
         ``models`` directory.
     """
     cfg = cfg or load_score_config()
-    built_on = built_on or date.today()
+    gold_dir, bundle_date = resolve_gold_dir(gold_dir, reports_dir)
+    # The refresh date the site cites is the date of the data, not of the rendering run.
+    built_on = built_on or bundle_date or date.today()
     gold = load_gold(gold_dir, mapping_dir)
     rows = ranking_rows(gold, cfg)
     env = _environment(templates_dir)
@@ -399,13 +509,15 @@ def build(
         ),
         encoding="utf-8",
     )
-    ranking_csv = gold_dir / "ranking.csv"
+    ranking_csv = gold_dir / RANKING_CSV
     if ranking_csv.is_file():
-        shutil.copy(ranking_csv, out_dir / "ranking.csv")
+        shutil.copy(ranking_csv, out_dir / RANKING_CSV)
+        # A dated copy too: a download sitting in a folder should say which run it came from.
+        shutil.copy(ranking_csv, out_dir / f"predcar-classement-{built_on}.csv")
     logger.info("site built in %s: %d targets, %d published", out_dir, len(rows), len(published))
     return {
         "index": out_dir / "index.html",
         "methodology": out_dir / "methodologie.html",
-        "ranking_csv": out_dir / "ranking.csv",
+        "ranking_csv": out_dir / RANKING_CSV,
         "models": out_dir / MODELS_DIR,
     }

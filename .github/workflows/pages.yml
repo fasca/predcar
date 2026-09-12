@@ -1,0 +1,55 @@
+# Builds the static site from the latest committed evidence bundle and publishes it to GitHub
+# Pages. No pipeline run and no network access to the sources are needed: the site reads
+# reports/<date>/gold/, which is versioned — so a deployment cannot break because gov.uk is
+# momentarily down or because the coverage gate failed.
+name: Site — build et déploiement Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "reports/**"
+      - "predcar/site.py"
+      - "docs/methodology.md"
+      - "config/score.yaml"
+      - ".github/workflows/pages.yml"
+  # Called at the end of refresh.yml: a push made with GITHUB_TOKEN triggers no workflow,
+  # so the quarterly refresh has to invoke this one explicitly.
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+      - uses: actions/configure-pages@v5
+      - name: Construire le site
+        run: make site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

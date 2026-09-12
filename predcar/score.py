@@ -15,7 +15,6 @@ published only when the available weight sum ≥ ``min_weight_coverage``.
 from __future__ import annotations
 
 import logging
-import math
 from pathlib import Path
 
 import polars as pl
@@ -167,7 +166,3 @@ def score(
         pl.col("components_available").list.join("|"),
     ).write_csv(written["ranking"])
     return written
-
-
-def is_finite(x: float | None) -> bool:
-    return x is not None and math.isfinite(x)

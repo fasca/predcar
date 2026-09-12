@@ -11,42 +11,72 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
-### 2026-09-09 — PR #8 : site statique (phase 1, étape 5)
+### 2026-09-12 — PR : site statique (phase 1, étape 5)
 **Ajouté**
 - `predcar site` / `make site` (`predcar/site.py`, gabarits Jinja2 dans `site/templates/`,
-  CSS/JS dans `site/static/`) : site statique en français généré uniquement depuis
-  `data/gold/` vers `site/dist/` (non versionné).
+  CSS/JS dans `site/static/`) : site statique en français rendu vers `site/dist/` (non versionné).
   - Classement des cibles publiées avec filtres segment / décennie / pays et tri (score,
     « se raréfient le plus vite / le moins vite », parc le plus faible), top 50 par défaut,
     barres des quatre composantes, liste repliée des cibles à score non publié et pourquoi.
   - Une page par génération cible : rang et score, tableau des composantes (valeur, poids,
     part du score, explication), parc par pays, attrition lissée, rétention par cohorte,
     comparaison au segment (médiane des pairs, nombre de pairs, inflexion, ratio SORN),
-    sources citées avec dernière observation et licence, date de génération.
+    sources citées avec dernière observation et licence, date des données.
   - Page méthodologie rendue depuis `docs/methodology.md`, précédée des paramètres réels de
-    `config/score.yaml` ; `ranking.csv` téléchargeable.
+    `config/score.yaml` ; classement téléchargeable (`ranking.csv` et une copie datée
+    `predcar-classement-<date>.csv`).
   - Graphiques Plotly.js chargés depuis le CDN, données embarquées dans chaque page ; message
-    de repli si le CDN est inaccessible.
+    de repli si le CDN est inaccessible ; axe des parcs à zéro.
 - `data/gold/cohorts.parquet` (`metrics.cohort_retention`) : courbes de rétention agrégées par
   (cible, pays, cohorte d'immatriculation), `retention = stock / stock maximal observé`.
-- `.github/workflows/site.yml` : fetch des sources officielles, pipeline complet, build et
-  déploiement GitHub Pages — cron trimestriel (20 janvier / avril / juillet / octobre),
-  déclenchement manuel, push sur `main`.
-- Tests : rendu complet du site sur la population synthétique (pages, classement, cibles non
-  publiées, méthodologie, JSON embarqué sûr), formats français, rétention par cohorte.
+- `.github/workflows/pages.yml` : build et déploiement GitHub Pages sur push touchant `site/`,
+  `reports/`, `predcar/site.py`, `docs/methodology.md` ou `config/score.yaml`, `workflow_call`
+  et déclenchement manuel. Aucun accès réseau aux sources, aucun run de pipeline.
+- `.github/workflows/refresh.yml` : cron trimestriel (20 janvier / avril / juillet / octobre),
+  pipeline complet, export, **tests rejoués sur le nouveau bundle avant tout commit** (un
+  relabellisage DfT ou une dérive de couverture échoue là, pas en production), compression du
+  snapshot RDW, commit, puis appel explicite du déploiement.
+- Tests (13 → 14 sur le site, 220 au total) : rendu complet sur la population synthétique,
+  formats français, JSON embarqué qui ne peut pas fermer la balise `<script>`, **égalité
+  stricte entre un build depuis le Parquet d'un run et depuis le CSV d'un bundle**, bundle
+  incomplet ignoré, absence de chemin absolu dans les pages, cohorte à une seule observation
+  nommée et non dessinée.
 
-- `tasks/next.md` : fichier de reprise lu en premier par Claude Code au démarrage — actions
-  en attente sur données réelles avec les commandes exactes (run du pipeline, export, commit,
-  push), checklist d'analyse du prochain export, activation de GitHub Pages.
+**Le site lit le dernier bundle committé, pas `data/gold/`**
+`site.resolve_gold_dir()` prend le `gold/` du plus récent `reports/<date>/` contenant
+`gold/ranking.csv` (un export dont l'étape `score` a échoué est sauté, pas une erreur), et la
+**date affichée est celle du bundle**, pas celle du rendu. Conséquences : un déploiement prend
+quelques secondes au lieu de ~190 Mo et 20 minutes, ne casse pas si gov.uk est momentanément
+indisponible ou si la gate de couverture échoue, et ce que le site affiche est reproductible
+depuis le dépôt seul. `--gold-dir data/gold` rend un run local frais. `export.latest_report()`
+accepte un critère de complétude plutôt que de dupliquer la recherche du dernier bundle.
+
+**Honnêteté des graphiques** — le site prétend mesurer un déclin :
+- l'axe des parcs démarre à zéro (un axe tronqué exagère exactement ce qu'on mesure) ;
+- une cohorte observée **une seule fois** (toutes les cohortes RDW tant que les snapshots
+  mensuels ne se sont pas accumulés) est **exclue** de la courbe de rétention et **nommée** sous
+  le graphique avec la raison : normalisée par elle-même elle afficherait 100 %, ce qui se
+  lirait « rien n'a encore disparu » ;
+- une composante absente est signalée absente (poids renormalisés), jamais dessinée à 0 ;
+- la page dit que `sorn_ratio` est le ratio brut repris *tel quel* comme composante, sinon la
+  carte « part SORN » et la barre de composante semblent mesurer deux choses différentes.
 
 **Modifié**
-- `docs/ARCHITECTURE.md` §9 (site et déploiement), README §7, CLAUDE.md (`make site` n'est
-  plus « planned », `tasks/next.md` lu en premier), `docs/methodology.md` §7
-  (`cohorts.parquet`).
+- `metrics.COHORTS_SCHEMA` rendu public (il était lu comme membre privé depuis `site.py`).
+- `score.py` : suppression de `is_finite()`, morte depuis son introduction. `pyproject.toml` :
+  `duckdb` documenté comme outil de requêtes ad-hoc, non importé par le paquet.
+- Suppression de `tasks/next.md` : `tasks/todo.md` (le plan) et `tasks/lessons.md` (les règles)
+  suffisent — trois fichiers de reprise concurrents finissent par se contredire, voir la leçon
+  du 2026-09-12 sur les branches ouvertes.
+- `docs/ARCHITECTURE.md`, `README.md` §7, `CLAUDE.md`, `docs/methodology.md` §7 alignés.
 
-**Non validé sur données réelles** : le rendu a été vérifié sur l'export
-`reports/2026-09-08/` (241 pages, 225 classées) ; le premier déploiement Pages et le cron
-restent à observer sur GitHub.
+**Vérifié sur données réelles** — rendu depuis `reports/2026-09-12/` : 242 cibles, 228 classées,
+aucun lien interne cassé, et les 5 témoins conformes au bundle (parc et rang) : M3 E46 4 864
+(rang 72), S2000 3 801 (64), 205 GTI 1 990 (43), Clio Williams 142 (100), RS2 34 (4).
+**Restent à observer sur GitHub** : le premier déploiement Pages (opt-in *Settings → Pages →
+Source : GitHub Actions* requis) et les deux crons. La courbe de rétention par cohorte
+n'apparaîtra qu'au premier bundle exporté après cette PR, `cohorts.csv` n'existant dans aucun
+bundle antérieur.
 
 ### 2026-09-12 — PR : cron mensuel RDW et archives brutes compressées
 **Ajouté**
@@ -267,9 +297,12 @@ poids 1,0) : M3 E46 4 864, S2000 3 801, 205 GTI 1 990, Clio Williams 142, RS2 34
   l'année de première immatriculation uniquement ; courbes de rétention agrégées à la place
   de Kaplan-Meier.
 
-### Validé sur données réelles (2026-09-08) et reste à vérifier
-- Validé : layout des CSV DfT, réponse de l'API RDW, couverture du mapping, 241 cibles scorées
-  avec les quatre composantes.
-- À vérifier au prochain run : effet de `year_manufacture` sur les générations des imports
-  (Skyline, Evo, Supra), distribution des composantes après correction des règles, stock des
-  cibles témoins (Civic Type R EP3 attendu en centaines, plus 1).
+### Validé sur données réelles (dernier état : 2026-09-12)
+- Validé au 2026-09-08 : layout des CSV DfT, réponse de l'API RDW, couverture du mapping,
+  241 cibles scorées avec les quatre composantes.
+- Vérifié depuis, par le re-run du 2026-09-12 (`reports/2026-09-12/`) : l'effet de
+  `year_manufacture` sur les générations des imports (Skyline R32/R33/R34 séparées, Evo par le
+  numéro du libellé), la distribution des composantes après correction des règles, et le stock
+  des cibles témoins — Civic Type R EP3 à 4 139 exemplaires au lieu de 1.
+- Reste à observer sur GitHub : le premier déploiement Pages et les crons (mensuel RDW,
+  trimestriel de rafraîchissement).

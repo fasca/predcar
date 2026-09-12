@@ -62,8 +62,9 @@ uv run predcar normalize --min-coverage 0    # explorer sans échouer, lire le r
 make normalize                               # seuil de config/mapping.yaml
 ```
 
-État (2026-09-08, premières données réelles) : couverture **GB 97,9 %**, **NL 98,2 %**
-(immatriculations neuves GB 98,1 %). La première passe a révélé 11 familles de regex trop larges
+État (2026-09-12, `reports/2026-09-12/silver/coverage.csv`) : couverture **GB 99,0 %**,
+**NL 98,4 %** (immatriculations neuves GB 99,2 %), hors libellés `unknown_labels`. La première
+passe (2026-09-08 : GB 97,9 %, NL 98,2 %) avait révélé 11 familles de regex trop larges
 (`^900` capturait `9000`, `^MX-3` capturait `MX-30`, `^C2` capturait `C25`, `^ASTRA` capturait
 `ASTRAVAN`…) : toute règle sur un libellé numérique ou court se termine par `\b`. Le plus gros
 reste non mappé est `MODEL MISSING` (DfT), volontairement laissé sans `model_gen`.

@@ -93,3 +93,21 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
   `manifest.json` porte le sha du commit corrigé.
 - **Règle**: un `reports/<date>/` dont `git.sha` est antérieur au correctif n'est pas une preuve
   du correctif — c'est la preuve de ce qui le précède. Vérifier `git.sha` avant de s'en servir.
+
+### 2026-09-12 Les branches ouvertes font partie de l'état initial
+- **Erreur**: l'état du projet a été déduit de `tasks/todo.md` et de l'absence de `site/` sur
+  disque. Conclusion tirée : « l'étape 5 reste à écrire », et une question posée à l'utilisateur
+  pour *choisir un générateur de site*. En réalité quatre branches distantes non fusionnées
+  portaient déjà les 4 items non cochés de la phase 1, dont **deux implémentations complètes**
+  du site (Jinja2 et Astro) et un `tasks/handoff.md` où la décision de fusion était déjà prise
+  avec l'utilisateur. Sans la vérification, la session aurait réécrit du travail relu et livré
+  un troisième générateur.
+- **Correction**: `git fetch --prune && git branch -r -v` et `gh pr list --state open` avant de
+  planifier ; lire le dernier commit de chaque branche en avance sur `main` ; tester les
+  conflits avec `git merge-tree --write-tree main origin/<branche>` (lecture seule) pour
+  mesurer le coût réel d'une fusion au lieu de le supposer.
+- **Règle**: une case non cochée dans `tasks/todo.md` signifie « pas sur `main` », **pas**
+  « personne ne l'a fait ». L'état initial d'une session, c'est `main` **plus les branches
+  distantes** — et un fichier de passation (`handoff.md`, `next.md`) peut contenir une décision
+  déjà arrêtée qu'il serait absurde de reprendre à zéro. Corollaire : ne pas multiplier les
+  fichiers de reprise, ils se périment et finissent par se contredire ; un seul `todo.md`.
