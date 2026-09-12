@@ -29,9 +29,18 @@ import polars as pl
 
 from predcar import __version__, metrics, raw
 from predcar.normalize import TARGETS_FILE, TargetModel, load_targets
-from predcar.paths import CONFIG_DIR, GOLD_DIR, MAPPING_DIR, RAW_DIR, ROOT, SILVER_DIR
+from predcar.paths import (
+    CONFIG_DIR,
+    GOLD_DIR,
+    MAPPING_DIR,
+    RAW_DIR,
+    REPORTS_DIR,
+    ROOT,
+    SILVER_DIR,
+)
 
 logger = logging.getLogger(__name__)
+_DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 HEAD_LINES = 60
 MAX_DISTINCT = 60
@@ -388,6 +397,24 @@ def _versions() -> dict[str, str]:
     return out
 
 
+def latest_report(reports_dir: Path = REPORTS_DIR) -> Path | None:
+    """Return the most recent ``reports/<YYYY-MM-DD>/`` bundle, or None when there is none.
+
+    Mirrors ``raw.latest_snapshot`` but returns None instead of raising: callers (tests)
+    decide whether a missing bundle is an error.
+
+    Args:
+        reports_dir: directory holding the dated bundles.
+
+    Returns:
+        Path of the latest bundle directory, or None.
+    """
+    if not reports_dir.is_dir():
+        return None
+    days = sorted(d for d in reports_dir.iterdir() if d.is_dir() and _DAY_RE.fullmatch(d.name))
+    return days[-1] if days else None
+
+
 def export(
     out_dir: Path | None = None,
     raw_dir: Path = RAW_DIR,
@@ -398,7 +425,7 @@ def export(
 ) -> Path:
     """Write the evidence bundle and return its directory (default ``reports/<YYYY-MM-DD>/``)."""
     day = datetime.now(UTC).date().isoformat()
-    out_dir = out_dir or ROOT / "reports" / day
+    out_dir = out_dir or REPORTS_DIR / day
     if out_dir.exists():
         shutil.rmtree(out_dir)
     out_dir.mkdir(parents=True)
