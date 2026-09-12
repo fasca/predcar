@@ -12,8 +12,6 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
 
 ---
 
-_Aucune leçon enregistrée pour le moment. Ce fichier sera enrichi au fil du développement._
-
 ### 2026-09-08 Règles de mapping fourre-tout en conflit avec des cibles
 - **Erreur**: les fourre-tout `OTHER` de Honda et VW listaient `NSX`, `SCIROCCO` et
   `POLO ?[A-Z]`, en conflit avec les règles cibles → `MappingError` sur toute normalisation.
@@ -74,3 +72,24 @@ _Aucune leçon enregistrée pour le moment. Ce fichier sera enrichi au fil du d�
   contiennent le mot-clé mais sont mappés ailleurs (`reports/<date>/silver/labels_target_makes.csv`)
   avant de considérer une règle comme juste ; l'année d'immatriculation n'est pas l'année
   de fabrication pour un import.
+
+### 2026-09-12 Une sémantique documentée mais non implémentée
+- **Erreur**: `docs/methodology.md` §1 affirmait « le libellé prime quand il porte lui-même la
+  génération » (`M3 CSL`, `LANCER EVO VI`), mais `normalize.apply` traitait toutes les règles
+  qui matchent à égalité. Résultat : `MappingError` sur 264 lignes au premier run post-PR #7.
+  Les regex avaient tenté de compenser par un lookahead `(?!\s+(I|II|...))` que le backtracking
+  de `.*` désamorce (`LANCER.*(EVO|EVOLUTION)` s'arrête sur `LANCER EVO`, le lookahead voit
+  `LUTION V` et passe).
+- **Correction**: implémenter la précédence une fois dans le code (règle sans plage d'années
+  **portant une génération** > règle à plage), plutôt que de rustiner chaque regex.
+- **Règle**: toute règle de priorité écrite dans la doc doit avoir un test qui la vérifie ; si
+  elle n'est pas dans le code, elle n'existe pas. Et un lookahead placé après un `.*` ne protège
+  de rien : ancrer ou restructurer, ne jamais compter sur l'ordre de matching.
+
+### 2026-09-12 Une gate verte ne prouve pas que le run a tourné
+- **Erreur**: la couverture annoncée par la PR #7 (GB 99,0 %) n'avait jamais été produite par un
+  run complet ; le seul bundle committé datait d'avant la PR et portait encore ses bugs.
+- **Correction**: ne considérer un correctif comme validé qu'après un `make export` dont le
+  `manifest.json` porte le sha du commit corrigé.
+- **Règle**: un `reports/<date>/` dont `git.sha` est antérieur au correctif n'est pas une preuve
+  du correctif — c'est la preuve de ce qui le précède. Vérifier `git.sha` avant de s'en servir.

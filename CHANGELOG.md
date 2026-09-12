@@ -4,10 +4,49 @@ Toutes les évolutions notables de predcar, par pull request fusionnée. Format 
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; pas encore de version publiée,
 tout est dans « Non publié » jusqu'à la première release (fin de phase 1).
 
-Chaque entrée signale aussi ce qui reste **non validé sur données réelles** : l'environnement
-de développement n'atteint pas les sources (proxy), voir `docs/ARCHITECTURE.md` §7.
+Chaque entrée signale aussi ce qui reste **non validé sur données réelles**. L'accès aux
+sources dépend de l'environnement et se revérifie à chaque session (leçon du 2026-09-09) :
+il fonctionne depuis le WSL2 de l'utilisateur et, au 2026-09-12, depuis l'environnement
+Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
+
+### 2026-09-12 — PR : re-run réel post-PR #7 et précédence des règles de libellé
+**Corrigé**
+- `normalize.apply` : une règle dont le **libellé porte lui-même la génération** (pas de plage
+  d'années) l'emporte désormais sur une règle à plage d'années, comme `docs/methodology.md` §1
+  le décrit déjà. Sans cette précédence, `M3 CSL` (année enregistrée 2012) et
+  `LANCER EVOLUTION IX GT` / `EVO VIII GSR` faisaient échouer toute la normalisation
+  (`MappingError`, 264 lignes, 168 véhicules, 0 conflit de `model_gen`). Les fourre-tout sans
+  génération (`^PUMA(?!.*RACING)`) restent des replis et ne prennent pas le dessus — deux tests
+  verrouillent les deux sens. Le bug était invisible avant #7 : c'est la priorité donnée à
+  `year_manufacture` qui a déplacé les années de référence et créé les recouvrements.
+
+**Ajouté**
+- `reports/2026-09-12/` : premier bundle de preuves produit **après** la PR #7. Les 4 CSV DfT
+  sont bit-à-bit identiques à ceux du 2026-09-08 (mêmes sha256), donc tout écart mesuré vient
+  des corrections, pas d'un nouveau millésime.
+
+**Résultats mesurés (2026-09-08 → 2026-09-12, stock Europe)**
+| Cible | Avant | Après |
+|---|---|---|
+| HONDA CIVIC TYPE R EP3 | 2 (rang 31) | 4 139 (rang 48) |
+| HONDA CIVIC TYPE R FN2 / EK9 | 1 978 / 2 | 7 174 / 38 (EK9 rang 5) |
+| NISSAN SKYLINE GT-R R32 / R33 / R34 | 16 / 34 / 24 | 162 / 206 / 117 |
+| MITSUBISHI LANCER EVOLUTION V_VI / VII_IX | 38 / 528 | 256 / 651 |
+| RENAULT CLIO 16V MK1 | 148 | 264 |
+| FORD FIESTA ST MK7 | 36 784 | 21 997 (ST-LINE retirées) |
+| Couverture GB / NL (stock) | 0,9788 / 0,9820 | **0,9899 / 0,9840** |
+| Anomalies | 1 123 (935 `cohort_rise` VEH0120) | **82**, toutes VEH0124 |
+| Cibles avec données / publiées | 241 / 225 | 242 / 228 |
+
+Témoins stables et cohérents (invariant EU = GB + NL vérifié, 4 composantes, couverture de
+poids 1,0) : M3 E46 4 864, S2000 3 801, 205 GTI 1 990, Clio Williams 142, RS2 34.
+
+**Connu, non corrigé**
+- `predcar export` parcourt tous les dossiers `data/raw/<source>/<date>/` : sur un clone frais,
+  les snapshots anciens n'ont que leur `MANIFEST.json` et produisent une erreur par payload
+  absent (6 ici). Les trois étapes restent `ok` ; à traiter à part.
 
 ### 2026-09-09 — PR #7 : corrections d'après le premier export réel
 **Corrigé (diagnostic de `reports/2026-09-08/`)**
