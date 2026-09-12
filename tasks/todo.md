@@ -24,7 +24,9 @@
 - [x] `docs/sources/rdw_nl.md` (schéma présumé + liste de vérification), tests MockTransport
 - [x] **Valider sur une réponse réelle** (2026-09-08 : 203 051 lignes, layout conforme, cas
       `handelsbenaming` absent et `jaar` absent ajoutés), liste cochée, MANIFEST.json à committer
-- [ ] Planifier le cron mensuel (GitHub Actions) pour `make fetch-nl`
+- [x] Planifier le cron mensuel (GitHub Actions) pour `make fetch-nl` (2026-09-12 :
+      `.github/workflows/rdw-snapshot.yml`, payload committé gzippé — sans quoi l'historique
+      NL ne se construirait pas)
 
 ### Étape 3 — Mapping marques/modèles
 - [x] `mapping/target_models.csv` (~240 générations cibles), `makes.csv` (alias), `models.csv`

@@ -19,8 +19,10 @@ from predcar.paths import GOLD_DIR, MAPPING_DIR, SILVER_DIR
 app = typer.Typer(help="predcar data pipeline", no_args_is_help=True)
 fetch_app = typer.Typer(help="Download raw files into data/raw/<source>/<date>/")
 ingest_app = typer.Typer(help="Parse the latest raw snapshot into data/silver/")
+compress_app = typer.Typer(help="Gzip an archived raw payload so it can be versioned")
 app.add_typer(fetch_app, name="fetch")
 app.add_typer(ingest_app, name="ingest")
+app.add_typer(compress_app, name="compress")
 
 
 @app.callback()
@@ -61,6 +63,15 @@ def ingest_nl(
     """Parse one RDW snapshot into silver fleet_stock_nl_rdw_<date>.parquet."""
     snapshot = snapshot or raw.latest_snapshot(rdw.SOURCE)
     typer.echo(rdw.ingest(snapshot))
+
+
+@compress_app.command("nl")
+def compress_nl(
+    snapshot: Path | None = typer.Option(None, help="Raw snapshot dir (default: latest)"),
+) -> None:
+    """Gzip the archived RDW payload; the manifest sha256 keeps matching its content."""
+    snapshot = snapshot or raw.latest_snapshot(rdw.SOURCE)
+    typer.echo(raw.compress(snapshot, rdw.DATA_FILE))
 
 
 @app.command()

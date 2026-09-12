@@ -1,14 +1,22 @@
 """Immutable raw archive: data/raw/<source>/<YYYY-MM-DD>/<file> + MANIFEST.json (sha256).
 
-Payloads are not versioned in git (too large); the manifest is, so every downstream
+Most payloads are not versioned in git (too large); the manifest is, so every downstream
 artefact can be traced back to an exact file and checksum.
+
+A payload may be stored gzipped next to its manifest entry (``<file>.gz``). The manifest
+still records the sha256 and size of the **uncompressed** content, so compressing an archived
+file never changes its identity. This is what lets an irreplaceable source be committed: the
+RDW dataset is a snapshot with no upstream history, so a month that is not kept is lost, and
+1.2 MB gzipped per month is affordable where 66 MB of re-downloadable DfT CSV is not.
 """
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import logging
+import shutil
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -19,6 +27,7 @@ from predcar.paths import RAW_DIR
 logger = logging.getLogger(__name__)
 
 MANIFEST_NAME = "MANIFEST.json"
+GZIP_SUFFIX = ".gz"
 _CHUNK = 1 << 20
 
 
@@ -27,12 +36,66 @@ class RawArchiveError(RuntimeError):
 
 
 def sha256_of(path: Path) -> str:
-    """Return the hex sha256 digest of a file, streamed."""
+    """Return the hex sha256 digest of a file's uncompressed content, streamed.
+
+    A ``.gz`` path is decompressed on the fly, so a file keeps its digest once compressed.
+    """
     digest = hashlib.sha256()
-    with path.open("rb") as fh:
+    opener = gzip.open if path.suffix == GZIP_SUFFIX else lambda p, mode: Path(p).open(mode)
+    with opener(path, "rb") as fh:
         while chunk := fh.read(_CHUNK):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def resolve(directory: Path, filename: str) -> Path | None:
+    """Path of an archived file, plain or gzipped, or None when neither exists."""
+    for candidate in (directory / filename, directory / (filename + GZIP_SUFFIX)):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def read_bytes(directory: Path, filename: str) -> bytes:
+    """Uncompressed content of an archived file, whether it is stored plain or gzipped.
+
+    Raises:
+        RawArchiveError: when neither form is present.
+    """
+    path = resolve(directory, filename)
+    if path is None:
+        raise RawArchiveError(f"{directory / filename} not found (plain or {GZIP_SUFFIX})")
+    if path.suffix == GZIP_SUFFIX:
+        with gzip.open(path, "rb") as fh:
+            return fh.read()
+    return path.read_bytes()
+
+
+def compress(directory: Path, filename: str) -> Path:
+    """Replace an archived payload by its gzip, keeping the manifest valid.
+
+    Idempotent: returns the existing ``.gz`` when the file is already compressed.
+
+    Raises:
+        RawArchiveError: when the file is in neither form.
+    """
+    path = resolve(directory, filename)
+    if path is None:
+        raise RawArchiveError(f"{directory / filename} not found (plain or {GZIP_SUFFIX})")
+    if path.suffix == GZIP_SUFFIX:
+        return path
+    target = path.with_name(path.name + GZIP_SUFFIX)
+    part = target.with_name(target.name + ".part")
+    try:
+        with path.open("rb") as src, gzip.open(part, "wb") as dst:
+            shutil.copyfileobj(src, dst, _CHUNK)
+        part.replace(target)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
+    path.unlink()
+    logger.info("compressed %s -> %s (%d bytes)", path.name, target.name, target.stat().st_size)
+    return target
 
 
 def snapshot_dir(source: str, day: date | None = None, root: Path | None = None) -> Path:
@@ -150,9 +213,9 @@ def verify(directory: Path) -> None:
     if not manifest:
         raise RawArchiveError(f"no {MANIFEST_NAME} in {directory}")
     for filename, entry in manifest.items():
-        path = directory / filename
-        if not path.is_file():
-            raise RawArchiveError(f"{path} listed in manifest but missing")
+        path = resolve(directory, filename)
+        if path is None:
+            raise RawArchiveError(f"{directory / filename} listed in manifest but missing")
         actual = sha256_of(path)
         if actual != entry["sha256"]:
             raise RawArchiveError(f"{path}: sha256 {actual} != manifest {entry['sha256']}")

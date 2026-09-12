@@ -1,0 +1,52 @@
+# The RDW dataset is a snapshot of the current Dutch fleet with no history: a month that is
+# never archived is lost for good. This workflow archives one aggregated snapshot per month
+# and commits it gzipped (~1.2 MB) with its MANIFEST.json, so the NL stock history can be
+# rebuilt from git alone. predcar.raw reads a .gz archive transparently.
+name: Snapshot RDW mensuel
+
+on:
+  schedule:
+    # 03:17 UTC on the 1st of each month — off the hour to avoid the GitHub cron rush.
+    - cron: "17 3 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rdw-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+
+      - name: Archiver le snapshot agrégé
+        run: uv run predcar fetch nl
+
+      - name: Vérifier que le snapshot est exploitable
+        # Fails the run rather than committing an empty or truncated snapshot.
+        run: uv run predcar ingest nl
+
+      - name: Compresser le payload pour le versionner
+        run: uv run predcar compress nl
+
+      - name: Committer le MANIFEST.json
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/raw/nl_rdw/*/MANIFEST.json data/raw/nl_rdw/*/*.json.gz
+          if git diff --cached --quiet; then
+            echo "Aucun nouveau snapshot à committer."
+            exit 0
+          fi
+          git commit -m "Snapshot RDW $(date -u +%Y-%m-%d) (automatique)"
+          # HEAD:main works whether or not checkout left us on a branch.
+          git push origin HEAD:main

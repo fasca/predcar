@@ -158,6 +158,18 @@ def test_ingest_snapshot_end_to_end(fixtures: Path, tmp_path: Path) -> None:
     assert stock["count"].sum() == 575
 
 
+def test_ingest_reads_a_gzipped_snapshot(fixtures: Path, tmp_path: Path) -> None:
+    """An archived month kept gzipped in git stays replayable, byte for byte."""
+    snapshot = _snapshot(fixtures, tmp_path)
+    plain = rdw.ingest(snapshot, tmp_path / "silver_plain")
+
+    raw.compress(snapshot, rdw.DATA_FILE)
+    assert not (snapshot / rdw.DATA_FILE).exists()
+    compressed = rdw.ingest(snapshot, tmp_path / "silver_gz")
+
+    assert pl.read_parquet(compressed).equals(pl.read_parquet(plain))
+
+
 @pytest.mark.parametrize("registered", [(rdw.QUERY_FILE,), (rdw.DATA_FILE,)])
 def test_ingest_refuses_snapshot_missing_a_registered_file(
     fixtures: Path, tmp_path: Path, registered: tuple[str, ...]

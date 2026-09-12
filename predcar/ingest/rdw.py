@@ -203,12 +203,12 @@ def ingest(snapshot: Path, out_dir: Path = SILVER_DIR) -> Path:
     raw.verify(snapshot)
     manifest = raw.read_manifest(snapshot)
     missing = [
-        f for f in (DATA_FILE, QUERY_FILE) if f not in manifest or not (snapshot / f).is_file()
+        f for f in (DATA_FILE, QUERY_FILE) if f not in manifest or raw.resolve(snapshot, f) is None
     ]
     if missing:
         raise raw.RawArchiveError(f"incomplete RDW snapshot {snapshot}: missing {missing}")
     period = date.fromisoformat(snapshot.name)
-    rows = json.loads((snapshot / DATA_FILE).read_text(encoding="utf-8"))
+    rows = json.loads(raw.read_bytes(snapshot, DATA_FILE).decode("utf-8"))
     stock = parse_rows(rows, period)
     schemas.check_fleet_stock(stock)
     logger.info("rdw %s: %d silver rows", period, stock.height)

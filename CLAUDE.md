@@ -29,6 +29,7 @@ Keep this list in sync with the `Makefile` (targets marked *planned* do not exis
 uv sync                          # Install dependencies
 make fetch-uk / make ingest-uk   # Archive DfT/DVLA CSVs (VEH0120/0124/0160) → silver
 make fetch-nl / make ingest-nl   # Monthly aggregated RDW snapshot (SoQL, no personal data) → silver
+make compress-nl                 # Gzip the RDW payload so the month is committable (~1.2 MB)
 make normalize                   # Apply mapping/ → data/silver/fleet_stock.parquet, fail if coverage < 95 %
 make validate                    # Silver invariants
 make score                       # Indicators + score v1 → data/gold/ (docs/methodology.md)
@@ -166,7 +167,9 @@ is exposed individually on the site (show the *why*, not just the rank).
 
 - **No marketplace scraping in phases 1–2.** No forum scraping at all.
 - Never store personal data: RDW `kenteken` is never downloaded, always aggregate via API
-- Every raw file is archived immutably with a checksum; transformations are replayable
+- Every raw file is archived immutably with a checksum; transformations are replayable.
+  Payloads stay out of git except RDW snapshots (no upstream history, so an unkept month is
+  lost): those are committed gzipped, and `predcar.raw` reads either form transparently
 - The normalization step fails if < 95 % of a country's fleet is mapped for target makes
 - Source licences documented in `docs/SOURCES.md` (OGL v3 UK, CC0 RDW, DL-DE/BY-2-0 KBA,
   Licence Ouverte FR)
