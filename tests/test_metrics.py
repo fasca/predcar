@@ -365,7 +365,7 @@ def test_score_pipeline_writes_gold(tmp_path: Path) -> None:
         )
     )
     written = sc.score(silver, gold, mapping, CFG)
-    assert set(written) == {"series", "indicators", "scores", "ranking"}
+    assert set(written) == {"series", "indicators", "scores", "cohorts", "ranking"}
     ranking = pl.read_csv(written["ranking"])
     assert ranking.columns[:6] == ["rank", "make", "model_gen", "generation", "segment", "score"]
     top = ranking.filter(pl.col("rank") == 1)
@@ -521,3 +521,37 @@ def test_sorn_ratio_prefers_generation_level() -> None:
     )
     assert metrics.sorn_ratio(annual, _target("A", "G1"), "GB") == pytest.approx(0.1)
     assert metrics.sorn_ratio(annual, _target("A", "G2"), "GB") == pytest.approx(0.5)  # fallback
+
+
+def test_cohort_retention_is_relative_to_the_cohort_peak() -> None:
+    t = _target("A")
+    rows = []
+    for year, n in [(2018, 100), (2019, 90), (2020, 81)]:
+        rows.append(
+            _row(
+                period=date(year, 12, 31),
+                generation="G1",
+                year_first_reg=2005,
+                count=n,
+                status="licensed",
+            )
+        )
+        rows.append(
+            _row(
+                period=date(year, 12, 31),
+                generation="G1",
+                year_first_reg=2005,
+                count=5,
+                status="sorn",
+            )
+        )
+    # a second cohort observed once, and a model_gen-level row without a cohort (ignored)
+    rows.append(_row(period=date(2020, 12, 31), generation="G1", year_first_reg=2006, count=40))
+    rows.append(_row(period=date(2020, 12, 31), generation=None, source_file="df_VEH0120_GB.csv"))
+    out = metrics.cohort_retention(_stock(rows), [t])
+    c2005 = out.filter(pl.col("cohort") == 2005).sort("year")
+    assert c2005["stock"].to_list() == [100, 90, 81]  # SORN excluded
+    assert c2005["retention"].to_list() == pytest.approx([1.0, 0.9, 0.81])
+    assert out.filter(pl.col("cohort") == 2006)["retention"].to_list() == [1.0]
+    assert out.filter(pl.col("cohort").is_null()).height == 0
+    assert metrics.cohort_retention(_stock(rows), []).height == 0

@@ -9,8 +9,8 @@ Python data pipeline producing a **sourced, dated statistical proof** of the rar
 **MVP scope (v2):** zero scraping, zero user accounts, zero market prices. A reproducible
 Parquet pipeline + a static site.
 
-**Stack:** Python 3.12 | Polars | DuckDB | Pydantic | Typer | uv | static site (Astro or
-MkDocs + Plotly) | `make` + GitHub Actions (monthly cron) | GitHub Pages
+**Stack:** Python 3.12 | Polars | DuckDB | Pydantic | Typer | uv | static site (Jinja2 +
+Plotly.js, French UI) | `make` + GitHub Actions (monthly cron) | GitHub Pages
 **UI Language:** French | **Code Language:** English
 
 ## Communication
@@ -23,7 +23,7 @@ MkDocs + Plotly) | `make` + GitHub Actions (monthly cron) | GitHub Pages
 
 ## Key Commands
 
-Keep this list in sync with the `Makefile` (targets marked *planned* do not exist yet):
+Keep this list in sync with the `Makefile`:
 
 ```bash
 uv sync                          # Install dependencies
@@ -34,7 +34,7 @@ make normalize                   # Apply mapping/ → data/silver/fleet_stock.pa
 make validate                    # Silver invariants
 make score                       # Indicators + score v1 → data/gold/ (docs/methodology.md)
 make export                      # Evidence bundle reports/<date>/ — committed by the user, analysed here
-make site                        # (planned) Build static site from data/gold/
+make site                        # Static site from data/gold/ → site/dist/ (Jinja2 + Plotly CDN, GitHub Pages)
 make test / make lint            # pytest / ruff
 ```
 
@@ -44,24 +44,27 @@ kba.de or data.gouv.fr (proxy); since 2026-09-09 the user's WSL2 environment can
 UK DfT and NL RDW schemas are now *observed* (`docs/sources/<source>.md`, checklists ticked on
 2026-09-08); any new source still follows Source-First. Never fake a sample.
 **Feedback loop:** the user runs `make export` and commits `reports/<date>/` (raw heads and
-profiles, every target-make label, coverage, anomalies, gold CSV). At session start, read the
-latest `reports/*/manifest.json` and fix parsers, mapping rules and indicators from that
-evidence before anything else.
+profiles, every target-make label, coverage, anomalies, gold CSV). At session start, read
+`tasks/next.md` **first**: it lists the pending real-data actions with the exact commands.
+If this environment reaches the sources, run them yourself (pipeline, export, commit, push);
+otherwise read the latest `reports/*/manifest.json` and fix parsers, mapping rules and
+indicators from that evidence before anything else. Keep `tasks/next.md` current: tick what
+is done, remove finished sections, add what a fresh session must do next.
 
 ## Architecture
 
 ```
 data/raw/      → Immutable downloads, <source>/<YYYY-MM-DD>/<file>, with checksum
 data/silver/   → Normalized Parquet, common schemas (fleet_stock, fleet_new_reg)
-data/gold/     → Aggregates, indicators, scores (input of the site)
+data/gold/     → Aggregates, indicators, scores, cohort retention (the site's only input)
 mapping/       → makes.csv, models.csv, target_models.csv (make/model normalization)
 config/        → score.yaml (ALL score weights and thresholds)
-predcar/       → Python package: ingestion, normalization, metrics, Typer CLI
-site/          → Static site generator sources
+predcar/       → Python package: ingestion, normalization, metrics, score, export, site, Typer CLI
+site/          → templates/ (Jinja2, French UI), static/ (CSS, JS); dist/ is generated, never committed
 docs/          → SPEC.md (reference), ARCHITECTURE.md, SOURCES.md, sources/<source>.md, mapping.md, methodology.md
 reports/       → Dated evidence bundles from real runs (committed, see make export)
 tests/         → pytest: schema per source vintage, invariants, snapshot tests
-tasks/         → todo.md + lessons.md (task tracking)
+tasks/         → next.md (pending actions, read first), todo.md (plan), lessons.md
 ```
 
 ## Style Guide

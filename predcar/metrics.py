@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 GEN_LEVEL_SERIES = ("VEH0124", "RDW")
 MODEL_LEVEL_SERIES = ("VEH0120", "RDW")
 SORN_SERIES = "VEH0120"
+SALES_SERIES = "VEH0160"  # fleet_new_reg: cumulative sales, survival denominator
 EUROPE = "EU"
 TARGET_KEY = ["make", "model_gen", "generation"]
 
@@ -78,6 +79,61 @@ def annual_stock(stock: pl.DataFrame) -> pl.DataFrame:
     return (
         df.filter(pl.col("period") == pl.col("period").max().over(keys))
         .select(*keys, "period", "stock", "sorn")
+        .sort(keys)
+    )
+
+
+_COHORTS_SCHEMA = {
+    "make": pl.Utf8,
+    "model_gen": pl.Utf8,
+    "generation": pl.Utf8,
+    "country": pl.Utf8,
+    "series": pl.Utf8,
+    "cohort": pl.Int32,
+    "year": pl.Int32,
+    "stock": pl.Int64,
+    "retention": pl.Float64,
+}
+
+
+def cohort_retention(stock: pl.DataFrame, targets: list[TargetModel]) -> pl.DataFrame:
+    """Aggregated retention curves per (target, country, first-registration cohort).
+
+    ``retention(cohort, year) = stock(cohort, year) / max stock observed for the cohort``
+    (SPEC §5: retention curves, not Kaplan-Meier). Only the generation-level series carry a
+    cohort year (VEH0124, RDW); end-of-year values as in :func:`annual_stock`.
+    """
+    if not targets:
+        return pl.DataFrame(schema=_COHORTS_SCHEMA)
+    keys = ["country", "series", "make", "model_gen", "generation", "cohort", "year"]
+    wanted = pl.DataFrame(
+        [{"make": t.make, "model_gen": t.model_gen, "generation": t.generation} for t in targets]
+    ).unique()
+    df = (
+        stock.filter(
+            pl.col("model_gen").is_not_null()
+            & pl.col("generation").is_not_null()
+            & pl.col("year_first_reg").is_not_null()
+        )
+        .with_columns(
+            pl.col("source_file").map_elements(series_of, return_dtype=pl.Utf8).alias("series"),
+            pl.col("period").dt.year().alias("year"),
+            pl.col("year_first_reg").alias("cohort"),
+            (pl.col("status") == "sorn").fill_null(False).alias("is_sorn"),
+        )
+        .filter(pl.col("series").is_in(GEN_LEVEL_SERIES))
+        .join(wanted, on=TARGET_KEY, how="inner")
+        .group_by(*keys, "period")
+        .agg(pl.col("count").filter(~pl.col("is_sorn")).sum().alias("stock"))
+        .filter(pl.col("period") == pl.col("period").max().over(keys))
+    )
+    peak = pl.col("stock").max().over(keys[:-1])
+    return (
+        df.with_columns(
+            pl.when(peak > 0).then(pl.col("stock") / peak).otherwise(None).alias("retention")
+        )
+        .select(list(_COHORTS_SCHEMA))
+        .cast(_COHORTS_SCHEMA)
         .sort(keys)
     )
 

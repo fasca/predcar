@@ -1,4 +1,4 @@
-"""Typer CLI: ``predcar fetch uk``, ``predcar ingest uk``, ``predcar validate``."""
+"""Typer CLI: ``predcar fetch uk``, ``predcar ingest uk``, ``predcar score``, ``predcar site``."""
 
 from __future__ import annotations
 
@@ -12,9 +12,10 @@ from predcar import export as export_mod
 from predcar import normalize as normalize_mod
 from predcar import raw, schemas
 from predcar import score as score_mod
+from predcar import site as site_mod
 from predcar.config import load_mapping_config, load_sources_config
 from predcar.ingest import dft, rdw
-from predcar.paths import GOLD_DIR, MAPPING_DIR, SILVER_DIR
+from predcar.paths import GOLD_DIR, MAPPING_DIR, SILVER_DIR, SITE_DIST_DIR
 
 app = typer.Typer(help="predcar data pipeline", no_args_is_help=True)
 fetch_app = typer.Typer(help="Download raw files into data/raw/<source>/<date>/")
@@ -123,6 +124,20 @@ def export(
     manifest = path / "manifest.json"
     typer.echo(f"export: {path}")
     typer.echo(f"manifest: {manifest}")
+
+
+@app.command()
+def site(
+    gold_dir: Path = typer.Option(GOLD_DIR),
+    out_dir: Path = typer.Option(SITE_DIST_DIR, help="Emptied before rendering"),
+) -> None:
+    """Static site (ranking, model pages, methodology, CSV) from data/gold/ → site/dist/."""
+    try:
+        written = site_mod.build(gold_dir, out_dir)
+    except site_mod.SiteError as exc:
+        raise typer.Exit(code=2) from _echo_error(exc)
+    for name, path in written.items():
+        typer.echo(f"{name}: {path}")
 
 
 @app.command()

@@ -11,6 +11,43 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-09 — PR #8 : site statique (phase 1, étape 5)
+**Ajouté**
+- `predcar site` / `make site` (`predcar/site.py`, gabarits Jinja2 dans `site/templates/`,
+  CSS/JS dans `site/static/`) : site statique en français généré uniquement depuis
+  `data/gold/` vers `site/dist/` (non versionné).
+  - Classement des cibles publiées avec filtres segment / décennie / pays et tri (score,
+    « se raréfient le plus vite / le moins vite », parc le plus faible), top 50 par défaut,
+    barres des quatre composantes, liste repliée des cibles à score non publié et pourquoi.
+  - Une page par génération cible : rang et score, tableau des composantes (valeur, poids,
+    part du score, explication), parc par pays, attrition lissée, rétention par cohorte,
+    comparaison au segment (médiane des pairs, nombre de pairs, inflexion, ratio SORN),
+    sources citées avec dernière observation et licence, date de génération.
+  - Page méthodologie rendue depuis `docs/methodology.md`, précédée des paramètres réels de
+    `config/score.yaml` ; `ranking.csv` téléchargeable.
+  - Graphiques Plotly.js chargés depuis le CDN, données embarquées dans chaque page ; message
+    de repli si le CDN est inaccessible.
+- `data/gold/cohorts.parquet` (`metrics.cohort_retention`) : courbes de rétention agrégées par
+  (cible, pays, cohorte d'immatriculation), `retention = stock / stock maximal observé`.
+- `.github/workflows/site.yml` : fetch des sources officielles, pipeline complet, build et
+  déploiement GitHub Pages — cron trimestriel (20 janvier / avril / juillet / octobre),
+  déclenchement manuel, push sur `main`.
+- Tests : rendu complet du site sur la population synthétique (pages, classement, cibles non
+  publiées, méthodologie, JSON embarqué sûr), formats français, rétention par cohorte.
+
+- `tasks/next.md` : fichier de reprise lu en premier par Claude Code au démarrage — actions
+  en attente sur données réelles avec les commandes exactes (run du pipeline, export, commit,
+  push), checklist d'analyse du prochain export, activation de GitHub Pages.
+
+**Modifié**
+- `docs/ARCHITECTURE.md` §9 (site et déploiement), README §7, CLAUDE.md (`make site` n'est
+  plus « planned », `tasks/next.md` lu en premier), `docs/methodology.md` §7
+  (`cohorts.parquet`).
+
+**Non validé sur données réelles** : le rendu a été vérifié sur l'export
+`reports/2026-09-08/` (241 pages, 225 classées) ; le premier déploiement Pages et le cron
+restent à observer sur GitHub.
+
 ### 2026-09-12 — PR : cron mensuel RDW et archives brutes compressées
 **Ajouté**
 - `.github/workflows/rdw-snapshot.yml` : tous les 1ᵉʳ du mois (03h17 UTC) + `workflow_dispatch`.
