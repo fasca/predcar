@@ -4,7 +4,11 @@ min_coverage: 0.95
 # Per-country override, for a country whose mapping is still being built: its coverage is
 # still computed, logged and published in coverage.csv — only the gate is relaxed. Keep
 # every entry dated, so a temporary exemption cannot quietly become permanent.
-min_coverage_by_country: {}
+min_coverage_by_country:
+  # 2026-09-13: German mapping not written yet — the KBA Hersteller is a group, not a
+  # brand (FCA, STELLANTIS, GENERAL MOTORS…), and MINI is sold under BMW. DE joins the
+  # gate as soon as mapping/models.csv covers it (see docs/sources/kba_de.md).
+  DE: 0.0
 # How many unmapped (country, make, model_raw) rows to list in the coverage report.
 report_top_unmapped: 30
 # model_raw values by which the source itself says the model is unknown: never mappable,

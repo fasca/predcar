@@ -90,9 +90,35 @@ class NlRdwSource(BaseModel):
     api_url: HttpUrl
 
 
+class DeKbaSource(BaseModel):
+    """KBA FZ 2 workbook, one file per vintage (stock at 1 January).
+
+    The file name pattern changed between vintages, so both are declared and tried in order
+    (see docs/sources/kba_de.md).
+    """
+
+    licence: str
+    base_url: str
+    file_patterns: list[str] = Field(min_length=1)
+    sheet: str
+    first_year: int
+    last_year: int
+
+    @model_validator(mode="after")
+    def _year_range(self) -> DeKbaSource:
+        if self.last_year < self.first_year:
+            raise ValueError(f"last_year {self.last_year} < first_year {self.first_year}")
+        return self
+
+    def urls(self, year: int) -> list[str]:
+        """Candidate download URLs for a vintage, most likely first."""
+        return [f"{self.base_url}/{pattern.format(year=year)}" for pattern in self.file_patterns]
+
+
 class SourcesConfig(BaseModel):
     uk_dft: UkDftSource
     nl_rdw: NlRdwSource
+    de_kba: DeKbaSource
 
 
 def _load_yaml(path: Path) -> dict:

@@ -29,6 +29,7 @@ Keep this list in sync with the `Makefile`:
 uv sync                          # Install dependencies
 make fetch-uk / make ingest-uk   # Archive DfT/DVLA CSVs (VEH0120/0124/0160) → silver
 make fetch-nl / make ingest-nl   # Monthly aggregated RDW snapshot (SoQL, no personal data) → silver
+make fetch-de YEAR=2026 / make ingest-de  # KBA FZ 2.2 vintage (German fleet, model level) → silver
 make compress-nl                 # Gzip the RDW payload so the month is committable (~1.2 MB)
 make normalize                   # Apply mapping/ → data/silver/fleet_stock.parquet, fail if coverage < 95 %
 make validate                    # Silver invariants
@@ -137,7 +138,9 @@ tasks/         → todo.md (plan), lessons.md (rules learned from corrections)
   Snapshot only (no history) → archive a monthly snapshot in `data/raw/nl_rdw/YYYY-MM-DD/`.
 
 ### Phase 2
-- **DE KBA**: FZ 10 / FZ 17 XLSX (multi-line headers, labels change per vintage)
+- **DE KBA**: FZ 2 XLSX, sheet FZ 2.2 (stock by manufacturer and trade name, one file per
+  vintage). Header row moves between vintages, subtotals change shape; FZ 10 does not exist
+  and FZ 17 is make-level only (`docs/sources/kba_de.md`)
 - **FR SDES / data.gouv.fr**: new registrations by model only (no stock by model)
 - **STATS19** (UK accidents), **Google Trends** (pytrends), **YouTube Data API**
 

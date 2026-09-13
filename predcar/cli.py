@@ -14,7 +14,7 @@ from predcar import raw, schemas
 from predcar import score as score_mod
 from predcar import site as site_mod
 from predcar.config import load_mapping_config, load_sources_config
-from predcar.ingest import dft, rdw
+from predcar.ingest import dft, kba, rdw
 from predcar.paths import GOLD_DIR, MAPPING_DIR, SILVER_DIR, SITE_DIST_DIR
 
 app = typer.Typer(help="predcar data pipeline", no_args_is_help=True)
@@ -55,6 +55,26 @@ def ingest_uk(
     snapshot = snapshot or raw.latest_snapshot(dft.SOURCE)
     for name, path in dft.ingest(snapshot).items():
         typer.echo(f"{name}: {path}")
+
+
+@fetch_app.command("de")
+def fetch_de(
+    year: int = typer.Option(..., help="Vintage: the 1 January the stock refers to"),
+) -> None:
+    """Archive one KBA FZ 2 workbook (German fleet by manufacturer and trade name)."""
+    typer.echo(kba.fetch(load_sources_config(), year))
+
+
+@ingest_app.command("de")
+def ingest_de(
+    snapshot: Path | None = typer.Option(None, help="Raw snapshot dir (default: latest)"),
+) -> None:
+    """Parse one KBA vintage into silver fleet_stock_de_kba_<year>.parquet."""
+    snapshot = snapshot or raw.latest_snapshot(kba.SOURCE)
+    try:
+        typer.echo(kba.ingest(snapshot))
+    except kba.KbaSchemaError as exc:
+        raise typer.Exit(code=2) from _echo_error(exc)
 
 
 @ingest_app.command("nl")

@@ -48,6 +48,12 @@ def series_of(source_file: str) -> str:
             return key
     if "GEKENTEKENDE" in name or "RDW" in name:
         return "RDW"
+    # KBA FZ 2.2 (Germany). Recognised so the German silver rows can coexist with the rest,
+    # but deliberately absent from GEN_LEVEL_SERIES and MODEL_LEVEL_SERIES: the vintages are
+    # ingested, not yet scored. Adding it to MODEL_LEVEL_SERIES is what will turn Germany
+    # into a model_gen-level series, once mapping/models.csv covers the German labels.
+    if "FZ2" in name:
+        return "FZ2"
     raise ValueError(f"unknown series for source_file {source_file!r}")
 
 
