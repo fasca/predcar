@@ -126,3 +126,18 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
   commit. Corollaire : un seuil qui existe dans la config ne doit jamais être réécrit en dur
   dans un test, sinon les deux divergent au premier cas particulier — et c'est le test qui a
   raison contre le code, ou l'inverse, sans qu'on sache lequel.
+
+### 2026-09-13 Étendre un fourre-tout, c'est risquer d'en retirer une alternative
+- **Erreur**: en ajoutant les variantes espacées de la gamme Volvo (`V 70`, `S 60`) au fourre-tout,
+  j'ai réécrit son alternance `(40|50|70|80|90)` en `(40|50|90)` et **perdu `S70`** au passage.
+  Résultat invisible côté allemand — la couverture DE montait quand même — mais **255 861
+  véhicules britanniques** cessaient d'être mappés. Repéré en comparant le compte GB au
+  véhicule près avant/après, pas par les tests : la couverture GB restait à « 99,0 % » arrondie.
+- **Correction**: comparer les **comptes absolus** de chaque pays avant et après toute édition de
+  `mapping/models.csv`, pas seulement le pourcentage affiché ; et préférer *ajouter* une
+  alternative à *réécrire* une alternance existante.
+- **Règle**: une modification de mapping destinée à un pays doit laisser les autres **identiques
+  au véhicule près**. Un pourcentage arrondi cache une régression de plusieurs centaines de
+  milliers de lignes. Corollaire : quand un modèle a déjà sa règle propre (`^S60`, `^V70`, parce
+  qu'il existe une version `R`), c'est **cette** règle qu'on étend — un fourre-tout concurrent
+  lèverait `MappingError` ou, pire, changerait silencieusement le `model_gen`.

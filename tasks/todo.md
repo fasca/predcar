@@ -88,10 +88,15 @@
       8 millésimes 2019–2026, deux conventions de nommage, `docs/sources/kba_de.md`)
 - [x] Ingestion KBA : `predcar/ingest/kba.py`, `fetch de` / `ingest de`, 27 tests, invariant de
       somme contre le total publié → 5 millésimes exploitables (2020, 2023–2026), 3 refusés
-- [ ] Mapping allemand : les groupes `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER`
-      couvrent plusieurs marques cibles, les MINI sont vendues sous BMW → couverture DE 93,1 %,
-      exemptée de la gate. À traiter sur le rapport de couverture réel, puis remonter `DE` à 0.95
-      dans `config/mapping.yaml`
+- [x] Mapping allemand, 1re passe (2026-09-13) : `SONSTIGE/NICHT GETYPT` et `SONSTIGE HERSTELLER`
+      déclarés « modèle inconnu », fourre-tout étendus aux libellés allemands (Dacia sous Renault,
+      Cupra sous Seat, Kaefer, plateformes `8D,AUDI A4`, gammes Volvo espacées) → **DE 96,6 %**,
+      exemption retirée de `config/mapping.yaml`, GB et NL inchangés
+- [ ] Marques filles **cibles** vendues sous leur maison mère : MINI sous BMW, Smart sous Daimler
+      (4,6 M de véhicules, ~2,3 points de couverture DE). Un fourre-tout les attribuerait à
+      BMW/Mercedes : il faut pouvoir **réassigner la marque depuis le nom commercial**, ce qui
+      résoudrait aussi les groupes `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER`.
+      Décision d'architecture à prendre (colonne `make` de sortie dans `models.csv` ?)
 - [ ] Intégrer DE au score : déclarer `FZ2` dans `metrics.MODEL_LEVEL_SERIES` (niveau modèle
       générique, comme VEH0120 — la source n'a pas d'année de première immatriculation).
       Vérifier d'abord l'effet du trou 2021–2022 sur l'attrition

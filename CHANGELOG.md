@@ -11,6 +11,42 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-13 — PR : mapping allemand, 1re passe (DE 93,1 % → 96,6 %)
+**Corrigé**
+- `config/mapping.yaml` : `SONSTIGE/NICHT GETYPT` et `SONSTIGE HERSTELLER` rejoignent
+  `unknown_labels`. Le parseur KBA les déclarait déjà « modèle inconnu » (`kba.UNKNOWN_MODELS`)
+  mais la config ne les listait pas : 4,6 M de véhicules que la source elle-même dit non typés
+  étaient comptés comme *non mappés*. **À eux seuls : 93,1 % → 95,3 %.**
+- `mapping/models.csv` : la règle Volvo `^(S60|V70).*\bR\b` ne reconnaissait pas les libellés
+  espacés ; `S 60 R` et `V 70 R` étaient perdus (+3 véhicules sur la cible S60 R P2).
+
+**Ajouté** — fourre-tout étendus aux libellés allemands, ~2,5 M de véhicules :
+- marques filles **non cibles** vendues sous leur maison mère : Dacia sous Renault
+  (`DUSTER`, `SANDERO`…), Cupra sous Seat (`CUPRA LEON`, `FORMENTOR`, `BORN`) ;
+- libellés multi-noms séparés par une virgule ou un point-virgule : `8D,AUDI A4,S4`,
+  `BUSINESS;MULTIVAN`, `VW 1600,KAEFER 1303 LS` ;
+- gammes écrites avec un espace : `V 70`, `S 60`, `S 70` (Volvo) ;
+- Coccinelle et camping-cars VW, `BIG NUGGET` (Ford), `VIVARO` (Peugeot), `5ER` (BMW).
+
+**Deux pièges d'inversion** documentés dans `docs/mapping.md` : `CUPRA LEON` (marque Cupra,
+après 2018) n'est **pas** la cible `LEON CUPRA` (Seat, 1999–2012), et `AMG C 43` n'est pas la
+cible `C43 AMG`. Les règles ancrées les séparent ; une regex non ancrée les confondrait.
+Une regex ne peut pas non plus contenir de virgule — le fichier est un CSV.
+
+**L'exemption de la gate est retirée.** `min_coverage_by_country` redevient vide : l'Allemagne
+passe le seuil commun de 95 % avec de la marge. La mécanique reste en place pour la prochaine
+source.
+
+**GB et NL inchangés** : GB 99,0 % au véhicule près (2 710 536 642), NL 98,4 %, 228 cibles
+publiées, **aucun rang modifié**. Seule la Volvo S60 R gagne 3 véhicules, effet du correctif
+ci-dessus. Bundle `reports/2026-09-13/` à 0 erreur, 250 tests verts.
+
+**Non fait, et c'est une décision d'architecture** — MINI (sous BMW) et Smart (sous Daimler)
+sont des marques **cibles** vendues sous leur maison mère : 4,6 M de véhicules, ~2,3 points de
+couverture. Un fourre-tout les attribuerait à BMW et Mercedes, ce qui serait faux. Il faut
+pouvoir réassigner la marque depuis le nom commercial — ce qui réglerait aussi les groupes
+`FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER`. Voir `tasks/todo.md`.
+
 ### 2026-09-13 — PR : rendre le classement lisible (aide à la lecture)
 **Ajouté**
 - Bloc « Comment lire ce tableau » en tête du classement, ouvert par défaut : ce que

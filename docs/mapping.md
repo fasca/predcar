@@ -62,9 +62,34 @@ uv run predcar normalize --min-coverage 0    # explorer sans échouer, lire le r
 make normalize                               # seuil de config/mapping.yaml
 ```
 
-État (2026-09-12, `reports/2026-09-12/silver/coverage.csv`) : couverture **GB 99,0 %**,
-**NL 98,4 %** (immatriculations neuves GB 99,2 %), hors libellés `unknown_labels`. La première
+État (2026-09-13, `reports/2026-09-13/silver/coverage.csv`) : couverture **GB 99,0 %**,
+**NL 98,4 %**, **DE 96,6 %** (immatriculations neuves GB 99,2 %), hors libellés `unknown_labels`. La première
 passe (2026-09-08 : GB 97,9 %, NL 98,2 %) avait révélé 11 familles de regex trop larges
 (`^900` capturait `9000`, `^MX-3` capturait `MX-30`, `^C2` capturait `C25`, `^ASTRA` capturait
 `ASTRAVAN`…) : toute règle sur un libellé numérique ou court se termine par `\b`. Le plus gros
 reste non mappé est `MODEL MISSING` (DfT), volontairement laissé sans `model_gen`.
+
+## Particularités allemandes (KBA)
+
+Les libellés du KBA ne se comportent pas comme ceux du DfT ou du RDW, et trois familles de
+pièges s'ajoutent à celles ci-dessus :
+
+- **Le constructeur n'est pas la marque.** `Hersteller` est un groupe industriel avec un suffixe
+  pays (`VOLKSWAGEN (D)`, `MAZDA (B/J/USA/RC)`) ; `mapping/makes.csv` porte un alias par forme.
+  Les groupes multi-marques (`FCA (I)`, `STELLANTIS (F)`, `GENERAL MOTORS`, `JAGUAR LAND ROVER`)
+  n'ont **pas** d'alias : leur marque réelle est dans le nom commercial, et tant qu'ils ne sont
+  pas résolus leurs lignes restent hors du périmètre des marques cibles.
+- **Des marques filles sont vendues sous leur maison mère** : MINI sous `BMW`, Smart sous
+  `DAIMLER (D)`, Dacia sous `RENAULT (F)`, Cupra sous `SEAT (E)`. Quand la marque fille n'est pas
+  une cible (Dacia, Cupra), un fourre-tout suffit. Quand elle en est une (**MINI**, **SMART**),
+  un fourre-tout serait faux — il attribuerait des MINI à BMW : ces lignes restent délibérément
+  non mappées, voir `tasks/todo.md`.
+- **Un libellé peut en contenir plusieurs**, séparés par une virgule ou un point-virgule :
+  `8D,AUDI A4,S4`, `BUSINESS;MULTIVAN`, `VW 1600,KAEFER 1303 LS`. Une règle ancrée sur `^` rate
+  tout ce qui suit le premier nom. Corollaire : une regex ne peut pas contenir de virgule, le
+  fichier est un CSV — utiliser `\W` ou une classe explicite.
+
+Deux pièges d'inversion rencontrés, où l'ordre des mots change le modèle :
+`CUPRA LEON` (marque Cupra, après 2018) n'est **pas** la cible `LEON CUPRA` (Seat, 1999–2012),
+et `AMG C 43` n'est pas la cible `C43 AMG`. Les règles ancrées les distinguent naturellement ;
+une regex non ancrée les confondrait.
