@@ -140,5 +140,9 @@ Une ligne par `(make_raw, model_raw)`.
 - [x] Pied de page `©` exclu
 - [x] Somme des lignes vérifiée contre le total publié, sur les 8 millésimes
 - [x] Aucune donnée personnelle : la table est agrégée à la source
-- [ ] Mapping des constructeurs-groupes (FCA, STELLANTIS, GM, JLR) et des MINI vendues sous BMW
-      → couverture DE à 93,1 %, exemptée de la gate dans `config/mapping.yaml`
+- [x] Mapping : alias de constructeurs, `SONSTIGE/NICHT GETYPT` déclaré « modèle inconnu »,
+      fourre-tout étendus aux libellés allemands → **DE 96,6 %**, la gate commune s'applique
+      de nouveau (plus d'exemption dans `config/mapping.yaml`)
+- [ ] MINI (sous BMW) et Smart (sous Daimler) : marques **cibles** vendues sous leur maison mère,
+      4,6 M de véhicules. Un fourre-tout les attribuerait à BMW/Mercedes ; il faut pouvoir
+      réassigner la marque depuis le nom commercial. Idem pour les groupes FCA / STELLANTIS
