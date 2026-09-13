@@ -382,6 +382,61 @@ def test_normalize_fails_below_coverage(fixtures: Path, tmp_path: Path) -> None:
     assert set(written) == {"fleet_stock", "fleet_new_reg", "mapping_coverage"}
 
 
+def test_per_country_threshold_exempts_only_the_named_country(
+    fixtures: Path, tmp_path: Path
+) -> None:
+    """A country still being mapped must not gate the countries that are already mapped.
+
+    Ingesting a new source would otherwise break `make normalize` for everyone — and with it
+    the quarterly refresh — without anything changing in the existing mappings.
+    """
+    silver = _ingest_fixtures(fixtures, tmp_path)
+    mapping = tmp_path / "mapping"
+    mapping.mkdir()
+    (mapping / n.MAKES_FILE).write_text("alias,make\nBMW,BMW\n")
+    (mapping / n.MODELS_FILE).write_text(
+        "make,model_raw_regex,year_from,year_to,model_gen,generation\n"
+        "BMW,^M3 CSL,,,M3,E46\nHONDA,^S2000,,,S2000,AP1_AP2\n"
+    )
+    (mapping / n.TARGETS_FILE).write_text(
+        "make,model_gen,generation,segment,year_from,year_to\n"
+        "BMW,M3,E46,SPORTIVE,2000,2006\nHONDA,S2000,AP1_AP2,ROADSTER,1999,2009\n"
+    )
+    # Both fixture countries are below 95 %: exempting them lets the run through (the lookup
+    # is case-insensitive), and their coverage is still computed and published.
+    written = n.normalize(
+        silver, mapping, min_coverage=0.95, min_coverage_by_country={"gb": 0.0, "nl": 0.0}
+    )
+    cov = pl.read_parquet(written["mapping_coverage"])
+    stock = cov.filter(pl.col("table") == "fleet_stock")
+    assert set(stock["country"]) == {"GB", "NL"}
+    assert stock["coverage"].max() < 0.95
+
+    # exempting an absent country changes nothing: the real ones still gate
+    with pytest.raises(n.CoverageError, match="GB|NL"):
+        n.normalize(silver, mapping, min_coverage=0.95, min_coverage_by_country={"DE": 0.0})
+
+
+def test_per_country_threshold_still_gates_above_its_own_value(
+    fixtures: Path, tmp_path: Path
+) -> None:
+    """An exempted country is not ungated: it is gated at its own, lower threshold."""
+    silver = _ingest_fixtures(fixtures, tmp_path)
+    mapping = tmp_path / "mapping"
+    mapping.mkdir()
+    (mapping / n.MAKES_FILE).write_text("alias,make\nBMW,BMW\n")
+    (mapping / n.MODELS_FILE).write_text(
+        "make,model_raw_regex,year_from,year_to,model_gen,generation\n"
+        "BMW,^M3 CSL,,,M3,E46\nHONDA,^S2000,,,S2000,AP1_AP2\n"
+    )
+    (mapping / n.TARGETS_FILE).write_text(
+        "make,model_gen,generation,segment,year_from,year_to\n"
+        "BMW,M3,E46,SPORTIVE,2000,2006\nHONDA,S2000,AP1_AP2,ROADSTER,1999,2009\n"
+    )
+    with pytest.raises(n.CoverageError, match="GB"):
+        n.normalize(silver, mapping, min_coverage=0.0, min_coverage_by_country={"GB": 0.99})
+
+
 # --------------------------------------------------------------------------- real-data fixes
 
 

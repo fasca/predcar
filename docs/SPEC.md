@@ -55,11 +55,20 @@ Portail : https://www.kba.de/DE/Statistik/Fahrzeuge/Bestand/bestand_node.html (B
 
 | Série | Contenu | Format |
 |---|---|---|
-| FZ 10 (Bestand nach Herstellern und Typen) | Parc au 1er janvier par constructeur et type (codes HSN/TSN + libellé) | XLSX annuel |
-| FZ 17 | Bestand par Marke/Modellreihe | XLSX annuel |
-| FZ 10 (Neuzulassungen) | Immatriculations neuves mensuelles par Marke/Modell | XLSX mensuel |
+| **FZ 2, feuille FZ 2.2** | Parc au 1ᵉʳ janvier par **constructeur et nom commercial** (+ Typ-Schl.-Nr., kW, carburant, carrosserie) | XLSX annuel |
+| FZ 17 | Parc par marque **uniquement** — trop grossier pour ce projet | XLSX annuel |
 
-Notes : pas d'API, fichiers Excel avec en-têtes multi-lignes → parseur dédié et tests de non-régression par millésime. **Tâche 1 pour Claude : inventorier les URLs exactes des XLSX 2010–2026 et documenter le schéma de chaque millésime** (les libellés changent).
+**Correction du 2026-09-13, après inventaire par requête HTTP** : la « FZ 10 » annoncée dans la
+première version de cette spec **n'existe pas** (404 sur les 17 millésimes testés), et FZ 17 est
+au niveau marque seulement. La table utilisable est **FZ 2.2**. Huit millésimes sont publiés
+(2019 → 2026), sous deux conventions de nommage ; cinq sont exploitables, trois portent des
+lignes d'agrégat non identifiables et sont refusés par l'invariant de somme. FZ 2.2 **ne porte
+aucune année de première immatriculation** : l'Allemagne est une série de niveau modèle
+générique, comme VEH0120, sans cohortes ni générations.
+
+Notes : pas d'API, fichiers Excel dont la ligne d'en-tête se déplace d'un millésime à l'autre →
+parseur dédié, localisation dynamique de l'en-tête et tests par disposition. Schéma observé et
+liste des pièges : `docs/sources/kba_de.md`.
 
 ### 2.4 France — SDES / data.gouv.fr
 

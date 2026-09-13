@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 from predcar.paths import CONFIG_DIR
 
@@ -60,6 +60,22 @@ class MappingConfig(BaseModel):
     report_top_unmapped: int = Field(ge=1)
     # model_raw values meaning "model unknown" in the source itself, excluded from coverage
     unknown_labels: list[str] = Field(default_factory=list)
+    # Per-country override of min_coverage, for a country still being mapped: its coverage is
+    # still computed and published, only the gate is relaxed. Keep each entry dated in the
+    # YAML so a temporary exemption cannot quietly become permanent.
+    min_coverage_by_country: dict[str, float] = Field(default_factory=dict)
+
+    @field_validator("min_coverage_by_country")
+    @classmethod
+    def _valid_thresholds(cls, value: dict[str, float]) -> dict[str, float]:
+        bad = {k: v for k, v in value.items() if not 0 <= v <= 1}
+        if bad:
+            raise ValueError(f"min_coverage_by_country must be within 0..1, got {bad}")
+        return {k.upper(): v for k, v in value.items()}
+
+    def coverage_threshold(self, country: str) -> float:
+        """Threshold that gates ``country``, falling back to the global one."""
+        return self.min_coverage_by_country.get(country.upper(), self.min_coverage)
 
 
 class UkDftSource(BaseModel):
@@ -74,9 +90,35 @@ class NlRdwSource(BaseModel):
     api_url: HttpUrl
 
 
+class DeKbaSource(BaseModel):
+    """KBA FZ 2 workbook, one file per vintage (stock at 1 January).
+
+    The file name pattern changed between vintages, so both are declared and tried in order
+    (see docs/sources/kba_de.md).
+    """
+
+    licence: str
+    base_url: str
+    file_patterns: list[str] = Field(min_length=1)
+    sheet: str
+    first_year: int
+    last_year: int
+
+    @model_validator(mode="after")
+    def _year_range(self) -> DeKbaSource:
+        if self.last_year < self.first_year:
+            raise ValueError(f"last_year {self.last_year} < first_year {self.first_year}")
+        return self
+
+    def urls(self, year: int) -> list[str]:
+        """Candidate download URLs for a vintage, most likely first."""
+        return [f"{self.base_url}/{pattern.format(year=year)}" for pattern in self.file_patterns]
+
+
 class SourcesConfig(BaseModel):
     uk_dft: UkDftSource
     nl_rdw: NlRdwSource
+    de_kba: DeKbaSource
 
 
 def _load_yaml(path: Path) -> dict:

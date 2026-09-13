@@ -11,6 +11,53 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-13 — PR : ingestion KBA (Allemagne), phase 2 étape 1
+**Ajouté**
+- `predcar/ingest/kba.py`, `predcar fetch de --year` / `ingest de`, `make fetch-de` /
+  `make ingest-de` : parc allemand au 1ᵉʳ janvier par constructeur et nom commercial
+  (KBA **FZ 2**, feuille FZ 2.2) → `data/silver/fleet_stock_de_kba_<année>.parquet`.
+- `docs/sources/kba_de.md` : schéma observé sur les 8 classeurs réels, dix pièges documentés,
+  tableau des millésimes avec leur écart au total publié, liste de vérification cochée.
+- 33 alias de constructeurs allemands dans `mapping/makes.csv` (`VOLKSWAGEN (D)` →
+  `VOLKSWAGEN`, `DAIMLER (D)` → `MERCEDES-BENZ`…). Les libellés bruts ne sont jamais modifiés.
+- `min_coverage_by_country` (`config/mapping.yaml`) : seuil de couverture par pays. La gate
+  était globale — ingérer l'Allemagne aurait fait échouer `make normalize` pour GB et NL, et
+  avec lui le refresh trimestriel. DE est exempté et daté, sa couverture reste publiée.
+- Dépendances : `fastexcel` (lecture XLSX), `openpyxl` en dev (fabrication des fixtures).
+- 27 tests (219 → 246), fixtures **découpées dans les vrais classeurs** 2024 et 2020 pour
+  couvrir les deux dispositions d'en-tête.
+
+**La spec se trompait de table** — vérifié par requête HTTP : **FZ 10 n'existe pas** (404 sur
+17 millésimes) et FZ 17 est au niveau marque seulement (≤ 140 lignes). La table utilisable est
+FZ 2.2, ~16 600 lignes au niveau nom commercial. `docs/SPEC.md` §2.3, `CLAUDE.md` et
+`docs/SOURCES.md` sont corrigés et datés.
+
+**L'invariant de somme, et ce qu'il a trouvé** — la feuille publie son propre total ; les
+lignes de détail sont comparées à lui, de façon asymétrique : au-dessus = une ligne d'agrégat
+comptée deux fois, erreur ; en dessous = comptages supprimés par le KBA, attendu et journalisé.
+Ce seul contrôle a révélé trois défauts qu'aucun test sur un schéma supposé n'aurait vus :
+- les sous-totaux `ZUSAMMEN` changent de colonne selon le millésime (collés au constructeur
+  jusqu'en 2024, seuls dans la colonne du nom commercial en 2026) — les garder **doublait le
+  parc allemand**, 96 M au lieu de 49 M ;
+- leur orthographe n'est pas fiable : le fichier 2019 contient `CITROEN (F) ZSAMMEN` ;
+- le report des libellés de groupe franchissait les frontières de constructeur : le bloc Audi
+  2019 s'ouvre sans nom commercial, juste après Aston Martin, et ses lignes étaient créditées
+  à un modèle Aston Martin. Ces lignes deviennent `(MISSING)`, jamais supprimées.
+
+**Cinq millésimes sur huit sont exploitables** : 2020, 2023, 2024, 2025, 2026 — quatre au
+véhicule près, 2026 à −0,31 % (comptages supprimés par la source). 2019, 2021 et 2022 portent
+des lignes d'agrégat non identifiables (dans 2019, une ligne de 3 124 094 véhicules dont les
+trois libellés sont vides) : **refusés** plutôt que devinés. La série allemande a donc un trou
+en 2021–2022, à traiter avant d'en tirer une attrition.
+
+**Non fait, volontairement** — le mapping allemand. Le `Hersteller` du KBA est un groupe
+industriel (`FCA (I)`, `STELLANTIS (F)` mélange Corsa, 208 et C5 Aircross) et les MINI sont
+vendues sous BMW : la couverture DE est à **93,1 %**. C'est du travail de règles, pas de
+parsing, et il se fera sur le rapport de couverture réel. `metrics.series_of` reconnaît `FZ2`
+pour que les lignes allemandes coexistent dans le silver, mais la série est **absente de
+`MODEL_LEVEL_SERIES`** : `ranking.csv` est **identique au bit près** après cette PR, GB 99,0 %
+et NL 98,4 % inchangés.
+
 ### 2026-09-12 — PR : site statique (phase 1, étape 5)
 **Ajouté**
 - `predcar site` / `make site` (`predcar/site.py`, gabarits Jinja2 dans `site/templates/`,
