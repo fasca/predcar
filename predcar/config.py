@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 from predcar.paths import CONFIG_DIR
 
@@ -60,6 +60,22 @@ class MappingConfig(BaseModel):
     report_top_unmapped: int = Field(ge=1)
     # model_raw values meaning "model unknown" in the source itself, excluded from coverage
     unknown_labels: list[str] = Field(default_factory=list)
+    # Per-country override of min_coverage, for a country still being mapped: its coverage is
+    # still computed and published, only the gate is relaxed. Keep each entry dated in the
+    # YAML so a temporary exemption cannot quietly become permanent.
+    min_coverage_by_country: dict[str, float] = Field(default_factory=dict)
+
+    @field_validator("min_coverage_by_country")
+    @classmethod
+    def _valid_thresholds(cls, value: dict[str, float]) -> dict[str, float]:
+        bad = {k: v for k, v in value.items() if not 0 <= v <= 1}
+        if bad:
+            raise ValueError(f"min_coverage_by_country must be within 0..1, got {bad}")
+        return {k.upper(): v for k, v in value.items()}
+
+    def coverage_threshold(self, country: str) -> float:
+        """Threshold that gates ``country``, falling back to the global one."""
+        return self.min_coverage_by_country.get(country.upper(), self.min_coverage)
 
 
 class UkDftSource(BaseModel):

@@ -1,6 +1,10 @@
 # Make/model normalization parameters (SPEC §4).
 # Share of the fleet (by count) of *target makes* that must resolve to a model_gen, per country.
 min_coverage: 0.95
+# Per-country override, for a country whose mapping is still being built: its coverage is
+# still computed, logged and published in coverage.csv — only the gate is relaxed. Keep
+# every entry dated, so a temporary exemption cannot quietly become permanent.
+min_coverage_by_country: {}
 # How many unmapped (country, make, model_raw) rows to list in the coverage report.
 report_top_unmapped: 30
 # model_raw values by which the source itself says the model is unknown: never mappable,

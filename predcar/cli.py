@@ -88,7 +88,12 @@ def normalize(
     threshold = cfg.min_coverage if min_coverage is None else min_coverage
     try:
         written = normalize_mod.normalize(
-            silver_dir, mapping_dir, threshold, cfg.report_top_unmapped, tuple(cfg.unknown_labels)
+            silver_dir,
+            mapping_dir,
+            threshold,
+            cfg.report_top_unmapped,
+            tuple(cfg.unknown_labels),
+            cfg.min_coverage_by_country,
         )
     except normalize_mod.CoverageError as exc:
         raise typer.Exit(code=2) from _echo_error(exc)
