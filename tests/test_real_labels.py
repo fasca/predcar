@@ -83,16 +83,38 @@ def test_repo_rules_resolve_every_real_label_without_conflict(
 def test_real_coverage_stays_above_the_gate(
     real_labels: pl.DataFrame, real_labels_mapped: pl.DataFrame
 ) -> None:
-    """Replay the production coverage gate on the real per-label volumes."""
-    unknown = [u.upper() for u in load_mapping_config(None).unknown_labels]
+    """Replay the production coverage gate on the real per-label volumes.
+
+    Each country is checked against *its* threshold, the same way ``normalize`` does: a country
+    whose mapping is still being written is listed in ``min_coverage_by_country`` and gated at
+    its own, lower value. Hard-coding 0.95 here would either break every run that ingests a new
+    source, or force the exemption to be silent.
+    """
+    cfg = load_mapping_config(None)
+    unknown = [u.upper() for u in cfg.unknown_labels]
     joined = real_labels.select(
         "country", "make_raw", "model_raw", pl.col("count").cast(pl.Int64)
     ).join(real_labels_mapped, on=["make_raw", "model_raw"], how="left")
     known = joined.filter(~pl.col("model_raw").str.to_uppercase().is_in(unknown))
     for country, group in known.group_by("country"):
+        name = country[0]
         total = group["count"].sum()
         mapped = group.filter(pl.col("model_gen").is_not_null())["count"].sum()
-        assert mapped / total >= 0.95, f"{country[0]}: coverage {mapped / total:.4f} below the gate"
+        threshold = cfg.coverage_threshold(name)
+        share = mapped / total
+        assert share >= threshold, f"{name}: coverage {share:.4f} below its gate {threshold:.2f}"
+
+
+def test_exempted_countries_are_the_ones_we_declared(real_labels: pl.DataFrame) -> None:
+    """An exemption must be deliberate: every exempted country is a country we ingest.
+
+    Guards against an entry left behind in config/mapping.yaml once its mapping is done, which
+    would silently stop gating a country that no longer needs it.
+    """
+    cfg = load_mapping_config(None)
+    ingested = set(real_labels["country"].unique().to_list())
+    stale = set(cfg.min_coverage_by_country) - ingested
+    assert not stale, f"min_coverage_by_country lists countries that are not ingested: {stale}"
 
 
 def test_every_target_is_reachable_from_a_real_label(real_labels_mapped: pl.DataFrame) -> None:

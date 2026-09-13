@@ -111,3 +111,18 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
   distantes** — et un fichier de passation (`handoff.md`, `next.md`) peut contenir une décision
   déjà arrêtée qu'il serait absurde de reprendre à zéro. Corollaire : ne pas multiplier les
   fichiers de reprise, ils se périment et finissent par se contredire ; un seul `todo.md`.
+
+### 2026-09-13 Les tests se relancent *après* `make export`, pas avant
+- **Erreur**: la suite était verte en local, la CI rouge. `tests/test_real_labels.py` rejoue la
+  gate de couverture sur les libellés du **dernier bundle** : tant que `make export` n'avait pas
+  tourné, il lisait le bundle de la veille, sans l'Allemagne. L'export a ajouté 110 044 libellés
+  dont les allemands à 93,1 %, et le test — qui codait le seuil 0,95 en dur — a échoué, alors que
+  `config/mapping.yaml` exempte explicitement DE.
+- **Correction**: relancer `pytest` **après** `make export`, dans cet ordre (c'est déjà ce que
+  fait `.github/workflows/refresh.yml`) ; et faire lire aux tests le seuil réel
+  (`cfg.coverage_threshold(country)`) au lieu d'une constante.
+- **Règle**: quand un bundle versionné est une **entrée** de la suite de tests, modifier le
+  bundle est une modification du code sous test. Séquence : pipeline → `export` → `pytest` →
+  commit. Corollaire : un seuil qui existe dans la config ne doit jamais être réécrit en dur
+  dans un test, sinon les deux divergent au premier cas particulier — et c'est le test qui a
+  raison contre le code, ou l'inverse, sans qu'on sache lequel.
