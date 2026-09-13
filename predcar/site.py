@@ -499,6 +499,8 @@ def build(
         "models_dir": MODELS_DIR,
         "weights": cfg.weights.as_dict(),
         "component_labels": COMPONENT_LABELS,
+        # The legend must use the very same short labels as the bars in the table.
+        "component_short": COMPONENT_SHORT,
         "country_labels": COUNTRY_LABELS,
         "cfg": cfg,
     }

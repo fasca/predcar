@@ -11,6 +11,30 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-13 — PR : rendre le classement lisible (aide à la lecture)
+**Ajouté**
+- Bloc « Comment lire ce tableau » en tête du classement, ouvert par défaut : ce que
+  représente une ligne, puis **chaque colonne** (rang, années, pays, parc, attrition, score,
+  composantes) et la **légende des quatre barres**, qui reprend exactement les mêmes étiquettes
+  courtes que le tableau (`R`, `C`, `SORN`, `Infl.`) et le motif hachuré d'une composante absente.
+- Infobulle sur **tous** les en-têtes de colonne du classement sauf « Modèle », et sur les dix
+  colonnes de la table par pays de la page modèle.
+- Page modèle : une phrase dit à quoi sert la colonne « Médiane des pairs » — l'attrition d'une
+  génération ne veut rien dire seule, elle se lit contre celle des modèles du même segment et
+  du même âge.
+- 4 tests : chaque colonne est documentée, chaque en-tête porte une infobulle, les étiquettes
+  de la légende couvrent celles des barres, et la page modèle explique la comparaison.
+
+**Pourquoi** — retour d'usage sur le site publié : le tableau n'indiquait ni le sens ni
+l'échelle de ses colonnes. Rien ne disait qu'une attrition **négative** signifie un parc qui
+augmente, que le score va de 0 à 1, ni ce que valaient `R`, `C`, `SORN`, `Infl.`. La page
+affirme aussi désormais ce que ces chiffres **ne sont pas** : ni une cote, ni un prix, ni une
+prédiction de valeur — et qu'une composante manquante est exclue, jamais comptée 0.
+
+**Corrigé**
+- `test_unpublished_target_has_page_but_no_rank` découpait l'index sur `<details` en supposant
+  qu'il n'y en avait qu'un ; il cible maintenant `<details class="unpublished"`.
+
 ### 2026-09-12 — PR : site statique (phase 1, étape 5)
 **Ajouté**
 - `predcar site` / `make site` (`predcar/site.py`, gabarits Jinja2 dans `site/templates/`,
