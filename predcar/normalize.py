@@ -365,12 +365,23 @@ def normalize(
     min_coverage: float = 0.95,
     report_top: int = 30,
     unknown_labels: tuple[str, ...] = (),
+    min_coverage_by_country: dict[str, float] | None = None,
 ) -> dict[str, Path]:
     """Map every ingested silver file and write ``fleet_stock.parquet`` / ``fleet_new_reg.parquet``.
 
+    Args:
+        min_coverage: threshold gating every country without its own entry below.
+        min_coverage_by_country: per-country override, for a country still being mapped. Its
+            coverage is still computed, logged and published; only the gate is relaxed.
+
     Raises:
-        CoverageError: when any country's target-make coverage is below ``min_coverage``.
+        CoverageError: when a country's target-make coverage is below *its* threshold.
     """
+    per_country = {k.upper(): v for k, v in (min_coverage_by_country or {}).items()}
+
+    def threshold(country: str) -> float:
+        return per_country.get(country.upper(), min_coverage)
+
     makes = load_makes(mapping_dir / MAKES_FILE)
     rules = load_models(mapping_dir / MODELS_FILE)
     targets = load_targets(mapping_dir / TARGETS_FILE)
@@ -403,12 +414,15 @@ def normalize(
             report = unmapped_report(mapped, targets, report_top, unknown_labels)
             if report.height:
                 logger.info("top unmapped target-make rows:\n%s", report)
-            below = cov.filter(pl.col("coverage") < min_coverage)
-            if below.height:
+            below = [
+                f"{country} {share:.1%} < {threshold(country):.0%}"
+                for country, _, _, _, share in cov.iter_rows()
+                if share < threshold(country)
+            ]
+            if below:
                 raise CoverageError(
-                    f"fleet_stock coverage below {min_coverage:.0%} for "
-                    f"{below.select('country', 'coverage').to_dicts()}; extend {MODELS_FILE} "
-                    f"(see the unmapped report above)"
+                    f"fleet_stock coverage below {min_coverage:.0%}: {', '.join(below)}; "
+                    f"extend {MODELS_FILE} (see the unmapped report above)"
                 )
     if coverage_frames:
         staged["mapping_coverage"] = pl.concat(coverage_frames)

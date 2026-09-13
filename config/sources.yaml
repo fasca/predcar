@@ -14,3 +14,17 @@ nl_rdw:
   licence: CC0-1.0
   dataset_id: m9d7-ebf2
   api_url: https://opendata.rdw.nl/resource/m9d7-ebf2.json
+
+de_kba:
+  licence: DL-DE/BY-2-0
+  # FZ 2 "Bestand an Kraftfahrzeugen und Kraftfahrzeuganhängern nach Herstellern und
+  # Handelsnamen". Sheet FZ 2.2 is the model-level table (Handelsname); FZ 17 is make-level
+  # only, and the FZ 10 named in early drafts of the spec does not exist.
+  base_url: https://www.kba.de/SharedDocs/Downloads/DE/Statistik/Fahrzeuge/FZ2
+  # The file name changed between vintages; both are tried, most recent convention first.
+  file_patterns:
+    - "fz2_{year}.xlsx?__blob=publicationFile"
+    - "fz2_{year}_xlsx.xlsx?__blob=publicationFile"
+  sheet: FZ 2.2
+  first_year: 2019
+  last_year: 2026

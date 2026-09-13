@@ -83,7 +83,20 @@
       déploiement — **action utilisateur**, opt-in unique sans lequel `deploy-pages` échoue
 
 ## Phase 2
-- [ ] KBA (DE) : inventaire des XLSX 2010–2026 et schémas par millésime
+- [x] KBA (DE) : inventaire des XLSX par requête HTTP et schéma observé par millésime
+      (2026-09-13 : **FZ 10 n'existe pas**, FZ 17 est au niveau marque ; la table est **FZ 2.2**.
+      8 millésimes 2019–2026, deux conventions de nommage, `docs/sources/kba_de.md`)
+- [x] Ingestion KBA : `predcar/ingest/kba.py`, `fetch de` / `ingest de`, 27 tests, invariant de
+      somme contre le total publié → 5 millésimes exploitables (2020, 2023–2026), 3 refusés
+- [ ] Mapping allemand : les groupes `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER`
+      couvrent plusieurs marques cibles, les MINI sont vendues sous BMW → couverture DE 93,1 %,
+      exemptée de la gate. À traiter sur le rapport de couverture réel, puis remonter `DE` à 0.95
+      dans `config/mapping.yaml`
+- [ ] Intégrer DE au score : déclarer `FZ2` dans `metrics.MODEL_LEVEL_SERIES` (niveau modèle
+      générique, comme VEH0120 — la source n'a pas d'année de première immatriculation).
+      Vérifier d'abord l'effet du trou 2021–2022 sur l'attrition
+- [ ] Récupérer 2019, 2021, 2022 : comprendre leurs lignes d'agrégat sans libellé (dans 2019,
+      une ligne de 3 124 094 véhicules aux trois libellés vides) — sans assouplir l'invariant
 - [ ] Immatriculations FR (SDES), STATS19, Google Trends, YouTube
 
 ## Phase 3

@@ -1,4 +1,4 @@
-.PHONY: install fetch-uk fetch-nl ingest-uk ingest-nl compress-nl normalize score export site validate test lint
+.PHONY: install fetch-uk fetch-nl fetch-de ingest-uk ingest-nl ingest-de compress-nl normalize score export site validate test lint
 
 install:
 	uv sync
@@ -17,6 +17,12 @@ ingest-nl:           ## Parse latest raw RDW snapshot into data/silver/fleet_sto
 
 compress-nl:         ## Gzip the archived RDW payload so the month can be committed (~1.2 MB)
 	uv run predcar compress nl
+
+fetch-de:            ## Archive one KBA FZ 2 vintage: make fetch-de YEAR=2026
+	uv run predcar fetch de --year $(YEAR)
+
+ingest-de:           ## Parse the latest KBA vintage into data/silver/fleet_stock_de_kba_<year>.parquet
+	uv run predcar ingest de
 
 normalize:           ## Apply mapping/ → data/silver/fleet_stock.parquet, fail if coverage < 95 %
 	uv run predcar normalize
