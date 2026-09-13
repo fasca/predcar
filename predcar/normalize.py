@@ -43,6 +43,25 @@ class CoverageError(RuntimeError):
     """A country's target-make fleet is mapped below the configured threshold."""
 
 
+class MakeOverride(BaseModel):
+    """A raw make label that resolves to a *different* make for some model labels.
+
+    Needed because a manufacturer is not always a brand: the KBA sells MINI under ``BMW`` and
+    Smart under ``DAIMLER (D)``, and both are target makes of their own. Without this, their
+    vehicles would be credited to BMW and Mercedes-Benz, and the MINI and Smart targets would
+    have no German stock at all.
+    """
+
+    alias: str
+    make: str
+    model_regex: str
+
+    @field_validator("alias", "make", mode="before")
+    @classmethod
+    def _upper(cls, value: str) -> str:
+        return str(value).strip().upper()
+
+
 class ModelRule(BaseModel):
     make: str
     model_raw_regex: str
@@ -103,18 +122,49 @@ def _read_csv(path: Path) -> pl.DataFrame:
     return pl.read_csv(path, infer_schema_length=0).fill_null("")
 
 
-def load_makes(path: Path) -> dict[str, str]:
-    """alias → canonical make, both upper-cased and stripped."""
+MAKES_COLUMNS = {"alias", "make"}
+MAKES_OPTIONAL_COLUMNS = {"model_regex"}
+
+
+def _makes_frame(path: Path) -> pl.DataFrame:
     df = _read_csv(path)
-    if set(df.columns) != {"alias", "make"}:
-        raise MappingError(f"{path}: expected columns alias,make, got {df.columns}")
+    columns = set(df.columns)
+    if not MAKES_COLUMNS <= columns or not columns <= MAKES_COLUMNS | MAKES_OPTIONAL_COLUMNS:
+        raise MappingError(f"{path}: expected columns alias,make[,model_regex], got {df.columns}")
+    if "model_regex" not in columns:
+        df = df.with_columns(pl.lit(None, dtype=pl.Utf8).alias("model_regex"))
+    return df.select("alias", "make", "model_regex")
+
+
+def load_makes(path: Path) -> dict[str, str]:
+    """alias → canonical make, both upper-cased and stripped.
+
+    Rows carrying a ``model_regex`` are conditional and belong to ``load_make_overrides``;
+    they are skipped here so an alias keeps one unconditional make.
+    """
     makes = {}
-    for alias, make in df.iter_rows():
+    for alias, make, model_regex in _makes_frame(path).iter_rows():
+        if model_regex is not None and model_regex.strip():
+            continue
         key = alias.strip().upper()
         if key in makes and makes[key] != make.strip().upper():
             raise MappingError(f"{path}: alias {key!r} maps to two makes")
         makes[key] = make.strip().upper()
     return makes
+
+
+def load_make_overrides(path: Path) -> list[MakeOverride]:
+    """The rows of ``makes.csv`` that resolve a make *conditionally on the model label*."""
+    overrides = []
+    for alias, make, model_regex in _makes_frame(path).iter_rows():
+        if model_regex is None or not model_regex.strip():
+            continue
+        try:
+            re.compile(model_regex)
+        except re.error as exc:
+            raise MappingError(f"{path}: invalid model_regex {model_regex!r}: {exc}") from exc
+        overrides.append(MakeOverride(alias=alias, make=make, model_regex=model_regex))
+    return overrides
 
 
 def load_models(path: Path) -> list[ModelRule]:
@@ -210,13 +260,52 @@ def _candidates(pairs: pl.DataFrame, rules: list[ModelRule], makes: dict[str, st
     return pl.DataFrame(out, schema=schema)
 
 
-def apply(df: pl.DataFrame, makes: dict[str, str], rules: list[ModelRule]) -> pl.DataFrame:
+def _apply_make_overrides(rows: pl.DataFrame, overrides: list[MakeOverride]) -> pl.DataFrame:
+    """Re-point ``make`` for the raw labels whose brand depends on the model label.
+
+    Applied on ``make_raw`` (the label as published), before any model rule runs, so the rest
+    of the pipeline sees the real brand. The first matching override wins; declaring two that
+    match the same row is a rule bug and raises.
+    """
+    if not overrides or not rows.height:
+        return rows
+    resolved = pl.col("make")
+    seen: dict[str, list[MakeOverride]] = {}
+    for override in overrides:
+        seen.setdefault(override.alias, []).append(override)
+    for alias, group in seen.items():
+        for i, override in enumerate(group):
+            for other in group[i + 1 :]:
+                pattern, rival = re.compile(override.model_regex, re.I), other.model_regex
+                if override.make != other.make and pattern.pattern == rival:
+                    raise MappingError(
+                        f"makes.csv: alias {alias!r} has two overrides with the same regex"
+                    )
+        for override in group:
+            resolved = (
+                pl.when(
+                    (pl.col("make_raw") == alias)
+                    & pl.col("model_raw").str.contains(f"(?i){override.model_regex}")
+                )
+                .then(pl.lit(override.make))
+                .otherwise(resolved)
+            )
+    return rows.with_columns(resolved.alias("make"))
+
+
+def apply(
+    df: pl.DataFrame,
+    makes: dict[str, str],
+    rules: list[ModelRule],
+    make_overrides: list[MakeOverride] | None = None,
+) -> pl.DataFrame:
     """Fill ``make``, ``model_gen`` and ``generation`` on a silver frame.
 
     Args:
         df: fleet_stock or fleet_new_reg frame (``year_first_reg`` optional).
         makes: alias → canonical make.
         rules: model rules.
+        make_overrides: raw labels whose make depends on the model label (MINI under BMW).
 
     Returns:
         Same columns and row order, with the three normalized columns filled where a rule
@@ -231,6 +320,7 @@ def apply(df: pl.DataFrame, makes: dict[str, str], rules: list[ModelRule]) -> pl
         .replace_strict(makes, default=pl.col("make_raw"), return_dtype=pl.Utf8)
         .alias("make")
     )
+    rows = _apply_make_overrides(rows, make_overrides or [])
     # The year that places a car in a generation is its build year when the source has it
     # (imports are registered years after they were built); else its first-registration year.
     if not has_year:
@@ -383,6 +473,7 @@ def normalize(
         return per_country.get(country.upper(), min_coverage)
 
     makes = load_makes(mapping_dir / MAKES_FILE)
+    make_overrides = load_make_overrides(mapping_dir / MAKES_FILE)
     rules = load_models(mapping_dir / MODELS_FILE)
     targets = load_targets(mapping_dir / TARGETS_FILE)
     check_targets_have_rules(targets, rules)
@@ -396,7 +487,7 @@ def normalize(
         if not files:
             logger.warning("%s: no ingested file in %s, skipped", table, silver_dir)
             continue
-        mapped = apply(pl.concat([pl.read_parquet(p) for p in files]), makes, rules)
+        mapped = apply(pl.concat([pl.read_parquet(p) for p in files]), makes, rules, make_overrides)
         cov = coverage(mapped, targets, unknown_labels)
         for country, total, n_mapped, n_unknown, share in cov.iter_rows():
             logger.info(

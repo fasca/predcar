@@ -11,6 +11,38 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-13 — PR : marques filles vendues sous leur maison mère (DE 96,6 % → 98,9 %)
+**Ajouté**
+- `mapping/makes.csv` accepte une troisième colonne **optionnelle**, `model_regex` : la marque
+  devient conditionnelle au libellé du modèle. `normalize.MakeOverride`,
+  `normalize.load_make_overrides()` et un paramètre `make_overrides` sur `normalize.apply()`,
+  appliqué sur `make_raw` **avant** toute règle de modèle.
+- Trois surcharges : MINI sous `BMW`, Smart sous `DAIMLER (D)` et sous `MERCEDES-BENZ (E)`.
+- 7 tests unitaires + 1 test sur les libellés réels du bundle, qui échoue si une surcharge
+  cesse de matcher.
+
+**Pourquoi** — un constructeur n'est pas toujours une marque. Le KBA publie les MINI sous BMW
+et les Smart sous Daimler, or **MINI et Smart sont des marques cibles**. Un fourre-tout aurait
+été faux : il aurait crédité **5,1 M de véhicules** à BMW et Mercedes-Benz, gonflé ces deux
+marques, et laissé les cibles MINI Cooper S et Smart Roadster **sans aucun parc allemand** —
+donc artificiellement rares, et surévaluées dès que l'Allemagne entrera dans le score.
+
+**Deux cas trouvés par le test sur les libellés réels**, pas par relecture :
+- `JOHN COOPER WORKS` est la ligne sportive de MINI et ne commence pas par `COOPER` ;
+- `EQ FORTWO` est la Smart électrique, préfixée par la marque électrique de Mercedes.
+
+**Rétro-compatible** : un `makes.csv` à deux colonnes reste valide, et `apply()` sans
+surcharges se comporte exactement comme avant — les deux sont testés.
+
+**Effet mesuré** : DE **96,6 % → 98,9 %**, GB **identique au véhicule près**
+(2 710 536 642), NL +72 véhicules (des MINI que le RDW publie aussi sous « BMW »),
+228 cibles publiées, **aucun rang modifié**. Seules les deux MINI Cooper S gagnent 1 et 11
+véhicules. 257 tests, bundle `reports/2026-09-13/` à 0 erreur.
+
+**Reste** — les groupes multi-marques `FCA (I)`, `STELLANTIS (F)`, `GENERAL MOTORS`,
+`JAGUAR LAND ROVER` relèvent du même mécanisme : leur marque est dans le nom commercial. Les
+règles sont à écrire.
+
 ### 2026-09-13 — PR : mapping allemand, 1re passe (DE 93,1 % → 96,6 %)
 **Corrigé**
 - `config/mapping.yaml` : `SONSTIGE/NICHT GETYPT` et `SONSTIGE HERSTELLER` rejoignent

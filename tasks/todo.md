@@ -92,11 +92,11 @@
       déclarés « modèle inconnu », fourre-tout étendus aux libellés allemands (Dacia sous Renault,
       Cupra sous Seat, Kaefer, plateformes `8D,AUDI A4`, gammes Volvo espacées) → **DE 96,6 %**,
       exemption retirée de `config/mapping.yaml`, GB et NL inchangés
-- [ ] Marques filles **cibles** vendues sous leur maison mère : MINI sous BMW, Smart sous Daimler
-      (4,6 M de véhicules, ~2,3 points de couverture DE). Un fourre-tout les attribuerait à
-      BMW/Mercedes : il faut pouvoir **réassigner la marque depuis le nom commercial**, ce qui
-      résoudrait aussi les groupes `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER`.
-      Décision d'architecture à prendre (colonne `make` de sortie dans `models.csv` ?)
+- [x] Marques filles cibles (2026-09-13) : colonne optionnelle `model_regex` dans
+      `mapping/makes.csv`, la marque devient conditionnelle au libellé du modèle. MINI sous BMW
+      et Smart sous Daimler → 5,1 M de véhicules rendus à leur marque, **DE 98,9 %**
+- [ ] Groupes multi-marques `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER` :
+      même mécanisme, règles à écrire (leur marque est dans le nom commercial)
 - [ ] Intégrer DE au score : déclarer `FZ2` dans `metrics.MODEL_LEVEL_SERIES` (niveau modèle
       générique, comme VEH0120 — la source n'a pas d'année de première immatriculation).
       Vérifier d'abord l'effet du trou 2021–2022 sur l'attrition
