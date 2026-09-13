@@ -81,3 +81,22 @@ details.unpublished ul { columns: 2; column-gap: 2rem; font-size: 0.9rem; }
 .prose table { font-size: 0.9rem; display: block; overflow-x: auto; }
 .prose pre { background: #f2f1ee; padding: 0.75rem; overflow-x: auto; border-radius: 4px; }
 .params table { max-width: 60ch; background: var(--card); }
+
+/* "How to read this table": the ranking is meaningless without the sign and scale of each
+   column, so the legend sits above the table rather than in a separate help page. */
+.howto {
+  background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+  padding: 0.6rem 1rem; margin: 1rem 0;
+}
+.howto > summary { cursor: pointer; font-weight: 600; padding: 0.2rem 0; }
+.howto-lead { max-width: 78ch; }
+.howto-cols { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0.75rem 0; }
+.howto-cols dt { font-weight: 600; white-space: nowrap; }
+.howto-cols dd { margin: 0; max-width: 78ch; }
+.howto-legend { list-style: none; padding: 0; margin: 0.75rem 0; }
+.howto-legend li { margin: 0.3rem 0; max-width: 78ch; }
+.bar.demo { margin-right: 0.4rem; vertical-align: middle; }
+@media (max-width: 620px) {
+  .howto-cols { grid-template-columns: 1fr; gap: 0.1rem; }
+  .howto-cols dd { margin-bottom: 0.5rem; }
+}

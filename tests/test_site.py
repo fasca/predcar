@@ -95,7 +95,9 @@ def test_unpublished_target_has_page_but_no_rank(gold: tuple[Path, Path], tmp_pa
     slug = site.slugify(r["make"], r["model_gen"], r["generation"])
     page = (written["models"] / f"{slug}.html").read_text(encoding="utf-8")
     assert "Score non publié" in page
-    ranking_table, unpublished_list = written["index"].read_text(encoding="utf-8").split("<details")
+    # split on the unpublished block itself: the page carries other <details> sections
+    index = written["index"].read_text(encoding="utf-8")
+    ranking_table, unpublished_list = index.split('<details class="unpublished"')
     assert f"{slug}.html" not in ranking_table
     assert f"{slug}.html" in unpublished_list
 
@@ -268,3 +270,56 @@ def test_csv_identity_columns_survive_numeric_looking_model_names(tmp_path: Path
     df = site._read_table(gold, "cohorts")
     assert df.schema["model_gen"] == pl.String
     assert df["model_gen"].to_list()[-1] == "147 GTA"
+
+
+def test_ranking_page_explains_how_to_read_it(gold: tuple[Path, Path], tmp_path: Path) -> None:
+    """A ranking without the sign and scale of its columns is not readable.
+
+    Every column of the table must be named in the help block, and the component legend must
+    use the very same short labels as the bars, or the legend explains nothing.
+    """
+    out = tmp_path / "dist"
+    _build(gold, out)
+    index = (out / "index.html").read_text(encoding="utf-8")
+
+    assert "Comment lire ce tableau" in index
+    for column in ("Rang", "Années", "Pays", "Parc", "Attrition/an", "Score", "Composantes"):
+        assert f"<dt>{column}</dt>" in index, column
+    # the sign of attrition is the one thing a reader cannot guess
+    assert "négative" in index and "le parc augmente" in index
+    # a missing component is excluded, never counted as zero — said on the page, not only in docs
+    assert "jamais comptée 0" in index
+
+    legend = re.search(r"howto-legend.*?</ul>", index, re.S)
+    assert legend is not None
+    row = re.search(r'<td class="components">.*?</td>', index, re.S)
+    assert row is not None
+    bars = re.findall(r'class="lbl">([^<]*)<', row.group(0))
+    legend_labels = re.findall(r'class="lbl">([^<]*)<', legend.group(0))
+    assert bars, "no component bar in the table"
+    assert set(bars) <= set(legend_labels), (bars, legend_labels)
+
+
+def test_every_ranking_column_header_carries_a_tooltip(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """Hovering a header is the shortest path to its meaning; only Modèle is self-evident."""
+    out = tmp_path / "dist"
+    _build(gold, out)
+    index = (out / "index.html").read_text(encoding="utf-8")
+    table = re.search(r'<table id="ranking".*?</thead>', index, re.S)
+    assert table is not None
+    headers = re.findall(r"<th\b([^>]*)>([^<]*)</th>", table.group(0))
+    untitled = [label for attrs, label in headers if "title=" not in attrs]
+    assert untitled == ["Modèle"], untitled
+
+
+def test_model_page_says_what_the_peer_median_is_for(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """The per-country table is a comparison; without that, its numbers are just numbers."""
+    out = tmp_path / "dist"
+    _build(gold, out)
+    page = next((out / "modeles").iterdir()).read_text(encoding="utf-8")
+    assert "Médiane des pairs" in page
+    assert "même segment et du même âge" in page

@@ -41,20 +41,65 @@
   <span id="f-count" class="count"></span>
 </section>
 
+<details class="howto" open>
+  <summary>Comment lire ce tableau</summary>
+  <p class="howto-lead">Chaque ligne est une <strong>génération</strong> d'un modèle. Plus le score
+    est élevé, plus la génération cumule les signes d'un futur collector : elle est rare, elle
+    disparaît <em>moins vite</em> que les modèles comparables, une partie de son parc est conservée
+    hors route, et sa disparition a ralenti récemment.</p>
+
+  <dl class="howto-cols">
+    <dt>Rang</dt><dd>Position au classement. <strong>1 = potentiel le plus élevé</strong>.</dd>
+    <dt>Années</dt><dd>Années de production de cette génération.</dd>
+    <dt>Pays</dt><dd>Pays où la génération est observée. Le reste de la ligne agrège ces pays.</dd>
+    <dt>Parc</dt><dd>Véhicules encore en circulation, hors véhicules déclarés hors route (SORN).</dd>
+    <dt>Attrition/an</dt>
+    <dd>Part du parc qui disparaît chaque année. <strong>3 % = le parc perd 3 % par an</strong> ;
+      plus c'est bas, mieux le modèle se conserve. Une valeur <strong>négative</strong> signifie
+      que le parc augmente — réimmatriculations ou imports. « — » : historique trop court.</dd>
+    <dt>Score</dt>
+    <dd>De 0 à 1, moyenne des quatre composantes ci-dessous, pondérée par
+      {% for name, w in weights.items() %}{{ (w * 100) | round | int }} %{% if not loop.last %} / {% endif %}{% endfor %}.
+      Une composante manquante est <em>exclue</em> et les poids restants recalculés, jamais comptée 0.</dd>
+    <dt>Composantes</dt>
+    <dd>Les quatre barres ci-dessous : le remplissage est la valeur, de 0 à 1.</dd>
+  </dl>
+
+  <ul class="howto-legend">
+    {% for name, w in weights.items() %}
+    <li>
+      <span class="bar demo" aria-hidden="true"><span class="fill" style="width: 62%"></span><span class="lbl">{{ component_short[name] }}</span></span>
+      <strong>{{ component_labels[name] }}</strong> ({{ (w * 100) | round | int }} %) —
+      {% if name == 'rarity' %}1 = le parc le plus faible du classement.
+      {% elif name == 'conservation' %}disparaît moins vite que les modèles du même segment et du même âge.
+      {% elif name == 'sorn_ratio' %}part du parc britannique déclarée hors route mais conservée (garage, restauration). Indisponible hors Royaume-Uni.
+      {% else %}1 si la disparition a ralenti il y a moins de {{ cfg.inflection.recent_years }} ans.
+      {% endif %}
+    </li>
+    {% endfor %}
+    <li><span class="bar na demo" aria-hidden="true"><span class="lbl">—</span></span>
+      Barre hachurée : composante <strong>non disponible</strong> pour cette génération.</li>
+  </ul>
+
+  <p class="note">Ces chiffres décrivent la <em>raréfaction</em> mesurée dans les parcs officiels.
+    Ils ne sont ni une cote, ni un prix, ni une prédiction de valeur
+    (<a href="methodologie.html">méthodologie et limites</a>).</p>
+</details>
+
 <div class="table-wrap">
 <table id="ranking" class="ranking">
   <thead>
     <tr>
-      <th>Rang</th>
+      <th title="Position au classement : 1 = potentiel collector le plus élevé">Rang</th>
       <th>Modèle</th>
-      <th>Génération</th>
-      <th>Segment</th>
-      <th>Années</th>
-      <th>Pays</th>
-      <th class="num">Parc</th>
-      <th class="num">Attrition/an</th>
-      <th class="num">Score</th>
-      <th>Composantes</th>
+      <th title="Génération du modèle (code constructeur ou millésime)">Génération</th>
+      <th title="Famille du modèle, utilisée pour le comparer à ses semblables">Segment</th>
+      <th title="Années de production de cette génération">Années</th>
+      <th title="Pays où la génération est observée">Pays</th>
+      <th class="num" title="Véhicules encore en circulation, hors véhicules déclarés hors route">Parc</th>
+      <th class="num" title="Part du parc qui disparaît chaque année ; plus c'est bas, mieux le modèle se conserve. Négatif = le parc augmente">Attrition/an</th>
+      <th class="num" title="De 0 à 1 : moyenne pondérée des quatre composantes, plus haut = plus collector">Score</th>
+      <th title="Rareté, Conservation, part SORN, Inflexion récente — le remplissage est la valeur 0 à 1">Composantes</th>
     </tr>
   </thead>
   <tbody>

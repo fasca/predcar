@@ -63,9 +63,24 @@
 
 <section class="by-country">
   <h2>Comparaison au segment, par pays</h2>
+  <p class="note">Une génération se juge par rapport à ses semblables : la colonne
+    <strong>Attrition/an</strong> se lit contre <strong>Médiane des pairs</strong>, les modèles du
+    même segment et du même âge. Plus basse que la médiane = la génération se conserve mieux
+    qu'eux. Survolez un en-tête pour le détail de la colonne.</p>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Pays</th><th>Série</th><th>Niveau</th><th class="num">Parc</th><th class="num">Survie</th><th class="num">Attrition/an</th><th class="num">Médiane des pairs</th><th class="num">Pairs</th><th class="num">Inflexion</th><th class="num">Ratio SORN</th></tr></thead>
+    <thead><tr>
+      <th title="Pays d'observation ; « Europe » agrège les pays ci-dessous">Pays</th>
+      <th title="Table officielle d'où vient la série">Série</th>
+      <th title="Génération = la série distingue les générations ; modèle générique = toutes générations confondues">Niveau</th>
+      <th class="num" title="Véhicules encore en circulation, hors véhicules déclarés hors route">Parc</th>
+      <th class="num" title="Parc actuel rapporté aux ventes cumulées, ou au parc maximal observé">Survie</th>
+      <th class="num" title="Part du parc qui disparaît chaque année ; négatif = le parc augmente">Attrition/an</th>
+      <th class="num" title="Attrition médiane des modèles du même segment et du même âge : le point de comparaison">Médiane des pairs</th>
+      <th class="num" title="Nombre de modèles comparables ayant servi à calculer cette médiane">Pairs</th>
+      <th class="num" title="Année depuis laquelle l'attrition est passée sous celle des pairs, sans repasser au-dessus">Inflexion</th>
+      <th class="num" title="Part du parc britannique déclarée hors route mais conservée">Ratio SORN</th>
+    </tr></thead>
     <tbody>
     {% for c in by_country %}
       <tr>
