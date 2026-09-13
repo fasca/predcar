@@ -141,8 +141,10 @@ Une ligne par `(make_raw, model_raw)`.
 - [x] Somme des lignes vérifiée contre le total publié, sur les 8 millésimes
 - [x] Aucune donnée personnelle : la table est agrégée à la source
 - [x] Mapping : alias de constructeurs, `SONSTIGE/NICHT GETYPT` déclaré « modèle inconnu »,
-      fourre-tout étendus aux libellés allemands → **DE 96,6 %**, la gate commune s'applique
+      fourre-tout étendus aux libellés allemands → **DE 98,9 %**, la gate commune s'applique
       de nouveau (plus d'exemption dans `config/mapping.yaml`)
-- [ ] MINI (sous BMW) et Smart (sous Daimler) : marques **cibles** vendues sous leur maison mère,
-      4,6 M de véhicules. Un fourre-tout les attribuerait à BMW/Mercedes ; il faut pouvoir
-      réassigner la marque depuis le nom commercial. Idem pour les groupes FCA / STELLANTIS
+- [x] MINI (sous BMW) et Smart (sous Daimler) : la colonne `model_regex` de `mapping/makes.csv`
+      réassigne la marque depuis le nom commercial → 5,1 M de véhicules rendus à leur marque,
+      **DE 98,9 %** (`docs/mapping.md`)
+- [ ] Groupes multi-marques `FCA (I)` / `STELLANTIS (F)` / `GENERAL MOTORS` / `JAGUAR LAND ROVER` :
+      même mécanisme, règles à écrire

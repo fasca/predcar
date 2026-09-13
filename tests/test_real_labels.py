@@ -18,6 +18,7 @@ from typing import Literal, NamedTuple
 
 import polars as pl
 import pytest
+from conftest import stock_frame
 
 from predcar import normalize as n
 from predcar.config import load_mapping_config
@@ -165,3 +166,31 @@ def test_version_keywords_never_swallow_trim_labels(
             f"{got.height} labels wrongly mapped to {rule.model_gen}: "
             f"{got['model_raw'].head(5).to_list()}"
         )
+
+
+def test_daughter_brands_resolve_to_their_own_make(real_labels: pl.DataFrame) -> None:
+    """MINI and Smart are target makes sold under a parent manufacturer.
+
+    The KBA publishes them under BMW and DAIMLER (D). If the override ever stops matching,
+    their vehicles silently move to BMW and Mercedes-Benz — inflating those makes and leaving
+    the MINI and Smart targets with no German stock. Checked on the real labels of the bundle.
+    """
+    makes = n.load_makes(MAPPING_DIR / "makes.csv")
+    overrides = n.load_make_overrides(MAPPING_DIR / "makes.csv")
+    assert overrides, "no make override declared; MINI would be credited to BMW"
+
+    pairs = real_labels.select("make_raw", "model_raw").unique().drop_nulls()
+    resolved = n.apply(
+        stock_frame([{"make_raw": mk, "model_raw": ml} for mk, ml in pairs.iter_rows()]),
+        makes,
+        n.load_models(MAPPING_DIR / "models.csv"),
+        overrides,
+    )
+    for parent, child, label_like in [("BMW", "MINI", "COOPER"), ("DAIMLER", "SMART", "FORTWO")]:
+        rows = resolved.filter(
+            pl.col("make_raw").str.starts_with(parent)
+            & pl.col("model_raw").str.contains(label_like)
+        )
+        if not rows.height:  # the bundle may not carry that manufacturer yet
+            continue
+        assert rows["make"].unique().to_list() == [child], (parent, label_like)

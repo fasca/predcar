@@ -4,11 +4,29 @@ Trois fichiers CSV, appliqués par `make normalize` (`predcar normalize`) à tou
 silver ingérés. Résultat : `data/silver/fleet_stock.parquet`, `fleet_new_reg.parquet` et
 `mapping_coverage.parquet`.
 
-## `makes.csv` — `alias,make`
+## `makes.csv` — `alias,make[,model_regex]`
 
-Libellé brut (DfT `Make`, RDW `merk`) → marque canonique. Un libellé absent du fichier est
-conservé tel quel (identité). Exemples : `VAUXHALL → OPEL`, `MERCEDES → MERCEDES-BENZ`,
-`VW → VOLKSWAGEN`.
+Libellé brut (DfT `Make`, RDW `merk`, KBA `Hersteller`) → marque canonique. Un libellé absent
+du fichier est conservé tel quel (identité). Exemples : `VAUXHALL → OPEL`,
+`MERCEDES → MERCEDES-BENZ`, `VW → VOLKSWAGEN`.
+
+La troisième colonne, **optionnelle**, rend la marque **conditionnelle au libellé du modèle** :
+
+```csv
+BMW,BMW,
+BMW,MINI,^(MINI\b|COOPER|CLUBMAN|JOHN ?COOPER ?WORKS|…)
+DAIMLER (D),SMART,^(EQ )?(FORTWO|FORFOUR|…)
+```
+
+Un constructeur n'est pas toujours une marque : le KBA vend les MINI sous `BMW` et les Smart
+sous `DAIMLER (D)`, or **MINI et Smart sont des marques cibles**. Sans cette colonne, leurs
+5,1 millions de véhicules allemands seraient crédités à BMW et Mercedes-Benz, et les cibles
+MINI Cooper S et Smart Roadster n'auraient aucun parc allemand.
+
+La surcharge s'applique sur `make_raw` **avant** toute règle de modèle, donc le reste du
+pipeline voit la vraie marque. Une ligne sans `model_regex` reste l'alias inconditionnel de sa
+marque ; les deux formes coexistent pour un même alias. Le même mécanisme réglera les groupes
+multi-marques (`FCA`, `STELLANTIS`, `GENERAL MOTORS`, `JAGUAR LAND ROVER`).
 
 ## `models.csv` — `make,model_raw_regex,year_from,year_to,model_gen,generation`
 
@@ -63,7 +81,7 @@ make normalize                               # seuil de config/mapping.yaml
 ```
 
 État (2026-09-13, `reports/2026-09-13/silver/coverage.csv`) : couverture **GB 99,0 %**,
-**NL 98,4 %**, **DE 96,6 %** (immatriculations neuves GB 99,2 %), hors libellés `unknown_labels`. La première
+**NL 98,4 %**, **DE 98,9 %** (immatriculations neuves GB 99,2 %), hors libellés `unknown_labels`. La première
 passe (2026-09-08 : GB 97,9 %, NL 98,2 %) avait révélé 11 familles de regex trop larges
 (`^900` capturait `9000`, `^MX-3` capturait `MX-30`, `^C2` capturait `C25`, `^ASTRA` capturait
 `ASTRAVAN`…) : toute règle sur un libellé numérique ou court se termine par `\b`. Le plus gros

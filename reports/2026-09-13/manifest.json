@@ -1,8 +1,8 @@
 {
-  "exported_at": "2026-09-13T15:30:53+00:00",
+  "exported_at": "2026-09-13T20:18:38+00:00",
   "git": {
-    "sha": "fb5d452773adf78620adc1d0b915bb86e69c4b99",
-    "branch": "claude/mapping-de",
+    "sha": "52d90a366813b361cbb26f98b03fd4c727c4ee7f",
+    "branch": "claude/marques-filles",
     "dirty": true
   },
   "versions": {
@@ -26,9 +26,9 @@
     "gold": "ok"
   },
   "counts": {
-    "labels_target_makes": 110044,
-    "unmapped_rows": 27269,
-    "unmapped_count": 67645652,
+    "labels_target_makes": 110046,
+    "unmapped_rows": 27154,
+    "unmapped_count": 63078419,
     "anomalies": 82,
     "gold_cohorts_rows": 25491,
     "gold_indicators_rows": 703,

@@ -521,3 +521,74 @@ def test_coverage_excludes_source_unknown_labels() -> None:
     assert n.coverage(df, TARGETS)["coverage"][0] == pytest.approx(0.09)
     report = n.unmapped_report(df, TARGETS, 10, ("MODEL MISSING",))
     assert report["model_raw"].to_list() == ["X5"]
+
+
+# ------------------------------------------------------- make depends on the model label
+
+
+def _makes_file(tmp_path: Path, rows: str) -> Path:
+    mapping = tmp_path / "mapping"
+    mapping.mkdir(exist_ok=True)
+    (mapping / n.MAKES_FILE).write_text(rows, encoding="utf-8")
+    return mapping / n.MAKES_FILE
+
+
+def test_makes_file_without_the_optional_column_still_loads(tmp_path: Path) -> None:
+    """The third column is optional: existing two-column files must keep working."""
+    path = _makes_file(tmp_path, "alias,make\nVW,VOLKSWAGEN\n")
+    assert n.load_makes(path) == {"VW": "VOLKSWAGEN"}
+    assert n.load_make_overrides(path) == []
+
+
+def test_conditional_rows_are_overrides_not_plain_aliases(tmp_path: Path) -> None:
+    """An alias keeps one unconditional make; the conditional row is a separate rule."""
+    path = _makes_file(
+        tmp_path,
+        "alias,make,model_regex\nBMW,BMW,\nBMW,MINI,^(COOPER|MINI)\n",
+    )
+    assert n.load_makes(path) == {"BMW": "BMW"}
+    overrides = n.load_make_overrides(path)
+    assert [(o.alias, o.make) for o in overrides] == [("BMW", "MINI")]
+
+
+def test_invalid_override_regex_is_reported_with_the_file(tmp_path: Path) -> None:
+    path = _makes_file(tmp_path, "alias,make,model_regex\nBMW,MINI,^(COOPER\n")
+    with pytest.raises(n.MappingError, match="invalid model_regex"):
+        n.load_make_overrides(path)
+
+
+def test_make_override_repoints_only_the_matching_labels() -> None:
+    """A manufacturer is not always a brand: the KBA sells MINI under BMW.
+
+    Without this, MINI vehicles would be credited to BMW and the MINI targets would have no
+    German stock at all — and BMW would look bigger than it is.
+    """
+    makes = {"BMW": "BMW"}
+    overrides = [n.MakeOverride(alias="BMW", make="MINI", model_regex=r"^(COOPER|MINI\b)")]
+    rules = [
+        n.ModelRule(make="MINI", model_raw_regex=r"^COOPER S\b", model_gen="COOPER S"),
+        n.ModelRule(make="BMW", model_raw_regex=r"^M3\b", model_gen="M3"),
+    ]
+    df = _stock(
+        [
+            {"make_raw": "BMW", "model_raw": "COOPER S"},
+            {"make_raw": "BMW", "model_raw": "MINI ONE"},
+            {"make_raw": "BMW", "model_raw": "M3"},
+        ]
+    )
+    out = n.apply(df, makes, rules, overrides)
+    assert out["make"].to_list() == ["MINI", "MINI", "BMW"]
+    assert out["model_gen"].to_list() == ["COOPER S", None, "M3"]
+
+
+def test_make_override_is_case_insensitive_on_the_label() -> None:
+    makes = {"DAIMLER (D)": "MERCEDES-BENZ"}
+    overrides = [n.MakeOverride(alias="DAIMLER (D)", make="SMART", model_regex="^FORTWO")]
+    df = _stock([{"make_raw": "DAIMLER (D)", "model_raw": "Fortwo Coupe"}])
+    assert n.apply(df, makes, [], overrides)["make"].to_list() == ["SMART"]
+
+
+def test_without_overrides_apply_behaves_exactly_as_before() -> None:
+    makes = {"BMW": "BMW"}
+    df = _stock([{"make_raw": "BMW", "model_raw": "COOPER S"}])
+    assert n.apply(df, makes, [])["make"].to_list() == ["BMW"]
