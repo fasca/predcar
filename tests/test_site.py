@@ -6,8 +6,8 @@ import polars as pl
 import pytest
 from test_metrics import _population
 
+from predcar import metrics, site
 from predcar import score as sc
-from predcar import site
 from predcar.config import load_score_config
 from predcar.paths import DOCS_DIR, SITE_DIR
 
@@ -323,3 +323,47 @@ def test_model_page_says_what_the_peer_median_is_for(
     page = next((out / "modeles").iterdir()).read_text(encoding="utf-8")
     assert "Médiane des pairs" in page
     assert "même segment et du même âge" in page
+
+
+def test_model_page_marks_the_national_reference_as_outside_the_score(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """Showing a national fleet without saying it is excluded would mislead.
+
+    The German fleet cannot be split by generation, so it is published beside the score. The
+    page must say so, and say how many generations the figure covers.
+    """
+    gold_dir, mapping = gold
+    reference = pl.DataFrame(
+        {
+            "make": ["M"],
+            "model_gen": [pl.read_parquet(gold_dir / "scores.parquet")["model_gen"][0]],
+            "country": ["DE"],
+            "series": ["FZ2"],
+            "year": [2026],
+            "stock": [12345],
+            "target_generations": [3],
+        },
+        schema=metrics.REFERENCE_SCHEMA,
+    )
+    reference.write_parquet(gold_dir / "reference_stock.parquet")
+    out = tmp_path / "dist"
+    try:
+        _build(gold, out)
+        pages = "\n".join(p.read_text(encoding="utf-8") for p in (out / "modeles").iterdir())
+    finally:
+        (gold_dir / "reference_stock.parquet").unlink()
+    flat = re.sub(r"\s+", " ", pages)
+    assert "Parc national, hors score" in flat
+    assert "n'entrent ni dans l'attrition, ni dans le score" in flat
+    assert "Allemagne" in flat and "KBA FZ 2.2" in flat
+    assert "générations cibles de ce modèle, confondues" in flat
+
+
+def test_model_page_has_no_reference_section_without_the_table(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    out = tmp_path / "dist"
+    _build(gold, out)
+    pages = "\n".join(p.read_text(encoding="utf-8") for p in (out / "modeles").iterdir())
+    assert "Parc national, hors score" not in pages

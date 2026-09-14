@@ -365,7 +365,7 @@ def test_score_pipeline_writes_gold(tmp_path: Path) -> None:
         )
     )
     written = sc.score(silver, gold, mapping, CFG)
-    assert set(written) == {"series", "indicators", "scores", "cohorts", "ranking"}
+    assert set(written) == {"series", "reference", "indicators", "scores", "cohorts", "ranking"}
     ranking = pl.read_csv(written["ranking"])
     assert ranking.columns[:6] == ["rank", "make", "model_gen", "generation", "segment", "score"]
     top = ranking.filter(pl.col("rank") == 1)
@@ -555,3 +555,53 @@ def test_cohort_retention_is_relative_to_the_cohort_peak() -> None:
     assert out.filter(pl.col("cohort") == 2006)["retention"].to_list() == [1.0]
     assert out.filter(pl.col("cohort").is_null()).height == 0
     assert metrics.cohort_retention(_stock(rows), []).height == 0
+
+
+def test_reference_stock_covers_models_not_generations() -> None:
+    """A series with no first-registration year informs, it does not score.
+
+    Germany publishes its fleet by trade name only. Splitting it between generations is
+    impossible, so the figure is published per model with the number of target generations it
+    covers — never fed to rarity, which compares targets to one another.
+    """
+    targets = [_target("M3", "E36"), _target("M3", "E46"), _target("RS2", "B4")]
+    stock = _stock(
+        [
+            _row(country="DE", period=date(2025, 1, 1), model_gen="M3", source_file="fz2.xlsx"),
+            _row(
+                country="DE",
+                period=date(2026, 1, 1),
+                model_gen="M3",
+                source_file="fz2.xlsx",
+                count=90,
+            ),
+            _row(
+                country="DE",
+                period=date(2026, 1, 1),
+                model_gen="RS2",
+                source_file="fz2.xlsx",
+                count=7,
+            ),
+            # a scored series must never appear here
+            _row(country="GB", model_gen="M3", generation="E46", count=500),
+        ]
+    )
+    out = metrics.reference_stock(stock, targets)
+    assert out["series"].unique().to_list() == ["FZ2"]
+    assert out["country"].unique().to_list() == ["DE"]
+    rows = {(r["make"], r["model_gen"]): r for r in out.iter_rows(named=True)}
+    assert rows[("M", "M3")]["year"] == 2026  # latest vintage only
+    assert rows[("M", "M3")]["stock"] == 90
+    assert rows[("M", "M3")]["target_generations"] == 2
+    assert rows[("M", "RS2")]["target_generations"] == 1
+
+
+def test_reference_stock_is_empty_without_such_a_series() -> None:
+    assert metrics.reference_stock(_stock([_row()]), [_target("A")]).height == 0
+
+
+def test_reference_series_is_not_scored() -> None:
+    """The guard that keeps Germany out of the score: FZ2 in neither series list."""
+    for series in metrics.REFERENCE_SERIES:
+        assert series not in metrics.GEN_LEVEL_SERIES
+        assert series not in metrics.MODEL_LEVEL_SERIES

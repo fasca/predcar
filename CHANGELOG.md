@@ -11,6 +11,35 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-14 — PR : l'Allemagne publiée à côté du score, pas dedans
+**Décision** — après mesure, l'Allemagne **n'entre pas** dans le score, contrairement à ce qui
+était envisagé. Le KBA publie le parc par nom commercial **sans année de première
+immatriculation** : un modèle ne peut pas être réparti entre ses générations. Seules **55 des
+243 cibles (23 %)** pourraient recevoir un parc allemand — celles qui sont l'unique génération
+cible de leur modèle. Or la rareté pèse 35 % du score et se calcule en **comparant les cibles
+entre elles** : une Audi S3 gagnerait 100 686 véhicules et paraîtrait bien moins rare qu'une
+RS4 B5 qui n'en gagnerait aucun, non parce qu'elle l'est, mais parce que la source en dit plus
+sur elle. Le classement serait faussé en faveur des modèles à une seule génération cible.
+
+**Ajouté**
+- `metrics.reference_stock()` et `metrics.REFERENCE_SERIES` : parc national par **modèle** des
+  séries non découpables par génération, avec le **nombre de générations cibles couvertes**.
+  `FZ2` y figure et reste absente de `GEN_LEVEL_SERIES` et `MODEL_LEVEL_SERIES` — un test
+  verrouille cette exclusion.
+- `data/gold/reference_stock.parquet`, écrit par `make score`.
+- Page modèle : section « **Parc national, hors score** » qui affiche le chiffre, la série, son
+  année, et dit ce qu'il couvre (« les 5 générations cibles de ce modèle, confondues ») **et**
+  pourquoi il est exclu. `docs/methodology.md` §3 bis explique le biais en détail.
+- Libellés manquants : `DE` → « Allemagne », et la fiche source `KBA FZ 2.2`.
+- 5 tests (257 → 262), dont un qui vérifie qu'aucune section n'apparaît sans la table.
+
+**`ranking.csv` est identique au bit près** : 228 cibles publiées, aucun rang ni parc modifié.
+Bundle `reports/2026-09-14/` à 0 erreur.
+
+**Ce qui ferait entrer l'Allemagne dans le score** : une source allemande portant l'année de
+première immatriculation, ou une répartition par génération vérifiable. Ni l'une ni l'autre
+n'existe aujourd'hui dans les données ouvertes du KBA.
+
 ### 2026-09-13 — PR : marques filles vendues sous leur maison mère (DE 96,6 % → 98,9 %)
 **Ajouté**
 - `mapping/makes.csv` accepte une troisième colonne **optionnelle**, `model_regex` : la marque
