@@ -72,7 +72,11 @@ liste des pièges : `docs/sources/kba_de.md`.
 
 ### 2.4 France — SDES / data.gouv.fr
 
-- Immatriculations de voitures neuves par marque et modèle (mensuel) : rechercher « immatriculations voitures particulières neuves modèle » sur https://www.data.gouv.fr — jeux SDES/AAA Data.
+- Immatriculations de voitures neuves par marque et modèle (mensuel) : piste **vérifiée le
+  2026-09-14 et écartée**. Le jeu SDES « Immatriculations de véhicules routiers » (Licence
+  Ouverte) est ventilé par **commune × carburant × catégorie** et ne porte ni marque ni modèle ;
+  aucun autre jeu de data.gouv.fr ne descend au modèle. Les données par modèle sont
+  commerciales (AAA Data), hors périmètre open data du projet. Voir `docs/SOURCES.md`.
 - Parc roulant (par âge, énergie, département, **pas par modèle**) : « parc automobile » SDES.
 
 Usage MVP : dénominateur ventes pour les modèles vendus en France ; pas de stock par modèle. Documenter le manque.

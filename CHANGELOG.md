@@ -11,6 +11,31 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-14 — PR : la France écartée après vérification (Source-First)
+**Vérifié, puis écarté** — `docs/SPEC.md` §2.4 donnait une piste : « immatriculations de
+voitures neuves par marque et modèle » sur data.gouv.fr. Elle ne donne rien.
+
+Le seul jeu d'immatriculations du SDES (« Immatriculations de véhicules routiers », Licence
+Ouverte) est ventilé **par commune**. En-tête réel, lu par requête `Range` :
+
+```
+"COMMUNE_CODE";"COMMUNE_NOM";"CARBURANT";"STATUT_UTILISATEUR";"GROUPE";"CATEGORIE";"IMMAT_2010";…
+```
+
+**Ni marque, ni modèle.** Les recherches « immatriculation », « marque modèle véhicule »,
+« parc automobile » sur l'API data.gouv.fr ne ramènent rien d'autre au niveau modèle — les
+jeux « parc automobile » sont des flottes d'organisations. Les données par modèle sont
+commerciales (AAA Data), donc hors du périmètre open data du projet.
+
+**Aucun parseur n'a été écrit** : c'est précisément ce que le Source-First doit produire.
+`docs/SOURCES.md` et `docs/SPEC.md` §2.4 sont corrigés et datés.
+
+**Sur les trois sources restantes de la phase 2** (STATS19, Google Trends, YouTube) —
+`tasks/todo.md` porte maintenant le point de fond : chacune ajouterait un indicateur qui
+**n'existe pas dans le score v1** (`config/score.yaml` : rareté, conservation, SORN,
+inflexion). Les ingérer sans décider d'un score v2 produirait des données que rien n'utilise.
+Ce qu'il faut arbitrer d'abord : quel indicateur, quel poids, au détriment de quoi.
+
 ### 2026-09-14 — PR : groupes multi-marques du KBA (10 marques cibles rendues visibles)
 **Ajouté** — 20 règles dans `mapping/makes.csv` qui résolvent les constructeurs couvrant
 plusieurs marques, avec le mécanisme `model_regex` posé pour MINI et Smart :

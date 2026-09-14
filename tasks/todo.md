@@ -79,8 +79,7 @@
       appel explicite du déploiement — un push par `GITHUB_TOKEN` ne déclenche aucun workflow)
 - [x] Conserver l'historique RDW côté CI : `rdw-snapshot.yml` (cron mensuel) committe le
       payload gzippé (~1,2 Mo/mois) et son `MANIFEST.json` ; septembre 2026 archivé
-- [ ] Activer GitHub Pages (Settings → Pages → Source : GitHub Actions) et vérifier le premier
-      déploiement — **action utilisateur**, opt-in unique sans lequel `deploy-pages` échoue
+- [x] GitHub Pages activé et déploiement vérifié (2026-09-13) : https://fasca.github.io/predcar/
 
 ## Phase 2
 - [x] KBA (DE) : inventaire des XLSX par requête HTTP et schéma observé par millésime
@@ -111,7 +110,14 @@
       (2019, 3 124 094 véhicules) et une deuxième orthographe fautive (`ZUSAMMEM`, 2021-2022).
       **Les 8 millésimes 2019→2026 sont exploitables**, série annuelle sans trou, aucune
       tolérance assouplie. La série allemande complète est publiée dans `reference_stock`
-- [ ] Immatriculations FR (SDES), STATS19, Google Trends, YouTube
+- [x] Immatriculations FR (SDES) : **vérifié le 2026-09-14, écarté**. Le jeu du SDES est au
+      niveau communal (`COMMUNE_CODE;CARBURANT;CATEGORIE;IMMAT_2010…`), sans marque ni modèle ;
+      rien d'autre sur data.gouv.fr ne descend au modèle. Données par modèle = commerciales
+      (AAA Data), hors périmètre. `docs/SOURCES.md` et `docs/SPEC.md` §2.4 corrigés
+- [ ] STATS19 (accidents GB), Google Trends, YouTube : **chacun ajouterait un indicateur qui
+      n'existe pas dans le score v1** (`config/score.yaml` : rareté, conservation, SORN,
+      inflexion). Les ingérer sans décider d'un score v2 produirait des données que rien
+      n'utilise. À arbitrer avant de coder : quel indicateur, quel poids, au détriment de quoi
 
 ## Phase 3
 - [ ] Enchères, extrapolation Weibull publiée, newsletter/alertes
