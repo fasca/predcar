@@ -138,6 +138,7 @@ def score(
     written = {
         "series": gold_dir / "stock_series.parquet",
         "reference": gold_dir / "reference_stock.parquet",
+        "projection": gold_dir / "projection.parquet",
         "indicators": gold_dir / "indicators.parquet",
         "scores": gold_dir / "scores.parquet",
         "cohorts": gold_dir / "cohorts.parquet",
@@ -146,7 +147,10 @@ def score(
     series.write_parquet(written["series"])
     # National fleets that cannot be split by generation: published beside the score, not in it.
     metrics.reference_stock(stock, targets).write_parquet(written["reference"])
-    metrics.cohort_retention(stock, targets).write_parquet(written["cohorts"])
+    cohorts = metrics.cohort_retention(stock, targets)
+    cohorts.write_parquet(written["cohorts"])
+    # Weibull extrapolation of the cohort curves: published on the site, never scored.
+    metrics.weibull_projection(cohorts, targets, cfg.weibull).write_parquet(written["projection"])
     pl.concat([indicators, eu]).write_parquet(written["indicators"])
     scores.write_parquet(written["scores"])
     # ranking.csv is the public export: only targets that passed the publication gate

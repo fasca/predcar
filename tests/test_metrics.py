@@ -365,7 +365,15 @@ def test_score_pipeline_writes_gold(tmp_path: Path) -> None:
         )
     )
     written = sc.score(silver, gold, mapping, CFG)
-    assert set(written) == {"series", "reference", "indicators", "scores", "cohorts", "ranking"}
+    assert set(written) == {
+        "series",
+        "reference",
+        "projection",
+        "indicators",
+        "scores",
+        "cohorts",
+        "ranking",
+    }
     ranking = pl.read_csv(written["ranking"])
     assert ranking.columns[:6] == ["rank", "make", "model_gen", "generation", "segment", "score"]
     top = ranking.filter(pl.col("rank") == 1)
@@ -607,3 +615,144 @@ def test_reference_series_is_not_scored() -> None:
     for series in metrics.REFERENCE_SERIES:
         assert series not in metrics.GEN_LEVEL_SERIES
         assert series not in metrics.MODEL_LEVEL_SERIES
+
+
+# --------------------------------------------------------------------------- weibull
+
+
+def _weibull_points(k: float, lam: float, ages: list[int]) -> list[float]:
+    return [math.exp(-((a / lam) ** k)) for a in ages]
+
+
+def test_fit_weibull_recovers_the_parameters_of_a_clean_curve() -> None:
+    """Linearised least squares on exact Weibull points must return k and λ."""
+    ages = list(range(1, 13))
+    k, lam, s = metrics.fit_weibull(ages, _weibull_points(1.5, 20.0, ages))
+    assert k == pytest.approx(1.5, rel=1e-6)
+    assert lam == pytest.approx(20.0, rel=1e-6)
+    assert s == pytest.approx(0.0, abs=1e-9)
+
+
+def test_fit_weibull_skips_undefined_points_and_needs_two() -> None:
+    assert metrics.fit_weibull([1, 2, 3], [1.0, 1.0, 0.0]) is None  # nothing in (0, 1)
+    assert metrics.fit_weibull([1, 2], [1.0, 0.5]) is None  # a single usable point
+    assert metrics.fit_weibull([1, 2, 3], [0.5, 0.6, 0.7]) is None  # rising: k <= 0
+
+
+def _cohort_frame(rows: list[dict]) -> pl.DataFrame:
+    base = {"make": "M", "model_gen": "A", "generation": "G1", "country": "GB", "series": "VEH0124"}
+    return pl.DataFrame([{**base, **r} for r in rows]).cast(metrics.COHORTS_SCHEMA)
+
+
+def _cfg(**kw) -> "metrics.WeibullConfig":
+    from predcar.config import WeibullConfig
+
+    return WeibullConfig(**{"horizons": [5, 10], "min_points": 5, "min_cohorts": 1, **kw})
+
+
+def _cohort_rows(cohort: int, years: list[int], k: float, lam: float, peak: int) -> list[dict]:
+    ages = [y - cohort for y in years]
+    rets = _weibull_points(k, lam, ages)
+    return [
+        {"cohort": cohort, "year": y, "stock": round(peak * r), "retention": r}
+        for y, r in zip(years, rets, strict=True)
+    ]
+
+
+def test_projection_scales_current_stock_by_the_fitted_survival_ratio() -> None:
+    """One clean cohort: the projection is stock × R(age+h)/R(age), checked by hand."""
+    k, lam, peak = 1.5, 20.0, 1000
+    years = list(range(2015, 2027))  # cohort 2014, ages 1..12
+    cohorts = _cohort_frame(_cohort_rows(2014, years, k, lam, peak))
+    out = metrics.weibull_projection(cohorts, [_target("A")], _cfg())
+    assert out["horizon"].to_list() == [5, 10]
+    age = 12
+    stock_now = round(peak * math.exp(-((age / lam) ** k)))
+    for row in out.iter_rows(named=True):
+        expected = (
+            stock_now
+            * math.exp(-(((age + row["horizon"]) / lam) ** k))
+            / math.exp(-((age / lam) ** k))
+        )
+        assert row["stock_now"] == stock_now
+        assert row["stock_projected"] == round(expected)
+        assert row["low"] <= row["stock_projected"] <= row["high"]
+        assert row["year"] == 2026 + row["horizon"]
+        assert row["k_median"] == pytest.approx(k, rel=1e-6)
+        assert row["lambda_median"] == pytest.approx(lam, rel=1e-6)
+        assert (row["cohorts_fitted"], row["cohorts_total"]) == (1, 1)
+
+
+def test_projection_excludes_short_and_rising_cohorts_but_counts_them() -> None:
+    good = _cohort_rows(2014, list(range(2015, 2027)), 1.5, 20.0, 1000)
+    short = _cohort_rows(2020, list(range(2021, 2025)), 1.5, 20.0, 500)  # 4 points
+    rising = [
+        {"cohort": 2010, "year": y, "stock": s, "retention": r}
+        for y, s, r in [
+            (2018, 80, 0.8),
+            (2019, 70, 0.7),
+            (2020, 60, 0.6),
+            (2021, 90, 0.9),
+            (2022, 100, 1.0),
+            (2023, 95, 0.95),
+        ]
+    ]
+    out = metrics.weibull_projection(_cohort_frame(good + short + rising), [_target("A")], _cfg())
+    assert out.height == 2
+    assert out["cohorts_fitted"].unique().to_list() == [1]
+    assert out["cohorts_total"].unique().to_list() == [3]
+
+
+def test_projection_requires_min_cohorts() -> None:
+    cohorts = _cohort_frame(_cohort_rows(2014, list(range(2015, 2027)), 1.5, 20.0, 1000))
+    assert metrics.weibull_projection(cohorts, [_target("A")], _cfg(min_cohorts=2)).height == 0
+    assert metrics.weibull_projection(cohorts, [_target("B")], _cfg()).height == 0  # not a target
+
+
+def test_projection_is_not_a_score_input() -> None:
+    """The guard: nothing in score.py reads projection columns."""
+    import inspect
+
+    from predcar import score as sc
+
+    src = inspect.getsource(sc)
+    assert "projection" in src  # it is written…
+    assert "stock_projected" not in src and "k_median" not in src  # …never read
+
+
+def test_fit_weibull_recovers_parameters_when_observed_from_age_ten() -> None:
+    """The registers start in 2014: a 2004 cohort is first seen at age 10, already depleted.
+
+    Retention is then survival *relative to that first observation*. An unconditional fit
+    forces R = 1 at age 10 and returns k ≈ 4 for every model — the bug this test exists for.
+    The conditional model must recover the true k and λ from the partial window.
+    """
+    k, lam = 1.5, 20.0
+    ages = list(range(10, 22))
+    true = _weibull_points(k, lam, ages)
+    observed = [r / true[0] for r in true]  # normalised at the first observation
+    fk, flam, s = metrics.fit_weibull(ages, observed)
+    assert fk == pytest.approx(k, abs=0.03)  # grid step is 0.05
+    assert flam == pytest.approx(lam, rel=0.03)
+    assert s < 0.05
+
+
+def test_fit_weibull_uses_the_first_point_as_the_conditioning_age() -> None:
+    """A rising first point is not a peak; the fit conditions on it, it does not skip it."""
+    assert metrics.fit_weibull([], []) is None
+    assert metrics.fit_weibull([0, 1, 2], [1.0, 0.9, 0.8]) is None  # age 0 undefined
+
+
+def test_fit_weibull_refuses_degenerate_fits() -> None:
+    """A flat series drives λ to zero on the grid edge: nothing, rather than a number."""
+    ages = list(range(10, 22))
+    flat = [1.0, 0.999, 0.998, 0.997, 0.996, 0.995, 0.994, 0.993, 0.992, 0.991, 0.990, 0.989]
+    fit = metrics.fit_weibull(ages, flat)
+    assert fit is None or (metrics._LAMBDA_YEARS[0] <= fit[1] <= metrics._LAMBDA_YEARS[1])
+
+
+def test_settled_allows_a_young_cohort_to_fill_up_but_not_a_later_import() -> None:
+    ages, rets = metrics._settled([1, 2, 3, 4], [0.7, 1.0, 0.9, 0.8])  # type: ignore[misc]
+    assert ages == [2, 3, 4] and rets == [1.0, 0.9, 0.8]
+    assert metrics._settled([10, 11, 12, 13], [1.0, 0.8, 0.9, 0.7]) is None  # rise after year 2
+    assert metrics._settled([10, 11, 12], [1.0, 0.8, 0.82]) is not None  # within tolerance

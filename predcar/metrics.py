@@ -27,7 +27,7 @@ from datetime import date
 
 import polars as pl
 
-from predcar.config import ScoreConfig
+from predcar.config import ScoreConfig, WeibullConfig
 from predcar.normalize import TargetModel
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,200 @@ def series_of(source_file: str) -> str:
     if "FZ2" in name:
         return "FZ2"
     raise ValueError(f"unknown series for source_file {source_file!r}")
+
+
+# --------------------------------------------------------------------------- weibull projection
+
+PROJECTION_SCHEMA = {
+    "make": pl.Utf8,
+    "model_gen": pl.Utf8,
+    "generation": pl.Utf8,
+    "country": pl.Utf8,
+    "horizon": pl.Int32,
+    "year": pl.Int32,
+    "stock_now": pl.Int64,
+    "stock_projected": pl.Int64,
+    "low": pl.Int64,
+    "high": pl.Int64,
+    "k_median": pl.Float64,
+    "lambda_median": pl.Float64,
+    "cohorts_fitted": pl.Int32,
+    "cohorts_total": pl.Int32,
+}
+
+# A cohort whose retention climbs by more than this between two observations is being fed
+# by imports or re-registrations (SPEC §8 logs those as anomalies): it is not a survival curve.
+_RISE_TOLERANCE = 0.05
+
+
+# Shape grid for the conditional fit: k below 0.3 or above 8 is not a survival curve.
+_K_GRID = [0.3 + i * 0.05 for i in range(155)]
+# Scale (years) outside this range means the fit found no meaningful decline.
+_LAMBDA_YEARS = (2.0, 150.0)
+
+
+def fit_weibull(ages: list[int], retentions: list[float]) -> tuple[float, float, float] | None:
+    """Fit a Weibull survival to a cohort observed from age ``t₀``, not from birth.
+
+    The registers start in 2014, when most cohorts were already ten years old and partly
+    gone, so ``retention`` is survival **relative to the first observation**, not to the
+    number built. The model is therefore the conditional survival
+
+        R(t) / R(t₀) = exp(−((t/λ)^k − (t₀/λ)^k))
+
+    Fitting the unconditional form instead forces the curve through 1 at age t₀ and returns a
+    steep, meaningless ``k ≈ 4`` for every model. For a fixed ``k`` the scale has a closed form
+    (least squares through the origin on ``−ln R`` against ``t^k − t₀^k``), so ``k`` is found
+    by a fine grid and ``λ`` follows — no numerical optimiser, no new dependency.
+
+    Returns:
+        ``(k, λ, s)`` with ``s`` the residual standard deviation of ``ln(−ln R)``, or None with
+        fewer than two usable points (``0 < R < 1`` after ``t₀``) or when no decline fits.
+    """
+    if not ages or ages[0] <= 0:
+        return None
+    t0 = ages[0]
+    r0 = retentions[0]
+    if r0 is None or r0 <= 0:
+        return None
+    pts = [
+        (a, -math.log(r / r0))
+        for a, r in zip(ages[1:], retentions[1:], strict=True)
+        if r is not None and 0 < r < r0 and a > t0
+    ]
+    if len(pts) < 2:
+        return None
+    best: tuple[float, float, float] | None = None
+    for k in _K_GRID:
+        xs = [a**k - t0**k for a, _ in pts]
+        sxx = sum(x * x for x in xs)
+        if sxx <= 0:
+            continue
+        inv_lam_k = sum(x * y for x, (_, y) in zip(xs, pts, strict=True)) / sxx
+        if inv_lam_k <= 0:
+            continue
+        sse = sum((y - x * inv_lam_k) ** 2 for x, (_, y) in zip(xs, pts, strict=True))
+        if best is None or sse < best[0]:
+            best = (sse, k, inv_lam_k)
+    if best is None:
+        return None
+    _, k, inv_lam_k = best
+    lam = inv_lam_k ** (-1 / k)
+    # A best fit sitting on the grid boundary, or a scale outside a car's lifetime, is not a
+    # survival curve — it is noise or a flat series. Report nothing rather than a number.
+    if k <= _K_GRID[0] or k >= _K_GRID[-1] or not _LAMBDA_YEARS[0] <= lam <= _LAMBDA_YEARS[1]:
+        return None
+    resid = [
+        math.log(y) - math.log(x * inv_lam_k)
+        for x, (_, y) in zip([a**k - t0**k for a, _ in pts], pts, strict=True)
+        if y > 0 and x * inv_lam_k > 0
+    ]
+    n = len(resid)
+    s = math.sqrt(sum(r * r for r in resid) / (n - 2)) if n > 2 else 0.0
+    return k, lam, s
+
+
+def _conditional_ratio(k: float, lam: float, t0: int, t: float, shift: float = 0.0) -> float:
+    """``R(t)/R(t₀)`` under the fitted Weibull, with ``ln(−ln)`` shifted for the band."""
+    h = (t / lam) ** k - (t0 / lam) ** k
+    if h <= 0:
+        return 1.0
+    return math.exp(-math.exp(math.log(h) + shift))
+
+
+def _settled(ages: list[int], retentions: list[float]) -> tuple[list[int], list[float]] | None:
+    """Drop a young cohort's partial first year, then refuse any later rise (imports).
+
+    A cohort first seen the year it was registered is still filling up: its second point can
+    legitimately exceed the first. Past that, retention can only fall — a rise above the
+    tolerance means imports or re-registrations, and the curve is not a survival curve.
+    """
+    start = 1 if len(retentions) > 1 and retentions[1] > retentions[0] else 0
+    ages, retentions = ages[start:], retentions[start:]
+    if any(b > a * (1 + _RISE_TOLERANCE) for a, b in zip(retentions, retentions[1:], strict=False)):
+        return None
+    return ages, retentions
+
+
+def weibull_projection(
+    cohorts: pl.DataFrame, targets: list[TargetModel], cfg: WeibullConfig
+) -> pl.DataFrame:
+    """Project each target's national stock ``horizon`` years ahead from its cohort curves.
+
+    Per (target, country, cohort): fit a Weibull on the retention curve, then scale the
+    cohort's current stock by ``R(age + h) / R(age)``. Cohorts too short to fit, or whose
+    retention rises (imports), are left out and counted, never imputed. The band is the same
+    projection with the linearised fit shifted by ±2 residual standard deviations: an
+    **indicative** interval, not a formal confidence interval, and the page says so.
+
+    A projection is a statistical extrapolation of what the registers already show; it is
+    published beside the score and never enters it.
+
+    Returns:
+        One row per (target, country, horizon) with at least ``cfg.min_cohorts`` fitted
+        cohorts; ``stock_now`` is the current stock of the fitted cohorts only, so that
+        ``stock_projected / stock_now`` reads as a ratio over the same population.
+    """
+    if not cohorts.height or not targets:
+        return pl.DataFrame(schema=PROJECTION_SCHEMA)
+    wanted = {(t.make, t.model_gen, t.generation) for t in targets}
+    rows: list[dict] = []
+    keys = ["make", "model_gen", "generation", "country"]
+    for key, group in cohorts.sort("cohort", "year").group_by(keys, maintain_order=True):
+        make, model_gen, generation, country = key  # type: ignore[misc]
+        if (make, model_gen, generation) not in wanted:
+            continue
+        fitted: list[tuple[float, float, float, int, int, int]] = []  # k, lam, s, age, stock, yr
+        total = 0
+        for _, c in group.group_by("cohort", maintain_order=True):
+            total += 1
+            keep = [i for i, r in enumerate(c["retention"].to_list()) if r is not None and r > 0]
+            if len(keep) < cfg.min_points:
+                continue
+            ages = [int(a) for a in (c["year"] - c["cohort"]).gather(keep).to_list()]
+            rets = [float(r) for r in c["retention"].gather(keep).to_list()]
+            settled = _settled(ages, rets)
+            if settled is None or len(settled[0]) < cfg.min_points:
+                continue
+            fit = fit_weibull(*settled)
+            if fit is None:
+                continue
+            fitted.append((*fit, ages[-1], int(c["stock"][-1]), int(c["year"][-1])))
+        if len(fitted) < cfg.min_cohorts:
+            continue
+        latest_year = max(f[5] for f in fitted)
+        ks = sorted(f[0] for f in fitted)
+        lams = sorted(f[1] for f in fitted)
+        for h in cfg.horizons:
+            now = proj = low = high = 0.0
+            for k, lam, s, age, stock, _ in fitted:
+                # survival from today's age to age + h, conditional on being alive today
+                now += stock
+                proj += stock * _conditional_ratio(k, lam, age, age + h)
+                # +2s on ln(-ln R) means a larger -ln R, i.e. a lower retention
+                low += stock * _conditional_ratio(k, lam, age, age + h, +2 * s)
+                high += stock * _conditional_ratio(k, lam, age, age + h, -2 * s)
+            rows.append(
+                {
+                    "make": make,
+                    "model_gen": model_gen,
+                    "generation": generation,
+                    "country": country,
+                    "horizon": h,
+                    "year": latest_year + h,
+                    "stock_now": round(now),
+                    "stock_projected": round(proj),
+                    "low": round(low),
+                    "high": round(high),
+                    "k_median": ks[len(ks) // 2],
+                    "lambda_median": lams[len(lams) // 2],
+                    "cohorts_fitted": len(fitted),
+                    "cohorts_total": total,
+                }
+            )
+    if not rows:
+        return pl.DataFrame(schema=PROJECTION_SCHEMA)
+    return pl.DataFrame(rows, schema=PROJECTION_SCHEMA).sort(keys + ["horizon"])
 
 
 # --------------------------------------------------------------------------- annual series
