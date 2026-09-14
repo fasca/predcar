@@ -396,3 +396,60 @@ def test_reference_section_shows_the_trend_over_the_series(
     flat = re.sub(r"\s+", " ", pages)
     assert "1 250" in flat  # the latest point, French thousands separator
     assert "+25,0 % depuis 2019" in flat
+
+
+def _projection_frame(model: str, horizons: list[int]) -> pl.DataFrame:
+    return pl.DataFrame(
+        {
+            "make": ["M"] * len(horizons),
+            "model_gen": [model] * len(horizons),
+            "generation": ["G1"] * len(horizons),
+            "country": ["GB"] * len(horizons),
+            "horizon": horizons,
+            "year": [2026 + h for h in horizons],
+            "stock_now": [1000] * len(horizons),
+            "stock_projected": [700, 450][: len(horizons)],
+            "low": [500, 250][: len(horizons)],
+            "high": [850, 650][: len(horizons)],
+            "k_median": [1.2] * len(horizons),
+            "lambda_median": [18.5] * len(horizons),
+            "cohorts_fitted": [4] * len(horizons),
+            "cohorts_total": [6] * len(horizons),
+        },
+        schema=metrics.PROJECTION_SCHEMA,
+    )
+
+
+def test_model_page_shows_the_projection_and_says_it_is_outside_the_score(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """A projection shown without its caveats would read as a forecast of value."""
+    gold_dir, _ = gold
+    scores = pl.read_parquet(gold_dir / "scores.parquet")
+    row = scores.filter(pl.col("generation") == "G1").row(0, named=True)
+    _projection_frame(row["model_gen"], [5, 10]).write_parquet(gold_dir / "projection.parquet")
+    out = tmp_path / "dist"
+    try:
+        _build(gold, out)
+        page = (out / "modeles" / f"{site.slugify('M', row['model_gen'], 'G1')}.html").read_text(
+            encoding="utf-8"
+        )
+    finally:
+        (gold_dir / "projection.parquet").unlink()
+    flat = re.sub(r"\s+", " ", page)
+    assert "Projection à 5 et 10 ans" in flat
+    assert "ni une prédiction de valeur, ni une composante du score" in flat
+    assert "2031 (+5)" in flat and "700" in flat and "500 – 850" in flat
+    assert "-30,0 %" in flat and "4 / 6" in flat
+
+
+def test_model_page_explains_an_absent_projection(gold: tuple[Path, Path], tmp_path: Path) -> None:
+    """No table, but the reader learns why: the threshold, and that imports break the curve."""
+    out = tmp_path / "dist"
+    _build(gold, out)
+    pages = "\n".join(p.read_text(encoding="utf-8") for p in (out / "modeles").iterdir())
+    flat = re.sub(r"\s+", " ", pages)
+    assert "Pas de projection : il faut au moins" in flat
+    assert "<table" not in re.search(
+        r'<section class="projection">.*?</section>', flat, re.S
+    ).group(0)

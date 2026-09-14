@@ -25,3 +25,10 @@ peers:
 
 inflection:
   recent_years: 5             # inflection counts as "recent" if < N years ago
+
+weibull:
+  # Retention curves per cohort are fitted to R(t) = exp(-(t/lambda)^k) and extrapolated.
+  # Published on the model page, never part of the score (SPEC §2, phase 3).
+  horizons: [5, 10]           # years ahead
+  min_points: 5               # cohort observations with 0 < R < 1 needed to fit one cohort
+  min_cohorts: 3              # fitted cohorts needed to publish a projection for a target

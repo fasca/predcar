@@ -11,6 +11,41 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-14 — PR : projection Weibull à 5 et 10 ans (phase 3, publiée hors score)
+**Ajouté**
+- `metrics.fit_weibull()` et `metrics.weibull_projection()` : chaque cohorte d'immatriculation
+  est ajustée sur `R(t) = exp(−(t/λ)^k)` puis prolongée ; le parc projeté d'une cible est la
+  somme de ses cohortes ajustées, avec une fourchette (ajustement décalé de ±2 écarts-types,
+  **indicative**). Python pur, aucune dépendance nouvelle.
+- `config/score.yaml` → bloc `weibull` (`horizons: [5, 10]`, `min_points: 5`, `min_cohorts: 3`).
+- `gold/projection.parquet`, écrit par `make score`, exporté dans le bundle.
+- Page modèle : section « Projection à 5 et 10 ans » (parc actuel → projeté, fourchette,
+  `k`, `λ`, cohortes ajustées / totales) avec la phrase « ni une prédiction de valeur, ni une
+  composante du score » ; et, quand rien n'a pu être projeté, **pourquoi**.
+- `docs/methodology.md` §3 ter. 12 tests (266 → 278).
+
+**Le modèle qu'il a fallu corriger** — un premier fit non conditionnel donnait `k ≈ 4` pour
+tous les modèles et faisait perdre 98 % à une M3 E46 en dix ans. Cause : les registres
+commencent en 2014, quand une cohorte de 2004 a déjà dix ans et a perdu une partie de son
+parc ; la rétention est donc relative à la **première observation**, pas au nombre construit.
+Le modèle juste est la survie **conditionnelle** `R(t)/R(t₀) = exp(−((t/λ)^k − (t₀/λ)^k))`,
+ajustée par grille sur `k` et forme fermée sur `λ`. Un test génère une cohorte observée
+seulement à partir de dix ans et exige que `k = 1,5, λ = 20` soient retrouvés.
+
+**Garde-fous** — fit refusé s'il tombe sur la borne de la grille ou si `λ` sort de 2–150 ans ;
+cohorte exclue si son parc **remonte** de plus de 5 % après sa deuxième observation (imports,
+réimmatriculations) ; cible sans projection sous `min_cohorts`, et la page dit alors combien
+de cohortes manquaient et pourquoi.
+
+**Sur données réelles** — 109 cibles projetées, `k` médian 1,8 (q10–q90 : 1,1–2,85),
+`λ` médian 20 ans (12–30), perte médiane à dix ans 64 %, fourchette contenant la projection
+sur 218/218 lignes. M3 E46 : 3 556 → 2 368 à 5 ans, 1 582 à 10 ans (`k` 1,05, `λ` 14).
+**Trois témoins sur cinq n'ont pas de projection** — RS2, 205 GTI, Clio Williams : 11 des 17
+cohortes de la 205 GTI *remontent*, ce sont des classiques que l'on importe. C'est la limite
+documentée des cohortes ouvertes, pas un défaut du fit.
+
+**`ranking.csv` identique au bit près** — la projection ne touche pas au score.
+
 ### 2026-09-14 — PR : inventaire des 9 tables de la page DfT (Source-First)
 Les 12 CSV de la page inventoriés, en-têtes lus par requête `Range`, table par table dans
 `docs/sources/dft_uk.md`. **Aucune table ne donne les sorties du parc** (casse, export) — la

@@ -153,6 +153,7 @@ class Gold:
     series: pl.DataFrame
     cohorts: pl.DataFrame
     reference: pl.DataFrame
+    projection: pl.DataFrame
     targets: dict[tuple[str, str, str], TargetModel]
 
 
@@ -247,12 +248,19 @@ def load_gold(gold_dir: Path, mapping_dir: Path) -> Gold:
         if has_reference
         else pl.DataFrame(schema=metrics.REFERENCE_SCHEMA)
     )
+    has_projection = any((gold_dir / f"projection.{ext}").is_file() for ext in ("parquet", "csv"))
+    projection = (
+        _read_table(gold_dir, "projection")
+        if has_projection
+        else pl.DataFrame(schema=metrics.PROJECTION_SCHEMA)
+    )
     return Gold(
         scores=tables["scores"],
         indicators=tables["indicators"],
         series=tables["stock_series"],
         cohorts=cohorts,
         reference=reference,
+        projection=projection,
         targets=targets,
     )
 
@@ -427,6 +435,32 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
                 "change": (last - first) / first if len(years) > 1 and first else None,
             }
         )
+    projection = [
+        {
+            "country": r["country"],
+            "label": COUNTRY_LABELS.get(r["country"], r["country"]),
+            "horizon": r["horizon"],
+            "year": r["year"],
+            "stock_now": r["stock_now"],
+            "stock_projected": r["stock_projected"],
+            "low": r["low"],
+            "high": r["high"],
+            "change": (r["stock_projected"] - r["stock_now"]) / r["stock_now"]
+            if r["stock_now"]
+            else None,
+            "k": r["k_median"],
+            "lam": r["lambda_median"],
+            "cohorts_fitted": r["cohorts_fitted"],
+            "cohorts_total": r["cohorts_total"],
+        }
+        for r in gold.projection.filter(
+            (pl.col("make") == row["make"])
+            & (pl.col("model_gen") == row["model_gen"])
+            & (pl.col("generation") == row["generation"])
+        )
+        .sort("country", "horizon")
+        .iter_rows(named=True)
+    ]
     retention, retention_skipped = _cohort_traces(cohorts)
     charts = {
         "stock": _series_traces(series, "stock"),
@@ -440,6 +474,10 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
         "sources": sources,
         "charts_json": json.dumps(charts, ensure_ascii=False).replace("</", "<\\/"),
         "reference": reference,
+        "projection": projection,
+        # When nothing could be projected, say how far the target was from the threshold.
+        "projection_cohorts": cohorts.select("country", "cohort").unique().height,
+        "projection_min_cohorts": cfg.weibull.min_cohorts,
         "has_retention": bool(retention),
         "retention_skipped": retention_skipped,
         "min_weight_coverage": cfg.min_weight_coverage,

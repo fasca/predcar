@@ -38,6 +38,12 @@ class InflectionConfig(BaseModel):
     recent_years: int = Field(ge=1)
 
 
+class WeibullConfig(BaseModel):
+    horizons: list[int] = Field(min_length=1)
+    min_points: int = Field(ge=3)
+    min_cohorts: int = Field(ge=1)
+
+
 class ScoreConfig(BaseModel):
     version: int
     weights: ScoreWeights
@@ -46,6 +52,7 @@ class ScoreConfig(BaseModel):
     attrition: AttritionConfig
     peers: PeersConfig
     inflection: InflectionConfig
+    weibull: WeibullConfig
 
     @model_validator(mode="after")
     def _weights_sum_to_one(self) -> ScoreConfig:

@@ -120,7 +120,15 @@
       n'utilise. À arbitrer avant de coder : quel indicateur, quel poids, au détriment de quoi
 
 ## Phase 3
-- [ ] Enchères, extrapolation Weibull publiée, newsletter/alertes
+- [x] Extrapolation Weibull publiée (2026-09-14) : survie conditionnelle par cohorte, projection
+      à 5 et 10 ans avec fourchette indicative, page modèle, `docs/methodology.md` §3 ter.
+      109 cibles projetées ; les modèles anciens que l'on importe (205 GTI…) n'en ont pas, et
+      la page dit pourquoi. Hors score.
+- [ ] Enchères : sites vérifiés le 2026-09-14, tous ferment l'accès automatisé (403 dès
+      `robots.txt` chez Car & Classic et Catawiki, `ClaudeBot` interdit chez Aguttes, 403 sur les
+      ventes chez Collecting Cars). Contourner une protection est exclu → écarté, à documenter
+      dans `docs/SOURCES.md` avec la PR candidats
+- [ ] Newsletter / alertes
 
 ## Pistes vérifiées et écartées
 - 2026-09-14 : les 9 tables de la page DfT inventoriées (`docs/sources/dft_uk.md`). Aucune ne

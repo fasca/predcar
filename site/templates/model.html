@@ -103,6 +103,52 @@
     parc maximal observé). Détails et limites dans la <a href="{{ root }}methodologie.html">méthodologie</a>.</p>
 </section>
 
+{% if projection %}
+<section class="projection">
+  <h2>Projection à {{ projection | map(attribute='horizon') | unique | join(' et ') }} ans</h2>
+  <p class="note">Chaque cohorte d'immatriculation est ajustée sur une courbe de Weibull
+    <em>R(t) = exp(−(t/λ)<sup>k</sup>)</em> puis prolongée. C'est une <strong>extrapolation
+    statistique de ce que les registres montrent déjà</strong> — ni une prédiction de valeur, ni
+    une composante du score. La fourchette est indicative (ajustement décalé de ±2 écarts-types),
+    pas un intervalle de confiance formel. <em>k</em> &lt; 1 : la disparition ralentit avec l'âge,
+    signe que les survivantes sont gardées ; <em>k</em> &gt; 1 : elle s'accélère.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th>Pays</th><th class="num">Horizon</th><th class="num">Parc actuel</th>
+      <th class="num">Parc projeté</th><th class="num">Fourchette</th><th class="num">Évolution</th>
+      <th class="num" title="Pente de la courbe : &lt; 1 la disparition ralentit, &gt; 1 elle s'accélère">k</th>
+      <th class="num" title="Échelle en années : âge auquel 63 % d'une cohorte a disparu">λ (ans)</th>
+      <th title="Cohortes dont la courbe a pu être ajustée, sur le total observé">Cohortes</th>
+    </tr></thead>
+    <tbody>
+    {% for r in projection %}
+      <tr>
+        <td>{{ r.label }}</td>
+        <td class="num">{{ r.year }} (+{{ r.horizon }})</td>
+        <td class="num">{{ r.stock_now | fmt_int }}</td>
+        <td class="num"><strong>{{ r.stock_projected | fmt_int }}</strong></td>
+        <td class="num">{{ r.low | fmt_int }} – {{ r.high | fmt_int }}</td>
+        <td class="num">{% if r.change is not none %}{{ ('+' if r.change >= 0 else '') ~ (r.change | fmt_pct) }}{% else %}—{% endif %}</td>
+        <td class="num">{{ r.k | fmt_num }}</td>
+        <td class="num">{{ r.lam | fmt_num(1) }}</td>
+        <td>{{ r.cohorts_fitted }} / {{ r.cohorts_total }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% elif projection_cohorts %}
+<section class="projection">
+  <h2>Projection à 5 et 10 ans</h2>
+  <p class="note">Pas de projection : il faut au moins {{ projection_min_cohorts }} cohortes dont la
+    courbe de rétention puisse être ajustée, et cette génération n'en a pas assez — cohortes trop
+    courtes, ou dont le parc <em>remonte</em> (imports, réimmatriculations), ce qui n'est pas une
+    courbe de survie. Fréquent pour les modèles anciens que les collectionneurs importent.</p>
+</section>
+{% endif %}
+
 {% if reference %}
 <section class="reference">
   <h2>Parc national, hors score</h2>

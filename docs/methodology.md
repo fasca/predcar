@@ -86,6 +86,34 @@ relative et survie pondérées par le stock des pays où elles existent ; point 
 le plus récent des pays ; ratio SORN = valeur GB. Une valeur absente partout reste absente
 (null, jamais NaN ni 0).
 
+## 3 ter. Projection Weibull à 5 et 10 ans (publiée, hors score)
+
+Pour chaque (cible, pays, cohorte d'immatriculation), la courbe de rétention agrégée
+`R(âge) = Stock(âge) / Stock maximal observé` est ajustée sur une loi de Weibull :
+
+```
+R(t) = exp(−(t/λ)^k)        linéarisée :  ln(−ln R) = k·ln t − k·ln λ
+```
+
+Moindres carrés sur les points `0 < R < 1` (le pic `R = 1` et `R = 0` sont indéfinis dans la
+linéarisation). Sont **exclues, comptées et affichées** : les cohortes de moins de
+`weibull.min_points` observations, et celles dont la rétention **remonte** de plus de 5 % entre
+deux observations (imports, réimmatriculations — déjà journalisées comme anomalies). Une
+cible n'a de projection que si `weibull.min_cohorts` cohortes ont pu être ajustées.
+
+Projection d'une cohorte : `Stock_actuel × R(âge + h) / R(âge)`, sommée sur les cohortes
+ajustées ; `stock_now` est le parc de **ces cohortes seulement**, pour que le ratio
+projeté / actuel porte sur la même population. La fourchette reprend le calcul avec la
+droite décalée de ±2 écarts-types résiduels : c'est **indicatif**, pas un intervalle de
+confiance formel (pas d'événements individuels, cohortes ouvertes).
+
+`k` et `λ` publiés sont les médianes sur les cohortes ajustées. `k < 1` : la disparition
+ralentit avec l'âge (les survivantes sont gardées) ; `k > 1` : elle s'accélère. `λ` est l'âge
+auquel 63 % d'une cohorte a disparu.
+
+**Pourquoi hors score** : c'est une extrapolation de la tendance observée, pas une mesure. La
+mettre dans le score reviendrait à noter deux fois la même attrition.
+
 ## 4. Composantes du score (0–1, « plus haut = plus collector »)
 
 | Composante | Calcul | Absente quand |
@@ -120,13 +148,14 @@ ont `rarity` + `sorn_ratio` = 0.55 et ne sont pas publiés non plus.
 - Le RDW n'a pas d'historique : attrition et inflexion NL après 3 ans de snapshots.
 - `rarity` et `conservation` sont relatives à la population cible : ajouter des modèles
   déplace les valeurs.
-- Extrapolation Weibull à 5/10 ans : phase 3.
+- La projection Weibull (§3 ter) prolonge une tendance ; elle ne sait rien d'un choc à venir (réglementation, carburant, mode).
 
 ## 7. Sorties (`data/gold/`)
 
 | Fichier | Contenu |
 |---|---|
 | `stock_series.parquet` | série annuelle utilisée par (cible, pays) : stock, attrition lissée, niveau, tranche d'âge |
+| `projection.parquet` | projection Weibull à 5 et 10 ans par (cible, pays) : parc actuel des cohortes ajustées, projeté, fourchette, `k` et `λ` médians, cohortes ajustées / totales — **jamais utilisé par le score** |
 | `reference_stock.parquet` | parc national par **modèle** des séries non découpables par génération (Allemagne), avec le nombre de générations cibles couvertes — affiché sur le site, **jamais utilisé par le score** |
 | `indicators.parquet` | indicateurs par (cible, pays) et ligne `EU` |
 | `scores.parquet` | composantes brutes et normalisées, poids couverts, score, rang |
