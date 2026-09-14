@@ -62,6 +62,18 @@ class ScoreConfig(BaseModel):
         return self
 
 
+class CandidatesConfig(BaseModel):
+    """Thresholds of ``predcar candidates`` — models that shrink like targets but are not one."""
+
+    series: str
+    country: str
+    stock_peak_min: int = Field(ge=1)
+    stock_now_max: int = Field(ge=1)
+    loss_min: float = Field(gt=0, lt=1)
+    # model_gen values that are never candidates (catch-alls), as a regex
+    exclude_model_gen: str
+
+
 class MappingConfig(BaseModel):
     min_coverage: float = Field(gt=0, le=1)
     report_top_unmapped: int = Field(ge=1)
@@ -71,6 +83,7 @@ class MappingConfig(BaseModel):
     # still computed and published, only the gate is relaxed. Keep each entry dated in the
     # YAML so a temporary exemption cannot quietly become permanent.
     min_coverage_by_country: dict[str, float] = Field(default_factory=dict)
+    candidates: CandidatesConfig
 
     @field_validator("min_coverage_by_country")
     @classmethod

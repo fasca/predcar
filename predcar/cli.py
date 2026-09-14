@@ -8,6 +8,7 @@ from pathlib import Path
 import polars as pl
 import typer
 
+from predcar import candidates as candidates_mod
 from predcar import export as export_mod
 from predcar import normalize as normalize_mod
 from predcar import raw, schemas
@@ -169,6 +170,29 @@ def site(
         raise typer.Exit(code=2) from _echo_error(exc)
     for name, path in written.items():
         typer.echo(f"{name}: {path}")
+
+
+@app.command()
+def candidates(
+    silver_dir: Path = typer.Option(SILVER_DIR),
+    mapping_dir: Path = typer.Option(MAPPING_DIR),
+    out_dir: Path | None = typer.Option(None, help="Default: reports/<YYYY-MM-DD>/"),
+) -> None:
+    """Propose models that shrink like targets but are not one → reports/<date>/candidates.csv.
+
+    A proposal to curate by hand: the target list stays an editorial decision.
+    """
+    stock_path = silver_dir / "fleet_stock.parquet"
+    if not stock_path.is_file():
+        raise typer.Exit(code=2) from _echo_error(
+            FileNotFoundError(f"{stock_path} missing: run `predcar normalize` first")
+        )
+    cfg = load_mapping_config()
+    targets = normalize_mod.load_targets(mapping_dir / normalize_mod.TARGETS_FILE)
+    found = candidates_mod.find(
+        pl.read_parquet(stock_path), targets, cfg.candidates, tuple(cfg.unknown_labels)
+    )
+    typer.echo(candidates_mod.write(found, out_dir))
 
 
 @app.command()

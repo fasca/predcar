@@ -11,6 +11,34 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-14 — PR : `predcar candidates`, et les enchères écartées après vérification
+**Ajouté**
+- `predcar candidates` / `make candidates` (`predcar/candidates.py`) →
+  `reports/<date>/candidates.csv` : les modèles **mappés mais absents de la liste des cibles**
+  dont le parc GB (VEH0120, hors SORN) a perdu au moins la moitié de son **maximum
+  historique**, avec le parc au pic et son année, le parc actuel, la perte, et les cibles que
+  la marque a déjà — pour repérer une `306` à côté d'une `306 S16 MK1`. Seuils dans
+  `config/mapping.yaml: candidates` (`stock_peak_min`, `stock_now_max`, `loss_min`,
+  `exclude_model_gen`). 5 tests.
+- **L'outil propose, il n'écrit jamais dans `target_models.csv`** : une cible est une
+  génération avec ses années de production, ce que la donnée ne porte pas. La liste reste une
+  décision éditoriale.
+
+**Sur données réelles** — 41 candidats. En tête : Renault 19 (116 325 au pic en 1997, **48**
+aujourd'hui), Opel Carlton (187 896 → 102), Peugeot 309 (186 845 → 137), Ford Sierra
+(1 044 602 → 1 030), Nissan Sunny, Peugeot 306 / 406 / 106, Ford Escort, Opel Omega. Mesurer la
+perte depuis le pic réel plutôt que depuis 2014 en révèle dix de plus que l'estimation
+initiale — des modèles déjà presque disparus en 2014.
+
+**Enchères : vérifiées et écartées** — `docs/SOURCES.md`, `docs/SPEC.md` §2.7. Les cinq sites
+ferment l'accès automatisé : 403 dès `robots.txt` chez Car & Classic et Catawiki, 403 sur les
+ventes chez Collecting Cars, Bring a Trailer injoignable, et Aguttes interdit **nommément**
+`ClaudeBot`. Aucune API, aucun jeu ouvert. La spec conditionnait le scraping au respect de
+`robots.txt` : contourner un 403 ou une interdiction explicite est exclu, quelle que soit la
+valeur des données. Aucun code écrit.
+
+**`ranking.csv` identique au bit près.** 283 tests.
+
 ### 2026-09-14 — PR : projection Weibull à 5 et 10 ans (phase 3, publiée hors score)
 **Ajouté**
 - `metrics.fit_weibull()` et `metrics.weibull_projection()` : chaque cohorte d'immatriculation

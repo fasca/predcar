@@ -124,10 +124,13 @@
       à 5 et 10 ans avec fourchette indicative, page modèle, `docs/methodology.md` §3 ter.
       109 cibles projetées ; les modèles anciens que l'on importe (205 GTI…) n'en ont pas, et
       la page dit pourquoi. Hors score.
-- [ ] Enchères : sites vérifiés le 2026-09-14, tous ferment l'accès automatisé (403 dès
-      `robots.txt` chez Car & Classic et Catawiki, `ClaudeBot` interdit chez Aguttes, 403 sur les
-      ventes chez Collecting Cars). Contourner une protection est exclu → écarté, à documenter
-      dans `docs/SOURCES.md` avec la PR candidats
+- [x] Enchères : **vérifiées et écartées** (2026-09-14). Les cinq sites ferment l'accès
+      automatisé (403 dès `robots.txt` chez Car & Classic et Catawiki, `ClaudeBot` interdit chez
+      Aguttes, 403 sur les ventes chez Collecting Cars). Contourner est exclu. `docs/SOURCES.md`
+- [x] Élargir les cibles — l'outil (2026-09-14) : `make candidates` → `reports/<date>/candidates.csv`,
+      31 modèles GB proposés (Saxo, 306, 406, 106, Punto HGT, MX-6, Carlton…)
+- [ ] Élargir les cibles — la décision : choisir dans `candidates.csv`, donner générations et
+      années ; les règles suivent. Décision éditoriale de l'utilisateur
 - [ ] Newsletter / alertes
 
 ## Pistes vérifiées et écartées
