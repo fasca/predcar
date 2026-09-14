@@ -141,3 +141,20 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
   milliers de lignes. Corollaire : quand un modèle a déjà sa règle propre (`^S60`, `^V70`, parce
   qu'il existe une version `R`), c'est **cette** règle qu'on étend — un fourre-tout concurrent
   lèverait `MappingError` ou, pire, changerait silencieusement le `model_gen`.
+
+### 2026-09-15 La règle d'un modèle de base avale ses versions recherchées
+- **Erreur**: `^ESCORT(?!.*COSWORTH)` envoyait `ESCORT RS TURBO`, `RS2000` et `XR3I` dans
+  « Escort » ; `^INTEGRA(?!.*TYPE R)` ratait `INTEGRA R`, l'appellation britannique de la DC2 ;
+  `^106.*(RALLYE|GTI)` faisait de la 106 GTI une Rallye ; `^COUPE` avalait la `COUPE S2`. Quatre
+  cibles existantes en étaient invisibles ou fausses depuis le premier run. Rien ne l'a
+  signalé : la couverture était à 99 % et chaque libellé était « mappé » — à un mauvais modèle.
+- **Correction**: c'est `predcar candidates` qui l'a révélé, à l'envers : la « perte » d'un modèle
+  de base était gonflée par ses versions sportives. Lire les libellés réels sous chaque
+  candidat avant de l'ajouter, et chercher les versions connues (RS, GTI, Turbo, 16V, XR, GSi,
+  T5) sous les règles de base des marques cibles.
+- **Règle**: une règle de modèle de base doit **exclure explicitement chaque mot-clé de
+  version** que le libellé peut porter, et chaque version exclue doit avoir sa règle — sinon
+  elle disparaît sans erreur. Corollaire : une cible dont le parc est anormalement bas (S2 à 0,
+  DC2 à 2) n'est pas « rare », elle est **mal mappée** ; vérifier ses libellés avant de croire
+  le chiffre. Et l'inverse d'une finition sportive (leçon du 2026-09-09) existe aussi : un
+  libellé peut porter un mot-clé sans le mot « TYPE » (`INTEGRA R`).

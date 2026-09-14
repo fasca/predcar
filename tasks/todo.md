@@ -129,8 +129,12 @@
       Aguttes, 403 sur les ventes chez Collecting Cars). Contourner est exclu. `docs/SOURCES.md`
 - [x] Élargir les cibles — l'outil (2026-09-14) : `make candidates` → `reports/<date>/candidates.csv`,
       31 modèles GB proposés (Saxo, 306, 406, 106, Punto HGT, MX-6, Carlton…)
-- [ ] Élargir les cibles — la décision : choisir dans `candidates.csv`, donner générations et
-      années ; les règles suivent. Décision éditoriale de l'utilisateur
+- [x] Élargir les cibles — 1er lot (2026-09-15, décision déléguée « les plus recherchés ») :
+      19 générations ajoutées, 4 versions recherchées libérées de la règle de leur modèle de
+      base (S2, Integra Type R, 106 GTI, Escort RS Turbo…). 243 → 262 cibles, 228 → 249 publiées
+- [ ] Élargir les cibles — lots suivants : 33 candidats restent, presque tous des modèles de
+      base dont la version sportive est déjà cible. À reprendre si de nouveaux modèles entrent
+      dans la fenêtre 1990-2015 (le refresh trimestriel régénère `candidates.csv`)
 - [ ] Newsletter / alertes
 
 ## Pistes vérifiées et écartées

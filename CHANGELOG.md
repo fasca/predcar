@@ -11,6 +11,36 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-15 — PR : premier lot de cibles issu de `candidates.csv` (243 → 262)
+**Ajouté** — 19 générations choisies parmi les 41 candidats pour leur intérêt collector avéré
+ou probable : Audi Coupé B3 et Cabriolet B4, Citroën C6, Fiat Punto HGT, Ford Escort RS Turbo,
+RS2000 et XR3i (deux générations), Sierra XR4i et XR4x4, Lancia Thema, Mazda MX-6, Mercedes
+190 W201 et 190E 2.3-16, Opel Carlton GSi et Corsa GSi (B et C), Peugeot 106 GTI, Volvo 850 T5.
+Les modèles de base restants (306, 406, Escort, Sierra, Sunny, Renault 19…) ne sont pas
+retenus : ce qui est recherché est leur version sportive, et elle est désormais une cible.
+
+**Corrigé — quatre versions recherchées étaient avalées par la règle du modèle de base**, et
+c'est la liste des candidats qui l'a révélé (leur « perte » gonflait celle du modèle de base) :
+- `COUPE S2 4WD TURBO` → Coupé, au lieu de **S2** (39 378 véhicule-trimestres) ;
+- `INTEGRA R` — l'appellation britannique de la **Type R DC2** — → Integra (133 669) ;
+- `106 GTI` → **106 Rallye**, alors que la GTI 1.6 16v n'en est pas une (213 517) ;
+- `ESCORT RS TURBO`, `RS2000`, `XR3I`, `SIERRA XR4X4`, `CARLTON GSI`, `850 T5`,
+  `190E 2.3-16`, `190 E-16 EVOLUTION II` → modèle de base.
+Conséquences visibles : **quatre cibles existantes deviennent publiées** — Audi S2 (73), Integra
+Type R DC2 (294) et DC5 (254), Thema 8.32 (70, qui trouve enfin un pair dans son segment) ; la
+106 Rallye S2 passe de 233 à **86** véhicules ; la 190E 2.5-16 gagne son Evolution II.
+
+**Repli ajouté** pour `INTEGRA TYPE R` hors 1995–2006 : 12 véhicules démappés depuis toujours.
+
+**Effet** — 261 cibles avec données, **249 publiées** (228 avant). GB **+12 véhicules** mappés
+(les 12 ci-dessus), NL −1, DE inchangé. Les 5 témoins gardent leur parc au véhicule près. 224
+rangs bougent : 21 nouvelles lignes s'intercalent, rien d'autre. En tête des nouvelles : Corsa
+GSi B (102 véhicules, rang 3), Audi S2 (73, rang 6), Escort XR3i MK3/4 (512, rang 10).
+
+**Ce que les tests ont attrapé** : une Corsa GSi immatriculée en 2001 est une **C**, pas une B —
+mon attente était fausse, le test paramétré sur les libellés réels l'a corrigée. 33 candidats
+restent dans `reports/<date>/candidates.csv`.
+
 ### 2026-09-14 — PR : `predcar candidates`, et les enchères écartées après vérification
 **Ajouté**
 - `predcar candidates` / `make candidates` (`predcar/candidates.py`) →
