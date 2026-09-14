@@ -150,5 +150,5 @@ Une ligne par `(make_raw, model_raw)`.
 - [x] MINI (sous BMW) et Smart (sous Daimler) : la colonne `model_regex` de `mapping/makes.csv`
       réassigne la marque depuis le nom commercial → 5,1 M de véhicules rendus à leur marque,
       **DE 98,9 %** (`docs/mapping.md`)
-- [ ] Groupes multi-marques `FCA (I)` / `STELLANTIS (F)` / `GENERAL MOTORS` / `JAGUAR LAND ROVER` :
-      même mécanisme, règles à écrire
+- [x] Groupes multi-marques `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER` /
+      `MG ROVER` : résolus par `model_regex`, 10 marques cibles rendues visibles (DE 98,5 %)
