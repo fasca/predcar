@@ -97,9 +97,13 @@
       et Smart sous Daimler → 5,1 M de véhicules rendus à leur marque, **DE 98,9 %**
 - [ ] Groupes multi-marques `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER` :
       même mécanisme, règles à écrire (leur marque est dans le nom commercial)
-- [ ] Intégrer DE au score : déclarer `FZ2` dans `metrics.MODEL_LEVEL_SERIES` (niveau modèle
-      générique, comme VEH0120 — la source n'a pas d'année de première immatriculation).
-      Vérifier d'abord l'effet du trou 2021–2022 sur l'attrition
+- [x] DE au score : **non**, après mesure (2026-09-14). Sans année de 1re immatriculation, seules
+      55 des 243 cibles (23 %) recevraient un parc allemand → biais de comparabilité sur la
+      rareté (35 % du score). L'Allemagne est publiée à côté du score
+      (`gold/reference_stock.parquet`, page modèle, `docs/methodology.md` §3 bis)
+- [ ] Ce qui ferait entrer DE dans le score : une source allemande avec l'année de 1re
+      immatriculation, ou une répartition par génération vérifiable — aucune n'existe
+      aujourd'hui dans l'open data du KBA
 - [ ] Récupérer 2019, 2021, 2022 : comprendre leurs lignes d'agrégat sans libellé (dans 2019,
       une ligne de 3 124 094 véhicules aux trois libellés vides) — sans assouplir l'invariant
 - [ ] Immatriculations FR (SDES), STATS19, Google Trends, YouTube

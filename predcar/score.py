@@ -137,12 +137,15 @@ def score(
     gold_dir.mkdir(parents=True, exist_ok=True)
     written = {
         "series": gold_dir / "stock_series.parquet",
+        "reference": gold_dir / "reference_stock.parquet",
         "indicators": gold_dir / "indicators.parquet",
         "scores": gold_dir / "scores.parquet",
         "cohorts": gold_dir / "cohorts.parquet",
         "ranking": gold_dir / "ranking.csv",
     }
     series.write_parquet(written["series"])
+    # National fleets that cannot be split by generation: published beside the score, not in it.
+    metrics.reference_stock(stock, targets).write_parquet(written["reference"])
     metrics.cohort_retention(stock, targets).write_parquet(written["cohorts"])
     pl.concat([indicators, eu]).write_parquet(written["indicators"])
     scores.write_parquet(written["scores"])

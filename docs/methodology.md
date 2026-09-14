@@ -11,6 +11,7 @@ chaque source, chaque limite. Paramètres dans `config/score.yaml`, jamais en du
 | VEH0124 (DfT) | GB | annuelle, 2014 → | génération (via année de 1re immatriculation) | stock par génération, cohortes (Licensed et SORN distingués ; le ratio SORN publié reste celui de VEH0120) |
 | VEH0160 (DfT) | GB | trimestrielle, 2001 → | modèle générique | immatriculations neuves (ventes) |
 | RDW `m9d7-ebf2` | NL | snapshot mensuel, depuis notre 1er snapshot | génération (via année de 1re admission) | stock par génération |
+| KBA FZ 2.2 | DE | annuelle, au 1ᵉʳ janvier | **modèle générique uniquement** | parc allemand — **informatif, hors score** (§3 bis) |
 
 VEH0120 et VEH0124 décrivent le même parc : ils ne sont **jamais additionnés**. Pour chaque
 (génération cible, pays), le stock et l'attrition viennent de la série de niveau génération
@@ -55,6 +56,27 @@ Par (marque, modèle générique, génération, pays) — deux marques peuvent p
   modèle générique (VEH0120, toutes générations confondues).
 - **Rareté absolue** : stock courant ; étiquette `<20`, `<100`, `<500`, `>=500`
   (`rarity.thresholds`).
+
+## 3 bis. L'Allemagne, publiée mais hors score
+
+Le KBA publie le parc allemand par constructeur et **nom commercial**, sans aucune année de
+première immatriculation. Un modèle ne peut donc pas être réparti entre ses générations.
+
+La conséquence n'est pas une simple perte de précision, c'est un **biais de comparabilité**.
+Seules les cibles qui sont l'unique génération cible de leur modèle pourraient recevoir un parc
+allemand : **55 sur 243, soit 23 %**. Or la rareté — 35 % du score — se calcule en comparant les
+cibles entre elles. Une Audi S3 gagnerait 100 686 véhicules allemands et paraîtrait bien moins
+rare qu'une RS4 B5 qui n'en gagnerait aucun : non pas parce qu'elle l'est, mais parce que la
+source nous en dit plus sur elle. Le classement serait faussé de façon systématique, en faveur
+des modèles à une seule génération cible.
+
+L'Allemagne est donc **publiée à côté du score, jamais dedans** : `gold/reference_stock.parquet`
+donne le parc du **modèle** (toutes générations confondues) avec le nombre de générations cibles
+qu'il recouvre, et la page modèle l'affiche en disant ce qu'il couvre et pourquoi il est exclu.
+
+Ce qui la ferait entrer dans le score : une source allemande portant l'année de première
+immatriculation, ou une répartition par génération vérifiable. Ni l'une ni l'autre n'existe
+aujourd'hui dans les données ouvertes du KBA.
 
 ## 3. Agrégat Europe
 
@@ -104,6 +126,7 @@ ont `rarity` + `sorn_ratio` = 0.55 et ne sont pas publiés non plus.
 | Fichier | Contenu |
 |---|---|
 | `stock_series.parquet` | série annuelle utilisée par (cible, pays) : stock, attrition lissée, niveau, tranche d'âge |
+| `reference_stock.parquet` | parc national par **modèle** des séries non découpables par génération (Allemagne), avec le nombre de générations cibles couvertes — affiché sur le site, **jamais utilisé par le score** |
 | `indicators.parquet` | indicateurs par (cible, pays) et ligne `EU` |
 | `scores.parquet` | composantes brutes et normalisées, poids couverts, score, rang |
 | `cohorts.parquet` | courbes de rétention par (cible, pays, cohorte d'immatriculation) : `retention = stock / stock maximal observé de la cohorte` (VEH0124, RDW), affichées sur la page modèle du site |

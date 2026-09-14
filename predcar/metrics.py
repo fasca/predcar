@@ -60,6 +60,73 @@ def series_of(source_file: str) -> str:
 # --------------------------------------------------------------------------- annual series
 
 
+# Series that describe a national fleet at model_gen level only, with no year of first
+# registration: they cannot be split by generation, so they inform but never score.
+REFERENCE_SERIES = ("FZ2",)
+
+REFERENCE_SCHEMA = {
+    "make": pl.Utf8,
+    "model_gen": pl.Utf8,
+    "country": pl.Utf8,
+    "series": pl.Utf8,
+    "year": pl.Int32,
+    "stock": pl.Int64,
+    "target_generations": pl.Int32,
+}
+
+
+def reference_stock(stock: pl.DataFrame, targets: list[TargetModel]) -> pl.DataFrame:
+    """Latest national stock per (make, model_gen) for the series that cannot be scored.
+
+    Germany (KBA FZ 2.2) publishes its fleet by trade name with **no first-registration year**,
+    so a model's stock cannot be split between its generations. Feeding it to the score would
+    bias the ranking: only the 23 % of targets that are the sole target generation of their
+    model would gain German vehicles, and rarity — 35 % of the score — is computed by comparing
+    targets to one another. An Audi S3 would look far less rare than an RS4 B5 because we have
+    more data on it, not because it is.
+
+    So the figure is published alongside the score, never inside it, with the number of target
+    generations it covers so the page can say what it does and does not mean.
+
+    Returns:
+        One row per (make, model_gen) present in both the targets and the reference series.
+    """
+    if not targets:
+        return pl.DataFrame(schema=REFERENCE_SCHEMA)
+    counts: dict[tuple[str, str], int] = {}
+    for target in targets:
+        counts[(target.make, target.model_gen)] = counts.get((target.make, target.model_gen), 0) + 1
+    wanted = pl.DataFrame(
+        [
+            {"make": make, "model_gen": model_gen, "target_generations": n}
+            for (make, model_gen), n in counts.items()
+        ],
+        schema={"make": pl.Utf8, "model_gen": pl.Utf8, "target_generations": pl.Int32},
+    )
+    rows = (
+        stock.filter(pl.col("model_gen").is_not_null())
+        .with_columns(
+            pl.col("source_file").map_elements(series_of, return_dtype=pl.Utf8).alias("series")
+        )
+        .filter(pl.col("series").is_in(REFERENCE_SERIES))
+    )
+    if not rows.height:
+        return pl.DataFrame(schema=REFERENCE_SCHEMA)
+    keys = ["make", "model_gen", "country", "series"]
+    latest = (
+        rows.with_columns(pl.col("period").dt.year().alias("year"))
+        .group_by(*keys, "year")
+        .agg(pl.col("count").sum().alias("stock"))
+    )
+    latest = latest.filter(pl.col("year") == pl.col("year").max().over(keys))
+    return (
+        latest.join(wanted, on=["make", "model_gen"], how="inner")
+        .select(list(REFERENCE_SCHEMA))
+        .cast(REFERENCE_SCHEMA)
+        .sort("make", "model_gen", "country")
+    )
+
+
 def annual_stock(stock: pl.DataFrame) -> pl.DataFrame:
     """End-of-year stock per (country, series, make, model_gen, generation, year).
 

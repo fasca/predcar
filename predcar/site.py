@@ -58,7 +58,12 @@ COMPONENT_COLUMNS = {
     "sorn_ratio": "sorn_ratio_c",
     "recent_inflection_point": "recent_inflection_point",
 }
-COUNTRY_LABELS = {"GB": "Royaume-Uni", "NL": "Pays-Bas", metrics.EUROPE: "Europe"}
+COUNTRY_LABELS = {
+    "GB": "Royaume-Uni",
+    "NL": "Pays-Bas",
+    "DE": "Allemagne",
+    metrics.EUROPE: "Europe",
+}
 SERIES_INFO = {
     "VEH0120": {
         "name": "DfT VEH0120",
@@ -80,6 +85,13 @@ SERIES_INFO = {
         "url": "https://www.gov.uk/government/statistical-data-sets/"
         "vehicle-licensing-statistics-data-files",
         "licence": "OGL v3",
+    },
+    "FZ2": {
+        "name": "KBA FZ 2.2",
+        "detail": "parc allemand au 1ᵉʳ janvier par constructeur et nom commercial, "
+        "sans année de première immatriculation",
+        "url": "https://www.kba.de/DE/Statistik/Fahrzeuge/Bestand/bestand_node.html",
+        "licence": "DL-DE/BY-2-0",
     },
     "RDW": {
         "name": "RDW « Gekentekende voertuigen » (m9d7-ebf2)",
@@ -140,6 +152,7 @@ class Gold:
     indicators: pl.DataFrame
     series: pl.DataFrame
     cohorts: pl.DataFrame
+    reference: pl.DataFrame
     targets: dict[tuple[str, str, str], TargetModel]
 
 
@@ -217,6 +230,9 @@ def load_gold(gold_dir: Path, mapping_dir: Path) -> Gold:
     directory of a committed evidence bundle (``reports/<date>/gold/``, CSV).
     """
     tables = {name: _read_table(gold_dir, name) for name in TABLES}
+    has_reference = any(
+        (gold_dir / f"reference_stock.{ext}").is_file() for ext in ("parquet", "csv")
+    )
     has_cohorts = any((gold_dir / f"cohorts.{ext}").is_file() for ext in ("parquet", "csv"))
     cohorts = (
         _read_table(gold_dir, "cohorts")
@@ -226,11 +242,17 @@ def load_gold(gold_dir: Path, mapping_dir: Path) -> Gold:
     targets = {
         (t.make, t.model_gen, t.generation): t for t in load_targets(mapping_dir / TARGETS_FILE)
     }
+    reference = (
+        _read_table(gold_dir, "reference_stock")
+        if has_reference
+        else pl.DataFrame(schema=metrics.REFERENCE_SCHEMA)
+    )
     return Gold(
         scores=tables["scores"],
         indicators=tables["indicators"],
         series=tables["stock_series"],
         cohorts=cohorts,
+        reference=reference,
         targets=targets,
     )
 
@@ -382,6 +404,21 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
         for s in sorted(cited):
             info = SERIES_INFO.get(s, {"name": s, "detail": "", "url": "", "licence": ""})
             sources.append({**info, "country": c["label"], "latest_year": c["latest_year"]})
+    reference = [
+        {
+            "country": r["country"],
+            "label": COUNTRY_LABELS.get(r["country"], r["country"]),
+            "series": r["series"],
+            "year": r["year"],
+            "stock": r["stock"],
+            "generations": r["target_generations"],
+        }
+        for r in gold.reference.filter(
+            (pl.col("make") == row["make"]) & (pl.col("model_gen") == row["model_gen"])
+        )
+        .sort("country")
+        .iter_rows(named=True)
+    ]
     retention, retention_skipped = _cohort_traces(cohorts)
     charts = {
         "stock": _series_traces(series, "stock"),
@@ -394,6 +431,7 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
         "by_country": by_country,
         "sources": sources,
         "charts_json": json.dumps(charts, ensure_ascii=False).replace("</", "<\\/"),
+        "reference": reference,
         "has_retention": bool(retention),
         "retention_skipped": retention_skipped,
         "min_weight_coverage": cfg.min_weight_coverage,
@@ -502,6 +540,7 @@ def build(
         # The legend must use the very same short labels as the bars in the table.
         "component_short": COMPONENT_SHORT,
         "country_labels": COUNTRY_LABELS,
+        "series_info": SERIES_INFO,
         "cfg": cfg,
     }
     published = [r for r in rows if r["published"]]

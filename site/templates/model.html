@@ -103,6 +103,33 @@
     parc maximal observé). Détails et limites dans la <a href="{{ root }}methodologie.html">méthodologie</a>.</p>
 </section>
 
+{% if reference %}
+<section class="reference">
+  <h2>Parc national, hors score</h2>
+  <p class="note">Ces parcs viennent de sources qui publient le parc <strong>par modèle, sans
+    année de première immatriculation</strong> : elles ne peuvent pas être réparties entre les
+    générations. Elles sont donc affichées ici à titre indicatif et <strong>n'entrent ni dans
+    l'attrition, ni dans le score</strong> — les y inclure avantagerait mécaniquement les modèles
+    qui n'ont qu'une génération cible (<a href="{{ root }}methodologie.html">méthodologie</a>).</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Pays</th><th>Série</th><th class="num">Année</th><th class="num">Parc du modèle</th><th>Portée</th></tr></thead>
+    <tbody>
+    {% for r in reference %}
+      <tr>
+        <td>{{ r.label }}</td>
+        <td>{{ series_info.get(r.series, {}).get('name', r.series) }}</td>
+        <td class="num">{{ r.year | fmt_year }}</td>
+        <td class="num">{{ r.stock | fmt_int }}</td>
+        <td>{% if r.generations > 1 %}les {{ r.generations }} générations cibles de ce modèle, confondues{% else %}cette génération{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+
 <section class="sources">
   <h2>Sources</h2>
   <ul>
