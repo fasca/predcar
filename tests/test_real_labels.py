@@ -194,3 +194,35 @@ def test_daughter_brands_resolve_to_their_own_make(real_labels: pl.DataFrame) ->
         if not rows.height:  # the bundle may not carry that manufacturer yet
             continue
         assert rows["make"].unique().to_list() == [child], (parent, label_like)
+
+
+def test_multi_brand_groups_resolve_to_a_target_make(real_labels: pl.DataFrame) -> None:
+    """A manufacturer group covers several brands; each must reach its own.
+
+    FCA, Stellantis, General Motors, Jaguar Land Rover and MG Rover each publish several
+    brands under one manufacturer. Without the overrides their vehicles sit outside the target
+    makes entirely, so Alfa Romeo, Fiat, Opel, Jaguar and MG have no German fleet.
+    """
+    makes = n.load_makes(MAPPING_DIR / "makes.csv")
+    overrides = n.load_make_overrides(MAPPING_DIR / "makes.csv")
+    pairs = real_labels.select("make_raw", "model_raw").unique().drop_nulls()
+    resolved = n.apply(
+        stock_frame([{"make_raw": mk, "model_raw": ml} for mk, ml in pairs.iter_rows()]),
+        makes,
+        n.load_models(MAPPING_DIR / "models.csv"),
+        overrides,
+    )
+    targets = {t.make for t in n.load_targets(MAPPING_DIR / "target_models.csv")}
+    for group, expected in [
+        ("FCA (I)", {"FIAT", "ALFA ROMEO", "LANCIA", "ABARTH"}),
+        ("STELLANTIS (F)", {"OPEL", "PEUGEOT", "CITROEN"}),
+        ("JAGUAR LAND ROVER (UK)", {"JAGUAR"}),
+    ]:
+        rows = resolved.filter(pl.col("make_raw") == group)
+        if not rows.height:  # the bundle may not carry that group yet
+            continue
+        reached = set(rows["make"].unique().to_list())
+        assert expected & reached, (group, sorted(reached)[:6])
+        # every make the group resolves to must be a real make, never the group label itself
+        assert group not in reached
+        assert reached <= targets | {"JEEP", "CHEVROLET", "CADILLAC", "LAND ROVER", "ROVER"}

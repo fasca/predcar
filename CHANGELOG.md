@@ -11,6 +11,30 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-14 — PR : groupes multi-marques du KBA (10 marques cibles rendues visibles)
+**Ajouté** — 20 règles dans `mapping/makes.csv` qui résolvent les constructeurs couvrant
+plusieurs marques, avec le mécanisme `model_regex` posé pour MINI et Smart :
+`FCA (I)` et `STELLANTIS (I)` → Fiat, Alfa Romeo, Lancia, Abarth, Jeep ; `STELLANTIS (F)` et
+`GENERAL MOTORS (E)` → Opel, Peugeot, Citroën ; `GENERAL MOTORS (USA)` → Chevrolet, Cadillac ;
+`JAGUAR LAND ROVER (UK)` → Jaguar, Land Rover ; `MG ROVER (UK)` → Rover, MG, MINI, Land Rover.
+
+Une ligne **sans** regex porte la marque dominante du groupe, les lignes conditionnelles les
+autres. Les regex d'un même groupe sont tenues **disjointes** pour que l'ordre de déclaration
+n'ait aucun effet.
+
+**Effet** — 11,1 M de véhicules-années entrent dans le périmètre des marques cibles, et **dix
+marques cibles deviennent visibles en Allemagne** : Fiat 1 341 938, Opel 3 805 672,
+Peugeot 960 493, Citroën 771 473, MINI 587 900, Jaguar 81 081, Alfa Romeo 78 002, Abarth
+20 244, Lancia 9 342, MG 4 431. La table de référence passe de **81 à 97 modèles** — Alfa 156,
+GTV, Fiat Coupé, Jaguar XJS y entrent.
+
+La couverture DE passe de 98,9 % à **98,5 %** : le dénominateur grandit de 11,1 M, pas le
+numérateur d'autant. Toujours très au-dessus du seuil commun de 95 %.
+
+**GB et NL inchangés**, **`ranking.csv` inchangé** (l'Allemagne reste hors score), 266 tests,
+bundle à 0 erreur. Un test vérifie sur les libellés réels que chaque groupe atteint bien ses
+marques et n'en laisse aucune sur le label du groupe.
+
 ### 2026-09-14 — PR : les 8 millésimes allemands, et la série de référence
 **Corrigé** — deux formes d'agrégat que le contrôle de somme signalait sans les nommer :
 - une **ligne de sous-total publiée sans son libellé** (2019, 3 124 094 véhicules : le total

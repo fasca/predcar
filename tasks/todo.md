@@ -95,8 +95,11 @@
 - [x] Marques filles cibles (2026-09-13) : colonne optionnelle `model_regex` dans
       `mapping/makes.csv`, la marque devient conditionnelle au libellé du modèle. MINI sous BMW
       et Smart sous Daimler → 5,1 M de véhicules rendus à leur marque, **DE 98,9 %**
-- [ ] Groupes multi-marques `FCA` / `STELLANTIS` / `GENERAL MOTORS` / `JAGUAR LAND ROVER` :
-      même mécanisme, règles à écrire (leur marque est dans le nom commercial)
+- [x] Groupes multi-marques (2026-09-14) : `FCA`, `STELLANTIS`, `GENERAL MOTORS`,
+      `JAGUAR LAND ROVER`, `MG ROVER` résolus par `model_regex`. 11,1 M de véhicules-années
+      entrés dans le périmètre, 10 marques cibles rendues visibles en Allemagne
+      (Fiat, Alfa Romeo, Lancia, Abarth, Opel, Peugeot, Citroën, Jaguar, MG, Mini) ;
+      la référence passe de 81 à **97 modèles**. Couverture DE 98,5 %
 - [x] DE au score : **non**, après mesure (2026-09-14). Sans année de 1re immatriculation, seules
       55 des 243 cibles (23 %) recevraient un parc allemand → biais de comparabilité sur la
       rareté (35 % du score). L'Allemagne est publiée à côté du score

@@ -81,7 +81,7 @@ make normalize                               # seuil de config/mapping.yaml
 ```
 
 État (2026-09-13, `reports/2026-09-13/silver/coverage.csv`) : couverture **GB 99,0 %**,
-**NL 98,4 %**, **DE 98,9 %** (immatriculations neuves GB 99,2 %), hors libellés `unknown_labels`. La première
+**NL 98,4 %**, **DE 98,5 %** (immatriculations neuves GB 99,2 %), hors libellés `unknown_labels`. La première
 passe (2026-09-08 : GB 97,9 %, NL 98,2 %) avait révélé 11 familles de regex trop larges
 (`^900` capturait `9000`, `^MX-3` capturait `MX-30`, `^C2` capturait `C25`, `^ASTRA` capturait
 `ASTRAVAN`…) : toute règle sur un libellé numérique ou court se termine par `\b`. Le plus gros
@@ -94,9 +94,10 @@ pièges s'ajoutent à celles ci-dessus :
 
 - **Le constructeur n'est pas la marque.** `Hersteller` est un groupe industriel avec un suffixe
   pays (`VOLKSWAGEN (D)`, `MAZDA (B/J/USA/RC)`) ; `mapping/makes.csv` porte un alias par forme.
-  Les groupes multi-marques (`FCA (I)`, `STELLANTIS (F)`, `GENERAL MOTORS`, `JAGUAR LAND ROVER`)
-  n'ont **pas** d'alias : leur marque réelle est dans le nom commercial, et tant qu'ils ne sont
-  pas résolus leurs lignes restent hors du périmètre des marques cibles.
+  Les groupes multi-marques (`FCA (I)`, `STELLANTIS (F)`, `GENERAL MOTORS`, `JAGUAR LAND ROVER`,
+  `MG ROVER`) sont résolus par la même colonne `model_regex` : une ligne **sans** regex porte la
+  marque dominante du groupe, les lignes conditionnelles les autres. Les regex d'un même groupe
+  sont tenues **disjointes**, pour que l'ordre de déclaration n'ait jamais d'effet.
 - **Des marques filles sont vendues sous leur maison mère** : MINI sous `BMW`, Smart sous
   `DAIMLER (D)`, Dacia sous `RENAULT (F)`, Cupra sous `SEAT (E)`. Quand la marque fille n'est pas
   une cible (Dacia, Cupra), un fourre-tout suffit. Quand elle en est une (**MINI**, **SMART**),
