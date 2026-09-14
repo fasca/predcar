@@ -589,11 +589,13 @@ def test_reference_stock_covers_models_not_generations() -> None:
     out = metrics.reference_stock(stock, targets)
     assert out["series"].unique().to_list() == ["FZ2"]
     assert out["country"].unique().to_list() == ["DE"]
-    rows = {(r["make"], r["model_gen"]): r for r in out.iter_rows(named=True)}
-    assert rows[("M", "M3")]["year"] == 2026  # latest vintage only
-    assert rows[("M", "M3")]["stock"] == 90
-    assert rows[("M", "M3")]["target_generations"] == 2
-    assert rows[("M", "RS2")]["target_generations"] == 1
+    # the whole series is published, not just its last point
+    m3 = out.filter(pl.col("model_gen") == "M3").sort("year")
+    assert m3["year"].to_list() == [2025, 2026]
+    assert m3["stock"].to_list() == [100, 90]
+    assert m3["target_generations"].unique().to_list() == [2]
+    rs2 = out.filter(pl.col("model_gen") == "RS2")
+    assert rs2["target_generations"].to_list() == [1]
 
 
 def test_reference_stock_is_empty_without_such_a_series() -> None:

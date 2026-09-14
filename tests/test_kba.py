@@ -262,3 +262,47 @@ def test_source_urls_cover_both_naming_conventions() -> None:
     assert len(urls) == 2
     assert any(u.endswith("fz2_2020.xlsx?__blob=publicationFile") for u in urls)
     assert any(u.endswith("fz2_2020_xlsx.xlsx?__blob=publicationFile") for u in urls)
+
+
+def test_unlabelled_aggregate_row_is_excluded(tmp_path: Path) -> None:
+    """The 2019 sheet publishes Audi's subtotal without its label: 3 124 094 vehicles.
+
+    Such a row has a count but no make, no trade name **and** no technical column. A real
+    variant row always carries a Typ-Schl.-Nr., a power rating or a fuel type, so the two
+    cannot be confused — which is what makes the exclusion safe.
+    """
+    path = _write_sheet(
+        tmp_path / "aggregate.xlsx",
+        [
+            ["Hersteller", "Handelsname", "Typ-Schl.-Nr.", "kW", "Kraftstoffart", "Insgesamt"],
+            [None, None, None, None, None, None],
+            ["AUDI (D)", "A4", "8E", 130, "B", 60],
+            [None, None, "8H", 120, "D", 40],  # a real variant: no labels but technical columns
+            [None, None, None, None, None, 100],  # the unlabelled subtotal
+            ["AUDI (H)", "TT", "8J", 147, "B", 25],
+            ["INSGESAMT", None, None, None, None, 125],
+        ],
+    )
+    stock = kba.parse_sheet(kba.read_sheet(path, SHEET), date(2019, 1, 1))
+    assert int(stock["count"].sum()) == 125
+    # the variant row is kept and merged into its model
+    audi = stock.filter(pl.col("make_raw") == "AUDI (D)")
+    assert int(audi["count"].sum()) == 100
+
+
+def test_subtotal_misspelt_with_a_trailing_m_is_excluded(tmp_path: Path) -> None:
+    """The 2021 and 2022 sheets spell one subtotal "HYUNDAI MOTOR (ROK) ZUSAMMEM"."""
+    path = _write_sheet(
+        tmp_path / "typo_m.xlsx",
+        [
+            ["Hersteller", "Handelsname", "Typ-Schl.-Nr.", "Insgesamt"],
+            [None, None, None, None],
+            ["HYUNDAI MOTOR (ROK)", "I30", "ABC", 70],
+            [None, "TUCSON", "ABD", 30],
+            ["HYUNDAI MOTOR (ROK) ZUSAMMEM", None, None, 100],
+            ["INSGESAMT", None, None, 100],
+        ],
+    )
+    stock = kba.parse_sheet(kba.read_sheet(path, SHEET), date(2021, 1, 1))
+    assert int(stock["count"].sum()) == 100
+    assert not any("ZUSAMME" in label for label in stock["make_raw"])

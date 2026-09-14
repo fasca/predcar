@@ -367,3 +367,32 @@ def test_model_page_has_no_reference_section_without_the_table(
     _build(gold, out)
     pages = "\n".join(p.read_text(encoding="utf-8") for p in (out / "modeles").iterdir())
     assert "Parc national, hors score" not in pages
+
+
+def test_reference_section_shows_the_trend_over_the_series(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """Eight consecutive German vintages: the page shows the move, not just the last point."""
+    gold_dir, _ = gold
+    model = pl.read_parquet(gold_dir / "scores.parquet")["model_gen"][0]
+    pl.DataFrame(
+        {
+            "make": ["M", "M"],
+            "model_gen": [model, model],
+            "country": ["DE", "DE"],
+            "series": ["FZ2", "FZ2"],
+            "year": [2019, 2026],
+            "stock": [1000, 1250],
+            "target_generations": [1, 1],
+        },
+        schema=metrics.REFERENCE_SCHEMA,
+    ).write_parquet(gold_dir / "reference_stock.parquet")
+    out = tmp_path / "dist"
+    try:
+        _build(gold, out)
+        pages = "\n".join(p.read_text(encoding="utf-8") for p in (out / "modeles").iterdir())
+    finally:
+        (gold_dir / "reference_stock.parquet").unlink()
+    flat = re.sub(r"\s+", " ", pages)
+    assert "1 250" in flat  # the latest point, French thousands separator
+    assert "+25,0 % depuis 2019" in flat

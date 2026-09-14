@@ -36,6 +36,9 @@ COL_MAKE = "Hersteller"
 COL_MODEL = "Handelsname"
 COL_COUNT = "Insgesamt"
 REQUIRED_COLUMNS = (COL_MAKE, COL_MODEL, COL_COUNT)
+# Columns between the trade name and the count: Typ-Schl.-Nr., kW, fuel, drive, body. A
+# real vehicle row always carries at least one of them; an aggregate row never does.
+TECHNICAL_COLUMNS_ARE_EMPTY = "_no_technical_columns"
 
 # Header labels sit on two rows and move between vintages (row 8 or 9 in the workbook), so
 # they are searched for rather than assumed. Scanning a few more rows than observed is free.
@@ -46,9 +49,10 @@ HEADER_SCAN_ROWS = 15
 # subtotal is appended to the manufacturer ("VOLKSWAGEN (D) ZUSAMMEN", empty trade name) up
 # to 2024, and sits alone in the trade-name column from 2026 — so both columns are tested.
 # Keeping them silently doubled the German fleet: ~96 M vehicles instead of ~49 M.
-# The spelling is not reliable either: the 2019 file contains "CITROEN (F) ZSAMMEN".
+# The spelling is not reliable either: the 2019 file has "CITROEN (F) ZSAMMEN" (no U) and
+# the 2021 and 2022 files have "HYUNDAI MOTOR (ROK) ZUSAMMEM" (M for N).
 TOTAL_LABELS = ("INSGESAMT", "ZUSAMMEN")
-_TOTAL_RE = r"(?i)^(.*\s)?(INSGESAMT|ZU?SAMMEN)$"
+_TOTAL_RE = r"(?i)^(.*\s)?(INSGESAMT|ZU?SAMME[MN])$"
 # The grand total is published in the sheet and the parsed rows are checked against it, but
 # the check is asymmetric. Detail rows *above* the total mean an aggregate row was counted
 # twice — always a parser bug. Detail rows *below* it are expected: the KBA suppresses small
@@ -192,16 +196,34 @@ def parse_sheet(sheet: pl.DataFrame, period: date) -> pl.DataFrame:
     """
     columns, first_row = header_columns(sheet)
     names = sheet.columns
+    # Technical columns sit between the trade name and the count.
+    technical = [
+        names[j] for j in range(columns[COL_MODEL] + 1, columns[COL_COUNT]) if j < len(names)
+    ]
 
     def cell(label: str) -> pl.Expr:
         """The column holding ``label``, as trimmed text, empty cells becoming null."""
         expr = pl.col(names[columns[label]]).cast(pl.Utf8).str.strip_chars()
         return pl.when(expr.str.len_chars() > 0).then(expr).otherwise(None)
 
+    technical_empty = (
+        pl.all_horizontal(
+            [
+                pl.col(c).cast(pl.Utf8).str.strip_chars().str.len_chars().fill_null(0) == 0
+                for c in technical
+            ]
+        )
+        if technical
+        else pl.lit(False)
+    )
     df = sheet.slice(first_row).select(
         cell(COL_MAKE).alias("make_raw"),
         cell(COL_MODEL).alias("model_raw"),
         cell(COL_COUNT).alias("count"),
+        technical_empty.alias("_no_technical"),
+    )
+    df = df.with_columns(
+        pl.col("make_raw").alias("_raw_make"), pl.col("model_raw").alias("_raw_model")
     )
     # Group labels are written once, on the first row of their group. The trade name is only
     # carried forward **within** a manufacturer: the first rows of a new manufacturer can have
@@ -222,10 +244,26 @@ def parse_sheet(sheet: pl.DataFrame, period: date) -> pl.DataFrame:
         "model_raw"
     ).str.contains(_TOTAL_RE).fill_null(False)
     subtotal_rows = df.filter(totals).height
+    # An aggregate row carries a count but no label *and* no technical column. The 2019 sheet
+    # has one such row of 3 124 094 vehicles — Audi's subtotal, published without its label.
+    # Keeping it double-counted a whole manufacturer; a real variant row always has a
+    # Typ-Schl.-Nr., a power rating or a fuel type, so the two cannot be confused.
+    unlabelled_aggregate = (
+        pl.col("_raw_make").is_null() & pl.col("_raw_model").is_null() & pl.col("_no_technical")
+    )
+    dropped_aggregates = df.filter(pl.col("count").is_not_null() & unlabelled_aggregate)
+    if dropped_aggregates.height:
+        logger.info(
+            "kba %s: %d unlabelled aggregate row(s) excluded (%d vehicles)",
+            period,
+            dropped_aggregates.height,
+            int(dropped_aggregates["count"].sum()),
+        )
     df = df.filter(
         pl.col("count").is_not_null()
         & pl.col("make_raw").is_not_null()
         & ~totals
+        & ~unlabelled_aggregate
         & ~pl.col("make_raw").str.starts_with(FOOTER_PREFIX)
     )
     nameless = df.filter(pl.col("model_raw").is_null()).height

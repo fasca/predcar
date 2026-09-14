@@ -71,8 +71,9 @@ source nous en dit plus sur elle. Le classement serait faussé de façon systém
 des modèles à une seule génération cible.
 
 L'Allemagne est donc **publiée à côté du score, jamais dedans** : `gold/reference_stock.parquet`
-donne le parc du **modèle** (toutes générations confondues) avec le nombre de générations cibles
-qu'il recouvre, et la page modèle l'affiche en disant ce qu'il couvre et pourquoi il est exclu.
+donne la **série annuelle** du parc du **modèle** (toutes générations confondues, 2019 → 2026)
+avec le nombre de générations cibles qu'il recouvre ; la page modèle affiche le dernier point,
+son évolution depuis 2019, ce qu'il couvre et pourquoi il est exclu.
 
 Ce qui la ferait entrer dans le score : une source allemande portant l'année de première
 immatriculation, ou une répartition par génération vérifiable. Ni l'une ni l'autre n'existe

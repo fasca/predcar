@@ -93,28 +93,32 @@ La feuille publie son propre total. Les lignes de détail sont comparées à lui
 
 C'est ce contrôle qui a révélé les pièges 3, 4 et 5 — aucun n'était visible autrement.
 
-| Millésime | Lignes | Total déclaré | Résultat |
-|---|---|---|---|
-| 2019 | 14 410 | 47 095 784 | **refusé** — +3 130 665 (lignes d'agrégat sans libellé) |
-| 2020 | 14 976 | 47 715 977 | ok, écart **0** |
-| 2021 | 15 548 | 48 248 584 | **refusé** — +264 044 |
-| 2022 | 15 928 | 48 540 878 | **refusé** — +298 390 |
-| 2023 | 16 134 | 48 763 036 | ok, écart **0** |
-| 2024 | 16 228 | 49 098 685 | ok, écart **0** |
-| 2025 | 16 502 | 49 339 166 | ok, écart **0** |
-| 2026 | 16 615 | 49 486 487 | ok, −152 799 (−0,31 %, comptages supprimés) |
+| Millésime | Total déclaré | Écart après parsing |
+|---|---|---|
+| 2019 | 47 095 784 | +6 571 (+0,014 %) |
+| 2020 | 47 715 977 | **0** |
+| 2021 | 48 248 584 | −25 266 (−0,05 %) |
+| 2022 | 48 540 878 | **0** |
+| 2023 | 48 763 036 | **0** |
+| 2024 | 49 098 685 | **0** |
+| 2025 | 49 339 166 | **0** |
+| 2026 | 49 486 487 | −152 799 (−0,31 %, comptages supprimés) |
 
-**Cinq millésimes exploitables : 2020, 2023, 2024, 2025, 2026**, dont quatre au véhicule près.
+**Les huit millésimes 2019 → 2026 sont exploitables**, dont cinq au véhicule près. La série
+allemande est annuelle et **sans trou**.
 
-Les trois refusés portent des lignes d'agrégat que ce parseur ne sait pas nommer — dans le
-fichier 2019, une ligne de 3 124 094 véhicules dont les trois libellés sont vides. Plutôt que
-de deviner, ils sont écartés : mieux vaut cinq millésimes prouvés que huit dont trois faux.
-Les récupérer demande de comprendre ces lignes, pas d'assouplir le contrôle.
+Y arriver a demandé de comprendre deux formes d'agrégat que le contrôle de somme signalait
+sans les nommer :
 
-**Conséquence** : la série allemande a un trou en 2021–2022. Avant d'utiliser l'Allemagne pour
-une attrition (`attrition.min_history_years`), il faudra soit récupérer ces millésimes, soit
-en tenir compte — le Δt est calculé en années réelles, donc un trou est correctement traité,
-mais il coûte deux points d'observation.
+- **une ligne de sous-total publiée sans son libellé** (2019, 3 124 094 véhicules : le total
+  d'Audi). Elle se reconnaît à ceci qu'elle porte un comptage mais **ni libellé ni colonne
+  technique** — une vraie ligne de véhicule a toujours un Typ-Schl.-Nr., une puissance ou un
+  carburant. Critère vérifié sur les huit millésimes : une seule ligne concernée, aucun faux
+  positif ;
+- **une deuxième orthographe fautive** : `HYUNDAI MOTOR (ROK) ZUSAMMEM`, avec un `M` final
+  (2021 et 2022), après le `ZSAMMEN` sans `U` de 2019.
+
+Aucune tolérance n'a été assouplie pour y parvenir.
 
 ## 6. Vers le silver
 
@@ -138,7 +142,7 @@ Une ligne par `(make_raw, model_raw)`.
 - [x] Report des libellés de groupe, borné au constructeur
 - [x] Totaux `INSGESAMT` / `ZUSAMMEN` exclus dans leurs deux formes, coquille `ZSAMMEN` comprise
 - [x] Pied de page `©` exclu
-- [x] Somme des lignes vérifiée contre le total publié, sur les 8 millésimes
+- [x] Somme des lignes vérifiée contre le total publié, sur les 8 millésimes, tous exploitables
 - [x] Aucune donnée personnelle : la table est agrégée à la source
 - [x] Mapping : alias de constructeurs, `SONSTIGE/NICHT GETYPT` déclaré « modèle inconnu »,
       fourre-tout étendus aux libellés allemands → **DE 98,9 %**, la gate commune s'applique

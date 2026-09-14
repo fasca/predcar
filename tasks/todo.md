@@ -104,8 +104,10 @@
 - [ ] Ce qui ferait entrer DE dans le score : une source allemande avec l'année de 1re
       immatriculation, ou une répartition par génération vérifiable — aucune n'existe
       aujourd'hui dans l'open data du KBA
-- [ ] Récupérer 2019, 2021, 2022 : comprendre leurs lignes d'agrégat sans libellé (dans 2019,
-      une ligne de 3 124 094 véhicules aux trois libellés vides) — sans assouplir l'invariant
+- [x] Récupérer 2019, 2021, 2022 (2026-09-14) : une ligne de sous-total publiée **sans libellé**
+      (2019, 3 124 094 véhicules) et une deuxième orthographe fautive (`ZUSAMMEM`, 2021-2022).
+      **Les 8 millésimes 2019→2026 sont exploitables**, série annuelle sans trou, aucune
+      tolérance assouplie. La série allemande complète est publiée dans `reference_stock`
 - [ ] Immatriculations FR (SDES), STATS19, Google Trends, YouTube
 
 ## Phase 3
