@@ -55,6 +55,15 @@ Règles de cohérence, vérifiées à l'exécution (`MappingError`) :
 
 ## `target_models.csv` — `make,model_gen,generation,segment,year_from,year_to`
 
+**Élargir la liste** : `make candidates` (`predcar candidates`) écrit
+`reports/<date>/candidates.csv` — les modèles mappés, absents de la liste, dont le parc GB
+(VEH0120, hors SORN) a perdu au moins la moitié de son maximum, avec le parc au pic, le parc
+actuel, la perte, et les cibles que la marque a déjà (pour repérer une `306` à côté d'une
+`306 S16 MK1`). Seuils dans `config/mapping.yaml: candidates`. **L'outil propose, la liste se
+décide à la main** : une cible est une génération avec ses années de production, ce que la
+donnée ne porte pas. Retenir un candidat = lui donner ses générations, ses années, et ses
+règles dans `models.csv`, comme pour toute cible.
+
 Liste cible (~240 générations, 1990–2015, segments `SPORTIVE`, `GTI`, `COUPE`, `ROADSTER`,
 `PREMIUM`, `SUPERCAR`). Ses **marques** définissent le périmètre de la couverture.
 

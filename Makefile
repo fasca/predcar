@@ -1,4 +1,4 @@
-.PHONY: install fetch-uk fetch-nl fetch-de ingest-uk ingest-nl ingest-de compress-nl normalize score export site validate test lint
+.PHONY: install fetch-uk fetch-nl fetch-de ingest-uk ingest-nl ingest-de compress-nl normalize score export site candidates validate test lint
 
 install:
 	uv sync
@@ -35,6 +35,9 @@ export:              ## Evidence bundle → reports/<date>/ (commit it so the re
 
 site:                ## Static site from the latest reports/<date>/gold/ → site/dist/
 	uv run predcar site
+
+candidates:          ## Models that shrink like targets but are not one → reports/<date>/candidates.csv
+	uv run predcar candidates
 
 validate:            ## Check silver invariants
 	uv run predcar validate

@@ -98,6 +98,12 @@ Usage MVP : dénominateur ventes pour les modèles vendus en France ; pas de sto
 
 Résultats d'enchères publics : Collecting Cars, Car & Classic, Catawiki, Bring a Trailer (US, référence), Aguttes/Artcurial/Bonhams. Ventes réelles, pas prix demandés. Marketplaces (AutoScout24, mobile.de, LeBonCoin) : uniquement si valeur démontrée, via Scrapling, avec respect robots.txt et rate limiting.
 
+**Vérifié le 2026-09-14, écarté** : les cinq sites d'enchères ferment l'accès automatisé
+(403 dès `robots.txt` chez Car & Classic et Catawiki, 403 sur les ventes chez Collecting Cars,
+`ClaudeBot` interdit nommément chez Aguttes, Bring a Trailer injoignable). Aucune API, aucun
+jeu ouvert. Le respect de `robots.txt` étant la condition posée ici même, la piste est fermée
+sans contournement. Détail dans `docs/SOURCES.md`.
+
 ## 3. Modèle de données
 
 ```

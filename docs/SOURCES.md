@@ -17,3 +17,22 @@ re-téléchargeables depuis gov.uk avec tout leur historique. Le workflow
 
 Règle (SPEC §9) : toute URL incertaine est vérifiée par requête HTTP et l'URL finale consignée
 ici avec la date. Le schéma observé de chaque source est documenté dans `docs/sources/<source>.md`.
+
+## Résultats d'enchères (phase 3) — vérifiés le 2026-09-14, écartés
+
+La spec conditionne tout scraping au respect de `robots.txt` et prévient : « fragile, coûteux,
+risque légal (CGU, DataDome, RGPD) ». Vérification par requêtes HTTP simples, sans
+contournement :
+
+| Site | `robots.txt` | Page de résultats | Constat |
+|---|---|---|---|
+| Collecting Cars | `Allow: /`, `Crawl-delay: 1`, GPTBot/CCBot interdits | `/for-sale?status=sold` → **403** | protection anti-robot sur les ventes |
+| Car & Classic | **403 sur `robots.txt` lui-même** | `/auctions/sold` → 403 | accès automatisé refusé d'emblée |
+| Catawiki | **403 sur `robots.txt`** | — | idem |
+| Bring a Trailer | `Crawl-delay: 1`, `/search/` interdit | `/auctions/results/` → délai dépassé | injoignable en automatique |
+| Aguttes | `User-agent: ClaudeBot → Disallow: /` (Amazonbot, CCBot, Bytespider idem) | — | interdit **nommément** aux robots d'IA |
+
+Aucun de ces sites n'expose d'API ni de jeu de données ouvert. Passer outre un 403 ou une
+interdiction explicite reviendrait à contourner une protection : **exclu**, quelle que soit la
+valeur des données. La piste est fermée tant que ces sites ne publient pas leurs résultats
+autrement.

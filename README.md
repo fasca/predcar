@@ -125,6 +125,7 @@ committer**, puis appelle le déploiement. Activer Pages une fois :
 | `make normalize` | Applique `mapping/` → `data/silver/fleet_stock.parquet`, gate de couverture |
 | `make score` | Indicateurs (stock, attrition, SORN, inflexion, rareté) + score v1 → `data/gold/` |
 | `make export` | Dossier de preuves `reports/<date>/` à committer pour analyse à distance |
+| `make candidates` | Modèles qui se raréfient comme des cibles sans en être → `reports/<date>/candidates.csv`, à trier à la main |
 | `make site` | Site statique `site/dist/` depuis le dernier `reports/<date>/gold/` (classement, pages modèle, méthodologie, CSV) |
 | `make validate` | Invariants silver (stock ≥ 0, clés uniques, statuts) |
 | `make test` / `make lint` | pytest / ruff |

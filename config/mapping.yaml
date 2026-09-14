@@ -17,3 +17,14 @@ unknown_labels:
   - "ONBEKEND"           # RDW
   - "SONSTIGE/NICHT GETYPT"  # KBA: "other / not typed"
   - "SONSTIGE HERSTELLER"    # KBA: "other manufacturers"
+
+# `predcar candidates`: models mapped to a model_gen, absent from target_models.csv, whose
+# fleet shrank the way targets do. A proposal list only — the target list is an editorial
+# decision and generations need production years the data does not carry.
+candidates:
+  series: VEH0120             # the long GB history, model_gen level
+  country: GB
+  stock_peak_min: 500         # ignore models that never had a real fleet
+  stock_now_max: 20000        # ignore models still too common to be scarce
+  loss_min: 0.5               # at least half the peak fleet gone
+  exclude_model_gen: "^(OTHER|LEGACY|VAN$|COMMERCIAL)"   # catch-alls, never candidates
