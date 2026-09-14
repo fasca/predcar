@@ -1,8 +1,8 @@
 {
-  "exported_at": "2026-09-14T08:12:06+00:00",
+  "exported_at": "2026-09-14T08:26:09+00:00",
   "git": {
-    "sha": "f09d7963790ee14a991a6fc29bd2f36a18ac3be8",
-    "branch": "claude/de-au-score",
+    "sha": "a9c732c40be6fd2404410cd3c8fb5276e82f2eba",
+    "branch": "claude/kba-millesimes-manquants",
     "dirty": true
   },
   "versions": {
@@ -26,13 +26,13 @@
     "gold": "ok"
   },
   "counts": {
-    "labels_target_makes": 110046,
-    "unmapped_rows": 27154,
-    "unmapped_count": 63078419,
+    "labels_target_makes": 110100,
+    "unmapped_rows": 27173,
+    "unmapped_count": 66821559,
     "anomalies": 82,
     "gold_cohorts_rows": 25491,
     "gold_indicators_rows": 703,
-    "gold_reference_stock_rows": 81,
+    "gold_reference_stock_rows": 595,
     "gold_scores_rows": 242,
     "gold_stock_series_rows": 3013
   },
@@ -49,7 +49,10 @@
     "gold/reference_stock.csv",
     "gold/scores.csv",
     "gold/stock_series.csv",
+    "raw/de_kba/2019-01-01/MANIFEST.json",
     "raw/de_kba/2020-01-01/MANIFEST.json",
+    "raw/de_kba/2021-01-01/MANIFEST.json",
+    "raw/de_kba/2022-01-01/MANIFEST.json",
     "raw/de_kba/2023-01-01/MANIFEST.json",
     "raw/de_kba/2024-01-01/MANIFEST.json",
     "raw/de_kba/2025-01-01/MANIFEST.json",

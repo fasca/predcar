@@ -76,7 +76,7 @@ REFERENCE_SCHEMA = {
 
 
 def reference_stock(stock: pl.DataFrame, targets: list[TargetModel]) -> pl.DataFrame:
-    """Latest national stock per (make, model_gen) for the series that cannot be scored.
+    """Annual national stock per (make, model_gen) for the series that cannot be scored.
 
     Germany (KBA FZ 2.2) publishes its fleet by trade name with **no first-registration year**,
     so a model's stock cannot be split between its generations. Feeding it to the score would
@@ -88,8 +88,13 @@ def reference_stock(stock: pl.DataFrame, targets: list[TargetModel]) -> pl.DataF
     So the figure is published alongside the score, never inside it, with the number of target
     generations it covers so the page can say what it does and does not mean.
 
+    The whole series is published, not just its last point: the German vintages are annual
+    and consecutive since 2019, so the page can show how a model's national fleet moved even
+    though that movement cannot be attributed to one generation.
+
     Returns:
-        One row per (make, model_gen) present in both the targets and the reference series.
+        One row per (make, model_gen, country, year) present in both the targets and the
+        reference series.
     """
     if not targets:
         return pl.DataFrame(schema=REFERENCE_SCHEMA)
@@ -113,17 +118,16 @@ def reference_stock(stock: pl.DataFrame, targets: list[TargetModel]) -> pl.DataF
     if not rows.height:
         return pl.DataFrame(schema=REFERENCE_SCHEMA)
     keys = ["make", "model_gen", "country", "series"]
-    latest = (
+    annual = (
         rows.with_columns(pl.col("period").dt.year().alias("year"))
         .group_by(*keys, "year")
         .agg(pl.col("count").sum().alias("stock"))
     )
-    latest = latest.filter(pl.col("year") == pl.col("year").max().over(keys))
     return (
-        latest.join(wanted, on=["make", "model_gen"], how="inner")
+        annual.join(wanted, on=["make", "model_gen"], how="inner")
         .select(list(REFERENCE_SCHEMA))
         .cast(REFERENCE_SCHEMA)
-        .sort("make", "model_gen", "country")
+        .sort("make", "model_gen", "country", "year")
     )
 
 

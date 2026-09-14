@@ -404,21 +404,29 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
         for s in sorted(cited):
             info = SERIES_INFO.get(s, {"name": s, "detail": "", "url": "", "licence": ""})
             sources.append({**info, "country": c["label"], "latest_year": c["latest_year"]})
-    reference = [
-        {
-            "country": r["country"],
-            "label": COUNTRY_LABELS.get(r["country"], r["country"]),
-            "series": r["series"],
-            "year": r["year"],
-            "stock": r["stock"],
-            "generations": r["target_generations"],
-        }
-        for r in gold.reference.filter(
+    reference = []
+    for country, group in (
+        gold.reference.filter(
             (pl.col("make") == row["make"]) & (pl.col("model_gen") == row["model_gen"])
         )
-        .sort("country")
-        .iter_rows(named=True)
-    ]
+        .sort("year")
+        .group_by("country", maintain_order=True)
+    ):
+        name = country[0] if isinstance(country, tuple) else country
+        years, stocks = group["year"].to_list(), group["stock"].to_list()
+        first, last = stocks[0], stocks[-1]
+        reference.append(
+            {
+                "country": name,
+                "label": COUNTRY_LABELS.get(name, name),
+                "series": group["series"][0],
+                "year": years[-1],
+                "stock": last,
+                "generations": group["target_generations"][0],
+                "from_year": years[0],
+                "change": (last - first) / first if len(years) > 1 and first else None,
+            }
+        )
     retention, retention_skipped = _cohort_traces(cohorts)
     charts = {
         "stock": _series_traces(series, "stock"),

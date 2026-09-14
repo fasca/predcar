@@ -11,6 +11,34 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-14 — PR : les 8 millésimes allemands, et la série de référence
+**Corrigé** — deux formes d'agrégat que le contrôle de somme signalait sans les nommer :
+- une **ligne de sous-total publiée sans son libellé** (2019, 3 124 094 véhicules : le total
+  d'Audi). Elle se reconnaît à ceci qu'elle porte un comptage mais **ni libellé ni colonne
+  technique** — une vraie ligne de véhicule a toujours un Typ-Schl.-Nr., une puissance ou un
+  carburant. Critère vérifié sur les huit millésimes : une seule ligne concernée, **aucun faux
+  positif** ;
+- une **deuxième orthographe fautive** du sous-total : `HYUNDAI MOTOR (ROK) ZUSAMMEM`, avec un
+  `M` final (2021 et 2022), après le `ZSAMMEN` sans `U` de 2019.
+
+**Les 8 millésimes 2019 → 2026 sont désormais exploitables** (contre 5), dont cinq à l'écart
+**exactement nul** ; les trois autres à +0,014 %, −0,05 % et −0,31 %. **Aucune tolérance n'a
+été assouplie** — les deux correctifs sont vérifiés par mutation.
+
+**Ajouté** — `metrics.reference_stock()` publie la **série annuelle** et non plus le seul
+dernier point : 595 lignes, 81 modèles, 2019 → 2026 sans trou. La page modèle affiche
+l'évolution : « Allemagne · KBA FZ 2.2 · 2026 · 166 013 · **+24,9 % depuis 2019** · les 5
+générations cibles de ce modèle, confondues ».
+
+**Ce que cela ne change pas** — l'Allemagne **reste hors du score**. J'avais annoncé que
+récupérer ces millésimes débloquerait l'attrition allemande : c'est faux. Le blocage n'a jamais
+été le nombre de points mais l'**absence d'année de première immatriculation**, qui empêche de
+répartir un modèle entre ses générations (`docs/methodology.md` §3 bis). Huit points au lieu de
+cinq enrichissent la donnée publiée, pas le score.
+
+Couverture DE **98,9 %** sur les 8 millésimes (312,7 M de véhicules-années), GB et NL
+inchangés, `ranking.csv` **inchangé**, 265 tests, bundle à 0 erreur.
+
 ### 2026-09-14 — PR : l'Allemagne publiée à côté du score, pas dedans
 **Décision** — après mesure, l'Allemagne **n'entre pas** dans le score, contrairement à ce qui
 était envisagé. Le KBA publie le parc par nom commercial **sans année de première

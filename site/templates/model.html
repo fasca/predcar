@@ -113,7 +113,7 @@
     qui n'ont qu'une génération cible (<a href="{{ root }}methodologie.html">méthodologie</a>).</p>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Pays</th><th>Série</th><th class="num">Année</th><th class="num">Parc du modèle</th><th>Portée</th></tr></thead>
+    <thead><tr><th>Pays</th><th>Série</th><th class="num">Année</th><th class="num">Parc du modèle</th><th class="num">Évolution</th><th>Portée</th></tr></thead>
     <tbody>
     {% for r in reference %}
       <tr>
@@ -121,6 +121,7 @@
         <td>{{ series_info.get(r.series, {}).get('name', r.series) }}</td>
         <td class="num">{{ r.year | fmt_year }}</td>
         <td class="num">{{ r.stock | fmt_int }}</td>
+        <td class="num">{% if r.change is not none %}{{ ('+' if r.change >= 0 else '') ~ (r.change | fmt_pct) }} depuis {{ r.from_year }}{% else %}—{% endif %}</td>
         <td>{% if r.generations > 1 %}les {{ r.generations }} générations cibles de ce modèle, confondues{% else %}cette génération{% endif %}</td>
       </tr>
     {% endfor %}
