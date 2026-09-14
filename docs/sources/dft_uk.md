@@ -70,3 +70,33 @@ car DfT fournit deux niveaux (`GenModel` regroupé, `Model` variante exacte) et 
 au niveau `GenModel` tout en ayant besoin de la variante pour détecter les générations depuis le
 libellé (§4). `fleet_new_reg` porte aussi `make_raw`, `model_raw`, `source_file` pour la
 traçabilité.
+
+## Inventaire complet de la page (observé le 2026-09-14)
+
+La page publie **12 fichiers CSV** pour 9 tables. En-têtes lus par requête `Range` (2,5 Ko
+chacun), tailles par `HEAD`. Édition **identique** à l'archive du 2026-09-08 pour les quatre
+fichiers utilisés (mêmes tailles au byte près) : seules les URLs `media/<id>/` ont tourné.
+
+| Table | Taille | Colonnes d'identification | Contenu | Verdict |
+|---|---|---|---|---|
+| VEH0120_GB | 66 Mo | `BodyType, Make, GenModel, Model, Fuel, LicenceStatus` + trimestres 1994→ | parc par modèle, Licensed/SORN | **utilisée** |
+| VEH0120_UK | 40 Mo | idem | idem, GB + Irlande du Nord | écartée : on garde GB, cohérent avec VEH0124 |
+| VEH0124_AM / _NZ | 55 + 39 Mo | `… YearFirstUsed, YearManufacture, LicenceStatus` + années 2014→ | cohortes par génération | **utilisée** |
+| VEH0160_GB | 28 Mo | `BodyType, Make, GenModel, Model, Fuel` + trimestres 2001→ | immatriculations neuves | **utilisée** |
+| VEH0160_UK | 10 Mo | idem | idem, avec Irlande du Nord | écartée, même raison |
+| **VEH0220** | 42 Mo | `BodyType, Make, GenModel, Model, Fuel, EngineSizeSimple, EngineSizeDesc, LicenceStatus` + années 2014→ | parc **annuel** par modèle × **cylindrée** × statut | redondant avec VEH0120, **plus la cylindrée** |
+| **VEH0270** | 10 Mo | idem sans `LicenceStatus` | immatriculations neuves **annuelles** par modèle × cylindrée (vérifié : Abarth 124 = 20 en 2018-2019 dans les deux tables) | redondant avec VEH0160, plus la cylindrée |
+| VEH0125 | 242 Mo | `LSOA21CD, LSOA21NM, BodyType, Keepership, LicenceStatus` + trimestres | parc par **petite zone géographique** | sans modèle : inutilisable ici |
+| VEH0135 / VEH0145 | 62 + 61 Mo | `LSOA21CD, LSOA21NM, Fuel, Keepership` + trimestres | parc par zone × carburant (les 2,5 premiers Ko sont identiques ; l'une est probablement Licensed seul) | sans modèle : inutilisable |
+| VEH0520 | 29 Mo | `Geography, TaxClass, WheelPlan, … MaximumGrossWeightBand, YearFirstUsed, Fuel` | **poids lourds** par catégorie de poids | hors sujet |
+
+**Ce que l'inventaire établit :**
+
+- **Aucune table ne donne les sorties du parc** (casse, export, destruction). L'attrition que le
+  projet calcule — la disparition d'une année sur l'autre — reste la seule mesure, et elle
+  confond casse et export ; c'est déjà documenté (`docs/methodology.md` §6).
+- **Le seul gain possible est la cylindrée** (VEH0220 / VEH0270), comme discriminant de version
+  là où le libellé `Model` est ambigu. Le mapping GB est à 99,0 % ; le reste non mappé est
+  dominé par `MODEL MISSING`, pas par des ambiguïtés de version. Gain marginal, non prioritaire.
+- Les variantes `_UK` ajoutent l'Irlande du Nord ; VEH0124 n'existe qu'en GB, donc mélanger les
+  périmètres créerait un écart artificiel entre séries. On reste en GB.

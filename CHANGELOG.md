@@ -11,6 +11,15 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-14 — PR : inventaire des 9 tables de la page DfT (Source-First)
+Les 12 CSV de la page inventoriés, en-têtes lus par requête `Range`, table par table dans
+`docs/sources/dft_uk.md`. **Aucune table ne donne les sorties du parc** (casse, export) — la
+question posée. VEH0220 et VEH0270 sont les jumelles annuelles de VEH0120 et VEH0160 avec la
+**cylindrée** en plus (seul gain possible, marginal : le mapping GB est à 99,0 %) ; VEH0125,
+VEH0135, VEH0145 sont géographiques sans modèle ; VEH0520 concerne les poids lourds. Édition
+vérifiée **identique** à l'archive (tailles au byte près), seules les URLs ont tourné. Rien à
+ingérer, aucun parseur écrit.
+
 ### 2026-09-14 — PR : la France écartée après vérification (Source-First)
 **Vérifié, puis écarté** — `docs/SPEC.md` §2.4 donnait une piste : « immatriculations de
 voitures neuves par marque et modèle » sur data.gouv.fr. Elle ne donne rien.

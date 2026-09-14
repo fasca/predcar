@@ -122,6 +122,11 @@
 ## Phase 3
 - [ ] Enchères, extrapolation Weibull publiée, newsletter/alertes
 
+## Pistes vérifiées et écartées
+- 2026-09-14 : les 9 tables de la page DfT inventoriées (`docs/sources/dft_uk.md`). Aucune ne
+  donne la casse ou l'export ; VEH0220/VEH0270 n'ajoutent que la cylindrée (gain marginal) ;
+  VEH0125/0135/0145 sont géographiques sans modèle ; VEH0520 = poids lourds. Rien à ingérer.
+
 ---
 
 ## Review Notes
