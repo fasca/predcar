@@ -455,11 +455,11 @@ def test_per_country_threshold_still_gates_above_its_own_value(
         ("CITROEN", "SAXO VTR", 1999, "SAXO", None),
         ("CITROEN", "SAXO VTS", 1999, "SAXO VTS", "S0"),
         ("PEUGEOT", "306 XSI", 1995, "306", None),
-        ("FIAT", "PUNTO HGT 16V", 2001, "PUNTO HGT", None),
+        ("FIAT", "PUNTO HGT 16V", 2001, "PUNTO HGT", "176"),
         ("MITSUBISHI", "LANCER EVO VI", 2005, "LANCER EVOLUTION", "V_VI"),  # label beats year
         ("MITSUBISHI", "LANCER EVO I.V.", None, "LANCER EVOLUTION", "I_IV"),
         ("MITSUBISHI", "LANCER EVOLUTION GSR", 2005, "LANCER EVOLUTION", "VII_IX"),
-        ("VAUXHALL", "CORSA GSI 16V", 2001, "CORSA GSI", None),
+        ("VAUXHALL", "CORSA GSI 16V", 2001, "CORSA GSI", "C"),
         ("SAAB", "09-MAR", 2005, "9-3", None),  # Excel-mangled "9-3" in the DfT file
         ("MERCEDES", "300 SL AUTO", 1986, "SL", "R107"),
         ("MERCEDES", "190 SL", None, "SL", None),

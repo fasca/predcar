@@ -85,7 +85,7 @@
     "count_sum": 3510828288,
     "distinct_make_raw": 1842,
     "distinct_model_raw": 135100,
-    "mapped_share": 0.8654576936688964
+    "mapped_share": 0.8654576968020602
   },
   {
     "file": "fleet_stock_de_kba_2019.parquet",
