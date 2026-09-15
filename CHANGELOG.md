@@ -1,15 +1,22 @@
 # Changelog
 
 Toutes les évolutions notables de predcar, par pull request fusionnée. Format inspiré de
-[Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) ; pas encore de version publiée,
-tout est dans « Non publié » jusqu'à la première release (fin de phase 1).
+[Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). La version 1.0.0 (2026-09-15) clôt
+les trois phases de la spec ; les entrées suivantes iront dans une section « Non publié »
+au-dessus d'elle.
 
 Chaque entrée signale aussi ce qui reste **non validé sur données réelles**. L'accès aux
 sources dépend de l'environnement et se revérifie à chaque session (leçon du 2026-09-09) :
 il fonctionne depuis le WSL2 de l'utilisateur et, au 2026-09-12, depuis l'environnement
 Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
-## Non publié
+## [1.0.0] — 2026-09-15
+
+Première version publiée. Tout ce que `docs/SPEC.md` prévoyait a soit été livré, soit été
+vérifié et écarté avec preuve : score v1 sur GB + NL (262 cibles, 249 classées), Allemagne
+publiée à côté du score, projection Weibull, outil de candidats, page « Évolutions » et flux
+Atom, refresh trimestriel automatique ; France, enchères, STATS19, Google Trends et YouTube
+écartés (`docs/SOURCES.md`). Site : https://fasca.github.io/predcar/
 
 ### 2026-09-15 — PR : signaux phase 2 (STATS19, Google Trends, YouTube) vérifiés et écartés
 **Ajouté** — `docs/sources/stats19_uk.md` : schéma observé de la table `vehicle` STATS19
