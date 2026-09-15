@@ -149,6 +149,12 @@ ont `rarity` + `sorn_ratio` = 0.55 et ne sont pas publiés non plus.
 - `rarity` et `conservation` sont relatives à la population cible : ajouter des modèles
   déplace les valeurs.
 - La projection Weibull (§3 ter) prolonge une tendance ; elle ne sait rien d'un choc à venir (réglementation, carburant, mode).
+- **Ce qui n'entre pas dans le score, et pourquoi.** Les signaux hors parc prévus par la spec
+  ont été vérifiés le 2026-09-15 et écartés : STATS19 ne nomme que 593 modèles courants (165 des
+  200 modèles cibles n'y ont aucun véhicule — pas de donnée n'est pas zéro accident) ; Google
+  Trends n'a pas d'API ouverte (scraping) ; YouTube exige une clé et mesure la notoriété, pas la
+  raréfaction. Le score v1 ne mesure donc que ce que les registres officiels observent :
+  `docs/SOURCES.md`, `docs/sources/stats19_uk.md`.
 
 ## 7. Sorties (`data/gold/`)
 

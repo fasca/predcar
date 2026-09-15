@@ -11,6 +11,19 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-15 — PR : signaux phase 2 (STATS19, Google Trends, YouTube) vérifiés et écartés
+**Ajouté** — `docs/sources/stats19_uk.md` : schéma observé de la table `vehicle` STATS19
+(fichier complet 2021–2025, 937 265 lignes) et la raison de l'écarter : `generic_make_model`
+est une liste fermée de 593 modèles courants, hors liste → `-1` ; aucun Ferrari, Aston Martin,
+Lotus, TVR ; **35 des 200 modèles cibles seulement ont un véhicule accidenté**, les plus
+courants. Un taux d'accident ne couvrirait que 17 % des cibles, les moins rares — biais orienté
+contre le score. Section « Signaux phase 2 » dans `docs/SOURCES.md` : Google Trends (429, pas
+d'API, `pytrends` = scraping) et YouTube Data API (403 sans clé, signal de notoriété) écartés.
+
+**Modifié** — `docs/SPEC.md` §2.5, §2.6, §5, §7, `docs/methodology.md` §6, `CLAUDE.md`,
+`tasks/todo.md` : le score v1 reste le score ; toutes les pistes de la spec ont une réponse
+vérifiée. Aucun changement de code.
+
 ### 2026-09-15 — PR : page « Évolutions » et flux Atom (alertes sans compte)
 **Ajouté** — `predcar/changes.py` compare les `ranking.csv` des deux derniers bundles committés
 et le site publie le résultat : `evolutions.html` (un bloc par type de changement, lien vers la

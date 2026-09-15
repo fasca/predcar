@@ -142,7 +142,8 @@ tasks/         → todo.md (plan), lessons.md (rules learned from corrections)
   vintage). Header row moves between vintages, subtotals change shape; FZ 10 does not exist
   and FZ 17 is make-level only (`docs/sources/kba_de.md`)
 - **FR SDES / data.gouv.fr**: new registrations by model only (no stock by model)
-- **STATS19** (UK accidents), **Google Trends** (pytrends), **YouTube Data API**
+- **STATS19** (UK accidents), **Google Trends** (pytrends), **YouTube Data API** — all three
+  verified and ruled out on 2026-09-15 (`docs/SOURCES.md`, `docs/sources/stats19_uk.md`)
 
 ### Phase 3 (optional)
 - Public auction results (Collecting Cars, Car & Classic, Catawiki, BaT, Aguttes…)

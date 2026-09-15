@@ -83,15 +83,15 @@ Usage MVP : dénominateur ventes pour les modèles vendus en France ; pas de sto
 
 ### 2.5 Accidents / sinistralité (phase 2)
 
-- **STATS19** (UK, DfT road casualty statistics) : https://www.data.gov.uk/dataset/cb7ae6f0-4be6-4935-9277-47e5ce24a11f/road-safety-data — table `vehicle` avec `generic_make_model`, âge et sexe du conducteur, gravité. Normaliser par le parc VEH0120 → taux d'accident par modèle et par tranche d'âge conducteur.
+- **STATS19** (UK, DfT road casualty statistics) : https://www.data.gov.uk/dataset/cb7ae6f0-4be6-4935-9277-47e5ce24a11f/road-safety-data — table `vehicle` avec `generic_make_model`, âge et sexe du conducteur, gravité. Normaliser par le parc VEH0120 → taux d'accident par modèle et par tranche d'âge conducteur. **Vérifié le 2026-09-15, écarté** : `generic_make_model` est une liste fermée de 593 modèles courants, 165 des 200 modèles cibles n'y ont aucun véhicule (`docs/sources/stats19_uk.md`).
 - **Euro NCAP** (https://www.euroncap.com) : notes de sécurité par modèle/année (pas d'API officielle ; à scraper léger ou saisir manuellement pour la liste cible).
 - Group rating ABI/Thatcham (UK, 1–50) : proxy coût de réparation/vol.
 - France BAAC (ONISR) : pas de modèle → exclu.
 
 ### 2.6 Attachement / sentiment (phase 2)
 
-- Google Trends via `pytrends` : requêtes `"<modèle> à vendre"`, `"<modèle> for sale"`, `"<modèle> restauration"`, geo UK/FR/DE/NL.
-- YouTube Data API : nombre de vidéos et vues cumulées pour `<marque> <modèle>` (quota gratuit suffisant).
+- Google Trends via `pytrends` : requêtes `"<modèle> à vendre"`, `"<modèle> for sale"`, `"<modèle> restauration"`, geo UK/FR/DE/NL. **Vérifié le 2026-09-15, écarté** : 429 dès la première requête, pas d'API ouverte, `pytrends` est du scraping (`docs/SOURCES.md`).
+- YouTube Data API : nombre de vidéos et vues cumulées pour `<marque> <modèle>` (quota gratuit suffisant). **Vérifié le 2026-09-15, écarté** : 403 sans clé Google Cloud (décision de l'utilisateur) ; signal de notoriété, toutes générations confondues (`docs/SOURCES.md`).
 - Effectifs de communautés : subreddits, groupes Facebook (saisie manuelle pour la liste cible, pas de scraping).
 
 ### 2.7 Prix (phase 3, optionnel)
@@ -153,7 +153,7 @@ Par (model_gen, generation, country) puis agrégé Europe :
 - **Ratio SORN** (UK) = SORN / (SORN + Licensed) : part déjà mise en collection.
 - **Point d'inflexion** : année où l'attrition passe sous la médiane du segment (début de « collectorisation »).
 - **Rareté absolue** : Stock actuel, seuils < 500 / < 100 / < 20 exemplaires.
-- Phase 2 : taux d'accident normalisé (STATS19/VEH0120), tendance Google Trends 5 ans, volume YouTube.
+- Phase 2 : taux d'accident normalisé (STATS19/VEH0120), tendance Google Trends 5 ans, volume YouTube — **les trois vérifiés et écartés le 2026-09-15** (`docs/SOURCES.md`) ; le score v1 reste le score.
 
 Score composite v1 (pondérations explicites dans `config/score.yaml`, toutes révisables) :
 `score = 0.35·rareté + 0.25·conservation + 0.20·ratio_SORN + 0.20·point_inflexion_récent`.
@@ -182,7 +182,7 @@ Site statique généré depuis `gold/` :
 4. Calcul stock/survie/attrition/SORN, score v1.
 5. Site statique déployé sur GitHub Pages, refresh trimestriel par GitHub Actions.
 
-**Phase 2** : KBA (DE), immatriculations FR, STATS19, Google Trends, YouTube.
+**Phase 2** : KBA (DE), immatriculations FR, STATS19, Google Trends, YouTube. *Bilan : KBA publié à côté du score ; FR, STATS19, Trends, YouTube vérifiés et écartés (`docs/SOURCES.md`).*
 
 **Phase 3** : enchères, extrapolation Weibull publiée, newsletter/alertes.
 
