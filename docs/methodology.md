@@ -161,3 +161,18 @@ ont `rarity` + `sorn_ratio` = 0.55 et ne sont pas publiés non plus.
 | `scores.parquet` | composantes brutes et normalisées, poids couverts, score, rang |
 | `cohorts.parquet` | courbes de rétention par (cible, pays, cohorte d'immatriculation) : `retention = stock / stock maximal observé de la cohorte` (VEH0124, RDW), affichées sur la page modèle du site |
 | `ranking.csv` | export du classement (SPEC §6) : **uniquement les cibles publiées** (score non nul) ; les lignes non publiées restent dans `scores.parquet` à titre de diagnostic |
+
+## 8. Évolutions et flux
+
+Le projet n'a ni compte ni liste de diffusion. Son alerte est un **diff** : à chaque refresh
+trimestriel, un nouveau bundle de preuves est committé, le site est reconstruit depuis les
+**deux derniers**, et la page « Évolutions » — reprise dans un flux Atom auquel on s'abonne
+sans laisser d'adresse — liste ce qui a changé.
+
+Est un changement : une cible **publiée** ou **sortie** du classement, un **palier de rareté**
+franchi vers le bas (`>=500` → `<500` → `<100` → `<20`, seuils de `rarity.thresholds`), un
+**point d'inflexion apparu**, une **entrée ou sortie du top N** (`alerts.top_n`).
+
+N'en est pas un : **un mouvement de rang seul**. Dès qu'une cible s'ajoute, tous les rangs en
+dessous se décalent — 169 mouvements de dix places ou plus le jour où 21 cibles sont entrées.
+Le signaler noierait le reste.

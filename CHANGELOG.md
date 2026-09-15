@@ -11,6 +11,26 @@ Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
 ## Non publié
 
+### 2026-09-15 — PR : page « Évolutions » et flux Atom (alertes sans compte)
+**Ajouté** — `predcar/changes.py` compare les `ranking.csv` des deux derniers bundles committés
+et le site publie le résultat : `evolutions.html` (un bloc par type de changement, lien vers la
+page modèle) et `feed.xml` (Atom, une entrée par refresh, découvrable via `<link rel="alternate">`).
+Six types de changement : cible publiée / sortie du classement, palier de rareté franchi,
+point d'inflexion apparu, entrée / sortie du top N (`alerts.top_n: 50` dans `config/score.yaml`).
+**Un mouvement de rang seul n'est pas signalé** : dès qu'une cible s'ajoute, tous les rangs bougent
+(169 mouvements ≥ 10 places le 14/09 pour 21 entrées). `export.report_dirs()` liste les bundles.
+Vérifié sur 13/09 → 14/09 : 21 publiées, 1 palier (106 Rallye S2, 233 → 86), 5 inflexions,
+3 entrées et 10 sorties du top 50. `docs/methodology.md` §8, README, ARCHITECTURE.
+
+**Corrigé** — `rarity_tier` était calculé par pays mais mis à null sur la ligne Europe, donc
+absent de `ranking.csv` alors que c'est un livrable de la spec §5. Il est désormais calculé
+depuis le parc européen (`metrics.rarity_tier_expr`) et exporté. Bundle `reports/2026-09-15/`
+identique au 14/09 à cette colonne près (vérifié : 249 lignes, rangs et parcs inchangés).
+
+**Revue des 33 candidats restants** : aucun second lot (modèles de base dont la version sportive
+est déjà cible ; Audi A2, BMW 7 Series, allroad C5, Delta hors Integrale, Saab 900 examinés et
+écartés). Détail dans `tasks/todo.md`.
+
 ### 2026-09-15 — PR : premier lot de cibles issu de `candidates.csv` (243 → 262)
 **Ajouté** — 19 générations choisies parmi les 41 candidats pour leur intérêt collector avéré
 ou probable : Audi Coupé B3 et Cabriolet B4, Citroën C6, Fiat Punto HGT, Ford Escort RS Turbo,

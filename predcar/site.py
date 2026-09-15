@@ -21,9 +21,9 @@ import markdown
 import polars as pl
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from predcar import metrics
+from predcar import changes, metrics
 from predcar.config import ScoreConfig, load_score_config
-from predcar.export import latest_report
+from predcar.export import latest_report, report_dirs
 from predcar.normalize import TARGETS_FILE, TargetModel, load_targets
 from predcar.paths import (
     DOCS_DIR,
@@ -57,6 +57,25 @@ COMPONENT_COLUMNS = {
     "conservation": "conservation",
     "sorn_ratio": "sorn_ratio_c",
     "recent_inflection_point": "recent_inflection_point",
+}
+# Published site: the feed needs absolute identifiers.
+SITE_URL = "https://fasca.github.io/predcar/"
+CHANGE_LABELS = {
+    "published": (
+        "Nouvelles au classement",
+        "Cibles publiées pour la première fois, ou de nouveau.",
+    ),
+    "unpublished": ("Sorties du classement", "Cibles dont le score n'est plus publié."),
+    "tier_down": (
+        "Palier de rareté franchi",
+        "Le parc est passé sous un seuil : moins de 500, 100 ou 20 véhicules.",
+    ),
+    "inflection": (
+        "Point d'inflexion apparu",
+        "L'attrition est passée sous la médiane des pairs : la disparition ralentit.",
+    ),
+    "top_in": ("Entrées dans le top", "Cibles qui entrent dans les premières places."),
+    "top_out": ("Sorties du top", "Cibles qui en sortent."),
 }
 COUNTRY_LABELS = {
     "GB": "Royaume-Uni",
@@ -490,7 +509,7 @@ def model_context(row: dict, gold: Gold, cfg: ScoreConfig) -> dict:
 def _environment(templates_dir: Path) -> Environment:
     env = Environment(
         loader=FileSystemLoader(templates_dir),
-        autoescape=select_autoescape(["html"]),
+        autoescape=select_autoescape(["html", "xml"]),
         trim_blocks=True,
         lstrip_blocks=True,
     )
@@ -544,6 +563,19 @@ def resolve_gold_dir(
     return bundle / "gold", date.fromisoformat(bundle.name)
 
 
+def previous_gold_dir(bundle_date: date | None, reports_dir: Path = REPORTS_DIR) -> Path | None:
+    """The ``gold/`` of the bundle just before ``bundle_date``, for the « Évolutions » page.
+
+    None when the site is not built from a bundle, or when only one bundle exists.
+    """
+    if bundle_date is None:
+        return None
+    older = [
+        d for d in report_dirs(reports_dir, _BUNDLE_RANKING) if d.name < bundle_date.isoformat()
+    ]
+    return older[0] / "gold" if older else None
+
+
 def build(
     gold_dir: Path | None = None,
     out_dir: Path = SITE_DIST_DIR,
@@ -567,6 +599,17 @@ def build(
     built_on = built_on or bundle_date or date.today()
     gold = load_gold(gold_dir, mapping_dir)
     rows = ranking_rows(gold, cfg)
+    previous_dir = previous_gold_dir(bundle_date, reports_dir)
+    previous_date = date.fromisoformat(previous_dir.parent.name) if previous_dir else None
+    change_rows: list[dict] = []
+    if previous_dir is not None:
+        diff = changes.compare(
+            _read_table(previous_dir, "ranking"), _read_table(gold_dir, "ranking"), cfg
+        )
+        change_rows = [
+            {**r, "slug": slugify(r["make"], r["model_gen"], r["generation"])}
+            for r in diff.iter_rows(named=True)
+        ]
     env = _environment(templates_dir)
 
     if out_dir.exists():
@@ -578,6 +621,8 @@ def build(
     latest_year = gold.indicators["latest_year"].max() if gold.indicators.height else None
     base = {
         "built_on": built_on,
+        "previous_on": previous_date,
+        "change_count": len(change_rows),
         "latest_year": latest_year,
         "plotly_cdn": PLOTLY_CDN,
         "models_dir": MODELS_DIR,
@@ -608,6 +653,19 @@ def build(
         (out_dir / MODELS_DIR / f"{r['slug']}.html").write_text(
             template.render(**base, root="../", **model_context(r, gold, cfg)), encoding="utf-8"
         )
+    by_kind = {k: [r for r in change_rows if r["kind"] == k] for k in changes.KINDS}
+    (out_dir / "evolutions.html").write_text(
+        env.get_template("evolutions.html").render(
+            **base, root="./", by_kind=by_kind, kind_labels=CHANGE_LABELS, top_n=cfg.alerts.top_n
+        ),
+        encoding="utf-8",
+    )
+    (out_dir / "feed.xml").write_text(
+        env.get_template("feed.xml").render(
+            **base, by_kind=by_kind, kind_labels=CHANGE_LABELS, site_url=SITE_URL
+        ),
+        encoding="utf-8",
+    )
     (out_dir / "methodologie.html").write_text(
         env.get_template("methodology.html").render(
             **base, root="./", body=render_methodology(methodology_path)
@@ -623,6 +681,8 @@ def build(
     return {
         "index": out_dir / "index.html",
         "methodology": out_dir / "methodologie.html",
+        "changes": out_dir / "evolutions.html",
+        "feed": out_dir / "feed.xml",
         "ranking_csv": out_dir / RANKING_CSV,
         "models": out_dir / MODELS_DIR,
     }

@@ -110,6 +110,11 @@ site affiche est reproductible depuis le dépôt seul. La date affichée est cel
 Pour rendre un run local frais : `make site --gold-dir data/gold` (ou
 `uv run predcar site --gold-dir data/gold`).
 
+Le site publie aussi une page **Évolutions** et un **flux Atom** (`feed.xml`) : ce qui a changé
+entre les deux derniers bundles — cibles publiées ou sorties, paliers de rareté franchis,
+inflexions apparues, entrées et sorties du top 50. S'y abonner remplace la newsletter, sans
+compte ni adresse.
+
 Deux workflows GitHub : `pages.yml` construit et déploie sur Pages (push touchant `site/`,
 `reports/`, `docs/methodology.md`, ou *Run workflow*) ; `refresh.yml` rejoue le pipeline chaque
 trimestre après les publications DfT, **relance les tests sur le nouveau bundle avant de le

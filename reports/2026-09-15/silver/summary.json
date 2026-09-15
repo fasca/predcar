@@ -1,0 +1,428 @@
+[
+  {
+    "file": "fleet_new_reg.parquet",
+    "rows": 5036062,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2001-03-31",
+    "period_max": "2026-03-31",
+    "countries": [
+      "GB"
+    ],
+    "count_sum": 56125652,
+    "distinct_make_raw": 495,
+    "distinct_model_raw": 49123,
+    "mapped_share": 0.8649738982096814
+  },
+  {
+    "file": "fleet_new_reg_uk_dft.parquet",
+    "rows": 5036062,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2001-03-31",
+    "period_max": "2026-03-31",
+    "countries": [
+      "GB"
+    ],
+    "count_sum": 56125652,
+    "distinct_make_raw": 495,
+    "distinct_model_raw": 49123,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock.parquet",
+    "rows": 14930999,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "1994-12-31",
+    "period_max": "2026-09-08",
+    "countries": [
+      "DE",
+      "GB",
+      "NL"
+    ],
+    "statuses": [
+      "None",
+      "licensed",
+      "sorn"
+    ],
+    "count_sum": 3510828288,
+    "distinct_make_raw": 1842,
+    "distinct_model_raw": 135100,
+    "mapped_share": 0.8654576968020602
+  },
+  {
+    "file": "fleet_stock_de_kba_2019.parquet",
+    "rows": 3526,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2019-01-01",
+    "period_max": "2019-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 47102355,
+    "distinct_make_raw": 79,
+    "distinct_model_raw": 3362,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_de_kba_2020.parquet",
+    "rows": 3625,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2020-01-01",
+    "period_max": "2020-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 47715977,
+    "distinct_make_raw": 80,
+    "distinct_model_raw": 3459,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_de_kba_2021.parquet",
+    "rows": 3723,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2021-01-01",
+    "period_max": "2021-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 48223318,
+    "distinct_make_raw": 80,
+    "distinct_model_raw": 3549,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_de_kba_2022.parquet",
+    "rows": 3839,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2022-01-01",
+    "period_max": "2022-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 48540878,
+    "distinct_make_raw": 80,
+    "distinct_model_raw": 3663,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_de_kba_2023.parquet",
+    "rows": 3933,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2023-01-01",
+    "period_max": "2023-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 48763036,
+    "distinct_make_raw": 80,
+    "distinct_model_raw": 3752,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_de_kba_2024.parquet",
+    "rows": 4008,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2024-01-01",
+    "period_max": "2024-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 49098685,
+    "distinct_make_raw": 79,
+    "distinct_model_raw": 3824,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_de_kba_2025.parquet",
+    "rows": 4126,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2025-01-01",
+    "period_max": "2025-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 49339166,
+    "distinct_make_raw": 80,
+    "distinct_model_raw": 3934,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_de_kba_2026.parquet",
+    "rows": 4265,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2026-01-01",
+    "period_max": "2026-01-01",
+    "countries": [
+      "DE"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 49333688,
+    "distinct_make_raw": 79,
+    "distinct_model_raw": 4058,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_nl_rdw_2026-09-08.parquet",
+    "rows": 200664,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "2026-09-08",
+    "period_max": "2026-09-08",
+    "countries": [
+      "NL"
+    ],
+    "statuses": [
+      "None"
+    ],
+    "count_sum": 10799397,
+    "distinct_make_raw": 1448,
+    "distinct_model_raw": 83164,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "fleet_stock_uk_dft.parquet",
+    "rows": 14699290,
+    "columns": [
+      "country",
+      "period",
+      "make_raw",
+      "model_gen_raw",
+      "model_raw",
+      "make",
+      "model_gen",
+      "generation",
+      "year_first_reg",
+      "year_manufacture",
+      "status",
+      "count",
+      "source",
+      "source_file"
+    ],
+    "period_min": "1994-12-31",
+    "period_max": "2026-03-31",
+    "countries": [
+      "GB"
+    ],
+    "statuses": [
+      "licensed",
+      "sorn"
+    ],
+    "count_sum": 3111911788,
+    "distinct_make_raw": 491,
+    "distinct_model_raw": 53155,
+    "mapped_share": 0.0
+  },
+  {
+    "file": "mapping_coverage.parquet",
+    "rows": 4,
+    "columns": [
+      "country",
+      "total",
+      "mapped",
+      "unknown",
+      "coverage",
+      "table"
+    ],
+    "countries": [
+      "DE",
+      "GB",
+      "NL"
+    ]
+  }
+]

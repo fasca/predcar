@@ -6,6 +6,7 @@
   <title>{% block title %}predcar{% endblock %} — predcar</title>
   <meta name="description" content="Preuve statistique, sourcée et datée, de la raréfaction des voitures 1990–2015 en Europe, à partir des données ouvertes officielles.">
   <link rel="stylesheet" href="{{ root }}static/style.css">
+  <link rel="alternate" type="application/atom+xml" title="predcar — évolutions" href="{{ root }}feed.xml">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -13,7 +14,9 @@
   <a class="brand" href="{{ root }}index.html">predcar</a>
   <nav>
     <a href="{{ root }}index.html">Classement</a>
+    <a href="{{ root }}evolutions.html">Évolutions</a>
     <a href="{{ root }}methodologie.html">Méthodologie</a>
+    <a href="{{ root }}feed.xml">Flux</a>
     <a href="{{ root }}predcar-classement-{{ built_on }}.csv" download>Export CSV</a>
     <a href="https://github.com/fasca/predcar">Code source</a>
   </nav>
