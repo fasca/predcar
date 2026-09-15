@@ -6,6 +6,7 @@
 | RDW Gekentekende voertuigen (`m9d7-ebf2`) | NL | CC0 1.0 | https://opendata.rdw.nl/resource/m9d7-ebf2.json | 2026-09-08 | Vérifié : requête agrégée SoQL acceptée, 203 051 lignes (`docs/sources/rdw_nl.md`) |
 | KBA **FZ 2** (feuille FZ 2.2) | DE | [DL-DE/BY-2-0](https://www.govdata.de/dl-de/by-2-0) | https://www.kba.de/SharedDocs/Downloads/DE/Statistik/Fahrzeuge/FZ2/fz2_&lt;AAAA&gt;.xlsx?__blob=publicationFile | 2026-09-13 | Vérifié : 8 millésimes 2019–2026, deux conventions de nommage (`fz2_<AAAA>.xlsx` dès 2021, `fz2_<AAAA>_xlsx.xlsx` en 2019–2020). **FZ 10 n'existe pas** (404 sur 17 millésimes) et FZ 17 est au niveau marque seulement : la table utile est FZ 2.2, parc par constructeur et nom commercial. Schéma observé : `docs/sources/kba_de.md` |
 | SDES / data.gouv.fr | FR | Licence Ouverte (`fr-lo`) | https://www.data.gouv.fr/datasets/immatriculations-de-vehicules-routiers | 2026-09-14 | **Vérifié : inexploitable ici.** Le seul jeu d'immatriculations du SDES est au niveau **communal** — en-tête réel `COMMUNE_CODE;COMMUNE_NOM;CARBURANT;STATUT_UTILISATEUR;GROUPE;CATEGORIE;IMMAT_2010…IMMAT_2025` : **ni marque, ni modèle**. Aucun autre jeu de data.gouv.fr ne descend au modèle (recherches « immatriculation », « marque modèle », « parc automobile » : seulement des flottes d'organisations). Les données par modèle sont commerciales (AAA Data), donc hors périmètre open data |
+| DfT STATS19 road casualty statistics, table `vehicle` | GB | OGL v3.0 | https://data.dft.gov.uk/road-accidents-safety-data/dft-road-casualty-statistics-vehicle-last-5-years.csv | 2026-09-15 | **Vérifié : inexploitable ici.** Fichier ouvert (HTTP 200, 103,7 Mo, 937 265 véhicules 2021–2025) mais `generic_make_model` est une **liste fermée de 593 libellés génériques** (hors liste → `-1`, 14 % des voitures) : aucun Ferrari, Aston Martin, Lotus, TVR ; 35 des 200 modèles cibles seulement ont un accident, les plus courants. Observation : `docs/sources/stats19_uk.md` |
 
 **Archivage.** Les payloads bruts ne sont pas versionnés (taille), à une exception : le RDW est
 un *instantané sans historique amont*, donc un mois non conservé ici est définitivement perdu.
@@ -36,3 +37,19 @@ Aucun de ces sites n'expose d'API ni de jeu de données ouvert. Passer outre un 
 interdiction explicite reviendrait à contourner une protection : **exclu**, quelle que soit la
 valeur des données. La piste est fermée tant que ces sites ne publient pas leurs résultats
 autrement.
+
+## Signaux phase 2 — vérifiés le 2026-09-15, écartés
+
+La spec prévoyait trois signaux hors parc : sinistralité (STATS19), intérêt (Google Trends),
+attachement (YouTube). Chacun aurait été un indicateur nouveau, donc un score v2. Avant d'en
+arbitrer les poids, Source-First — et aucun ne passe :
+
+| Signal | Accès | Constat |
+|---|---|---|
+| STATS19 (`vehicle`, 2021–2025) | HTTP 200, fichier complet téléchargé | Libellé de modèle = liste fermée de 593 modèles courants ; **165 des 200 modèles cibles n'y ont aucun véhicule**, les marques rares n'y existent pas. Un taux d'accident ne couvrirait que 17 % des cibles, les moins rares : biais orienté contre le score. `docs/sources/stats19_uk.md` |
+| Google Trends | `trends.google.com/trends/explore` → **429** dès la première requête | Pas d'API ouverte ; `pytrends` rejoue l'API interne du site, c'est du scraping (règle « zéro scraping »). Fermé |
+| YouTube Data API | `googleapis.com/youtube/v3/search` → **403 sans clé** | API officielle mais clé Google Cloud requise : décision et compte de l'utilisateur. Sans clé, pas d'échantillon, donc pas de parseur. L'indicateur (vidéos pour `<marque> <modèle>`, toutes générations, dominé par la notoriété) ne mesure pas la raréfaction. Fermé ; réouvrable avec une clé et une décision de score v2 |
+
+Le score v1 reste le score. Toutes les pistes de la spec ont désormais une réponse vérifiée :
+GB et NL dans le score ; DE à côté (§3 bis de la méthodologie) ; FR, enchères, STATS19,
+Trends et YouTube écartés avec preuve.

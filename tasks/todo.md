@@ -114,10 +114,16 @@
       niveau communal (`COMMUNE_CODE;CARBURANT;CATEGORIE;IMMAT_2010…`), sans marque ni modèle ;
       rien d'autre sur data.gouv.fr ne descend au modèle. Données par modèle = commerciales
       (AAA Data), hors périmètre. `docs/SOURCES.md` et `docs/SPEC.md` §2.4 corrigés
-- [ ] STATS19 (accidents GB), Google Trends, YouTube : **chacun ajouterait un indicateur qui
-      n'existe pas dans le score v1** (`config/score.yaml` : rareté, conservation, SORN,
-      inflexion). Les ingérer sans décider d'un score v2 produirait des données que rien
-      n'utilise. À arbitrer avant de coder : quel indicateur, quel poids, au détriment de quoi
+- [x] STATS19, Google Trends, YouTube : **vérifiés le 2026-09-15, écartés** (Source-First avant
+      tout arbitrage de score v2). STATS19 : `generic_make_model` est une liste fermée de 593
+      modèles courants, 165 des 200 modèles cibles n'y ont aucun véhicule, marques rares absentes
+      (`docs/sources/stats19_uk.md`). Trends : 429, pas d'API, `pytrends` = scraping. YouTube :
+      403 sans clé Google Cloud (décision utilisateur), signal de notoriété toutes générations.
+      Le score v1 reste le score. `docs/SOURCES.md`, `docs/SPEC.md` §2.5/§2.6/§5/§7
+- [x] **Bilan projet (2026-09-15)** : chaque piste de la spec a une réponse vérifiée — GB et NL
+      dans le score, DE à côté, FR / enchères / STATS19 / Trends / YouTube écartés avec preuve.
+      Reste l'exploitation : refresh trimestriel (`refresh.yml`), snapshot RDW mensuel, revue de
+      `candidates.csv` et de la page « Évolutions » à chaque refresh
 
 ## Phase 3
 - [x] Extrapolation Weibull publiée (2026-09-14) : survie conditionnelle par cohorte, projection
