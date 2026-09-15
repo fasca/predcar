@@ -447,13 +447,24 @@ def latest_report(reports_dir: Path = REPORTS_DIR, requires: str | None = None) 
     Returns:
         Path of the latest matching bundle directory, or None.
     """
+    dirs = report_dirs(reports_dir, requires)
+    return dirs[0] if dirs else None
+
+
+def report_dirs(reports_dir: Path = REPORTS_DIR, requires: str | None = None) -> list[Path]:
+    """Every ``reports/<YYYY-MM-DD>/`` bundle, most recent first, optionally filtered.
+
+    Args:
+        reports_dir: directory holding the dated bundles.
+        requires: relative path each bundle must contain to be listed.
+    """
     if not reports_dir.is_dir():
-        return None
+        return []
     days = sorted(
         (d for d in reports_dir.iterdir() if d.is_dir() and _DAY_RE.fullmatch(d.name)),
         reverse=True,
     )
-    return next((d for d in days if requires is None or (d / requires).is_file()), None)
+    return [d for d in days if requires is None or (d / requires).is_file()]
 
 
 def export(

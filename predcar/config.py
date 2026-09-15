@@ -38,6 +38,12 @@ class InflectionConfig(BaseModel):
     recent_years: int = Field(ge=1)
 
 
+class AlertsConfig(BaseModel):
+    """What the « Évolutions » page and the Atom feed report between two bundles."""
+
+    top_n: int = Field(ge=1)
+
+
 class WeibullConfig(BaseModel):
     horizons: list[int] = Field(min_length=1)
     min_points: int = Field(ge=3)
@@ -53,6 +59,7 @@ class ScoreConfig(BaseModel):
     peers: PeersConfig
     inflection: InflectionConfig
     weibull: WeibullConfig
+    alerts: AlertsConfig
 
     @model_validator(mode="after")
     def _weights_sum_to_one(self) -> ScoreConfig:

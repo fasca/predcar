@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Évolutions{% endblock %}
+{% block content %}
+<section class="intro">
+  <h1>Ce qui a changé</h1>
+  {% if previous_on %}
+  <p>Entre le bundle du <strong>{{ previous_on }}</strong> et celui du <strong>{{ built_on }}</strong> :
+    {{ change_count }} changement{{ 's' if change_count != 1 }}. Un mouvement de rang seul n'est
+    pas signalé — dès que des cibles s'ajoutent, tous les rangs bougent. Ce qui compte : entrer ou
+    sortir du top {{ top_n }}, franchir un palier de rareté, voir apparaître une inflexion.
+    Abonnez-vous au <a href="feed.xml">flux Atom</a> pour être prévenu à chaque refresh.</p>
+  {% else %}
+  <p class="note">Il faut deux bundles de preuves pour comparer ; celui-ci est le premier. La page
+    se remplira au prochain refresh trimestriel.</p>
+  {% endif %}
+</section>
+
+{% for kind, rows in by_kind.items() if rows %}
+<section class="changes">
+  <h2>{{ kind_labels[kind][0] }} <span class="count">({{ rows | length }})</span></h2>
+  <p class="note">{{ kind_labels[kind][1] }}</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Modèle</th><th>Génération</th><th>Avant</th><th>Après</th><th>Détail</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="{{ models_dir }}/{{ r.slug }}.html">{{ r.make }} {{ r.model_gen }}</a></td>
+        <td>{{ r.generation }}</td>
+        <td>{{ r.before or '—' }}</td>
+        <td>{{ r.after or '—' }}</td>
+        <td>{{ r.detail }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

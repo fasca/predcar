@@ -149,7 +149,11 @@ def _bundle(root: Path, day: str, gold_dir: Path, *, complete: bool = True) -> P
         lists = [c for c, dt in df.schema.items() if dt == pl.List(pl.String)]
         df.with_columns(pl.col(c).list.join("|") for c in lists).write_csv(out / f"{name}.csv")
     if complete:
-        (out / "ranking.csv").write_text("rank,make\n1,X\n", encoding="utf-8")
+        real = gold_dir / "ranking.csv"
+        if real.is_file():
+            (out / "ranking.csv").write_bytes(real.read_bytes())
+        else:
+            (out / "ranking.csv").write_text("rank,make\n1,X\n", encoding="utf-8")
     return out
 
 
@@ -453,3 +457,82 @@ def test_model_page_explains_an_absent_projection(gold: tuple[Path, Path], tmp_p
     assert "<table" not in re.search(
         r'<section class="projection">.*?</section>', flat, re.S
     ).group(0)
+
+
+# ------------------------------------------------------------------ évolutions and feed
+
+
+def _bundle_pair(tmp_path: Path, gold_dir: Path) -> Path:
+    """Two bundles: the older one lacks the last published target and one inflection."""
+    reports = tmp_path / "reports"
+    newer = _bundle(reports, "2026-09-14", gold_dir)
+    older = reports / "2026-09-13" / "gold"
+    older.mkdir(parents=True)
+    ranking = pl.read_csv(
+        newer / "ranking.csv",
+        schema_overrides={"make": pl.String, "model_gen": pl.String, "generation": pl.String},
+    )
+    ranking.head(ranking.height - 1).with_columns(
+        pl.lit(None, dtype=pl.Int64).alias("inflection_year")
+    ).write_csv(older / "ranking.csv")
+    for name in ("indicators", "scores", "stock_series"):
+        (older / f"{name}.csv").write_bytes((newer / f"{name}.csv").read_bytes())
+    return reports
+
+
+def _build_from(reports: Path, gold: tuple[Path, Path], out: Path) -> None:
+    site.build(
+        None,
+        out,
+        gold[1],
+        SITE_DIR / "templates",
+        SITE_DIR / "static",
+        DOCS_DIR / "methodology.md",
+        CFG,
+        reports_dir=reports,
+    )
+
+
+def test_evolutions_page_and_feed_list_what_changed(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    import xml.etree.ElementTree as ET
+
+    reports = _bundle_pair(tmp_path, gold[0])
+    out = tmp_path / "dist"
+    _build_from(reports, gold, out)
+
+    page = (out / "evolutions.html").read_text(encoding="utf-8")
+    flat = re.sub(r"\s+", " ", page)
+    assert (
+        "Entre le bundle du <strong>2026-09-13</strong> et celui du <strong>2026-09-14</strong>"
+        in flat
+    )
+    assert "Nouvelles au classement" in flat  # the target dropped from the older bundle
+    assert "Point d'inflexion apparu" in flat or "inflection" not in flat
+    assert 'href="modeles/' in page  # every change links to its model page
+
+    feed = ET.parse(out / "feed.xml").getroot()
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    entries = feed.findall("a:entry", ns)
+    assert len(entries) == 1
+    assert "2026-09-14" in entries[0].find("a:title", ns).text
+    assert entries[0].find("a:id", ns).text.endswith("/2026-09-14")
+    # nav and discovery link
+    index = (out / "index.html").read_text(encoding="utf-8")
+    assert 'type="application/atom+xml"' in index and "evolutions.html" in index
+
+
+def test_evolutions_page_explains_itself_with_a_single_bundle(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    import xml.etree.ElementTree as ET
+
+    reports = tmp_path / "reports"
+    _bundle(reports, "2026-09-14", gold[0])
+    out = tmp_path / "dist"
+    _build_from(reports, gold, out)
+    page = (out / "evolutions.html").read_text(encoding="utf-8")
+    assert "Il faut deux bundles" in page
+    feed = ET.parse(out / "feed.xml").getroot()
+    assert feed.findall("{http://www.w3.org/2005/Atom}entry") == []

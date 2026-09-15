@@ -740,9 +740,18 @@ def _inflection_year(
 # --------------------------------------------------------------------------- Europe
 
 
-def aggregate_europe(indicators: pl.DataFrame) -> pl.DataFrame:
+def rarity_tier_expr(stock: pl.Expr, thresholds: list[int]) -> pl.Expr:
+    """Column version of :func:`rarity_tier`: the label of ``stock`` for every row."""
+    expr: pl.Expr = pl.lit(f">={max(thresholds)}")
+    for t in sorted(thresholds, reverse=True):
+        expr = pl.when(stock < t).then(pl.lit(f"<{t}")).otherwise(expr)
+    return expr
+
+
+def aggregate_europe(indicators: pl.DataFrame, thresholds: list[int]) -> pl.DataFrame:
     """One row per target: stock summed over countries, attrition stock-weighted, SORN from GB,
-    inflection = the most recent country inflection, survival stock-weighted.
+    inflection = the most recent country inflection, survival stock-weighted, rarity tier from
+    the summed stock (``thresholds`` = ``rarity.thresholds``).
 
     A value missing in every country stays null (never NaN, never 0).
     """
@@ -766,7 +775,7 @@ def aggregate_europe(indicators: pl.DataFrame) -> pl.DataFrame:
             pl.col("inflection_year").max().alias("inflection_year"),
             pl.col("sorn_ratio").filter(pl.col("country") == "GB").first().alias("sorn_ratio"),
         )
-        .with_columns(pl.lit(None, dtype=pl.Utf8).alias("rarity_tier"))
+        .with_columns(rarity_tier_expr(pl.col("stock"), thresholds).alias("rarity_tier"))
         .select(indicators.columns)
     )
 

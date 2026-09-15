@@ -32,3 +32,9 @@ weibull:
   horizons: [5, 10]           # years ahead
   min_points: 5               # cohort observations with 0 < R < 1 needed to fit one cohort
   min_cohorts: 3              # fitted cohorts needed to publish a projection for a target
+
+alerts:
+  # The « Évolutions » page and feed compare the two latest committed bundles. Entering or
+  # leaving the top N is reported; a raw rank move is not — as soon as targets are added,
+  # every rank shifts and the signal is noise.
+  top_n: 50

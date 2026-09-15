@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>predcar — évolutions du classement</title>
+  <subtitle>Ce qui a changé à chaque refresh des parcs officiels. Ni cote, ni prix : de la raréfaction mesurée.</subtitle>
+  <link href="{{ site_url }}feed.xml" rel="self" type="application/atom+xml"/>
+  <link href="{{ site_url }}evolutions.html" rel="alternate" type="text/html"/>
+  <id>tag:fasca.github.io,2026:predcar</id>
+  <updated>{{ built_on }}T00:00:00Z</updated>
+  <author><name>predcar</name></author>
+  {% if previous_on %}
+  <entry>
+    <title>Refresh du {{ built_on }} : {{ change_count }} changement{{ 's' if change_count != 1 }}</title>
+    <link href="{{ site_url }}evolutions.html" rel="alternate" type="text/html"/>
+    <id>tag:fasca.github.io,2026:predcar/evolutions/{{ built_on }}</id>
+    <updated>{{ built_on }}T00:00:00Z</updated>
+    <summary>Entre le {{ previous_on }} et le {{ built_on }}.</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        {% for kind, rows in by_kind.items() if rows %}
+        <h3>{{ kind_labels[kind][0] }} ({{ rows | length }})</h3>
+        <ul>
+          {% for r in rows %}
+          <li><a href="{{ site_url }}{{ models_dir }}/{{ r.slug }}.html">{{ r.make }} {{ r.model_gen }} {{ r.generation }}</a>
+            {% if r.before %}{{ r.before }} → {% endif %}{{ r.after }} — {{ r.detail }}</li>
+          {% endfor %}
+        </ul>
+        {% endfor %}
+      </div>
+    </content>
+  </entry>
+  {% endif %}
+</feed>

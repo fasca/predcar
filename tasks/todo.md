@@ -132,10 +132,14 @@
 - [x] Élargir les cibles — 1er lot (2026-09-15, décision déléguée « les plus recherchés ») :
       19 générations ajoutées, 4 versions recherchées libérées de la règle de leur modèle de
       base (S2, Integra Type R, 106 GTI, Escort RS Turbo…). 243 → 262 cibles, 228 → 249 publiées
-- [ ] Élargir les cibles — lots suivants : 33 candidats restent, presque tous des modèles de
-      base dont la version sportive est déjà cible. À reprendre si de nouveaux modèles entrent
-      dans la fenêtre 1990-2015 (le refresh trimestriel régénère `candidates.csv`)
-- [ ] Newsletter / alertes
+- [x] Élargir les cibles — revue des 33 restants (2026-09-15) : **aucun second lot**. Modèles
+      de base dont la version sportive est déjà cible ; cas examinés et écartés : Audi A2
+      (5 061, culte mais pas collector), BMW 7 Series (libellé sur trois générations), allroad
+      C5 (747, marginal), Delta hors Integrale (13), Saab 900 non-turbo. Le refresh régénère
+      `candidates.csv` chaque trimestre
+- [x] Alertes (2026-09-15) : page « Évolutions » + flux Atom construits depuis les deux derniers
+      bundles — publiées / sorties, paliers de rareté, inflexions, entrées et sorties du top 50.
+      Sans compte ni adresse. `docs/methodology.md` §8
 
 ## Pistes vérifiées et écartées
 - 2026-09-14 : les 9 tables de la page DfT inventoriées (`docs/sources/dft_uk.md`). Aucune ne

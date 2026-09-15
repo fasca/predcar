@@ -124,7 +124,7 @@ def score(
     targets = load_targets(mapping_dir / TARGETS_FILE)
 
     indicators, series = metrics.compute_indicators(stock, new_reg, targets, cfg)
-    eu = metrics.aggregate_europe(indicators)
+    eu = metrics.aggregate_europe(indicators, cfg.rarity.thresholds)
     scores = composite(normalize_components(eu, cfg), cfg)
     published = scores.filter(pl.col("score").is_not_null()).height
     logger.info(
@@ -163,6 +163,7 @@ def score(
         "score",
         "weight_coverage",
         "stock",
+        "rarity_tier",
         "rarity",
         "conservation",
         "sorn_ratio",

@@ -155,7 +155,10 @@ Une divergence de schéma lève toujours une erreur explicite (`DftSchemaError`,
   sources citées avec dernière observation et licence, date de génération ;
 - `methodologie.html` : `docs/methodology.md` rendu, précédé des paramètres réels de
   `config/score.yaml` ;
-- `ranking.csv` : export du classement (cibles publiées).
+- `ranking.csv` : export du classement (cibles publiées, avec le palier `rarity_tier`) ;
+- `evolutions.html` et `feed.xml` : ce qui a changé entre les deux derniers bundles committés
+  (`predcar/changes.py`, `docs/methodology.md` §8) ; le flux Atom est l'alerte du projet,
+  sans compte ni adresse.
 
 `.github/workflows/site.yml` reconstruit tout depuis les sources officielles (fetch, ingest,
 normalize, score, site) et déploie sur GitHub Pages : cron trimestriel (le 20 des mois de

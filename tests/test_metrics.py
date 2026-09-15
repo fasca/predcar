@@ -300,7 +300,7 @@ def test_compute_indicators_relative_attrition_and_inflection() -> None:
 def test_aggregate_europe_sums_stock_and_keeps_gb_sorn() -> None:
     stock, new_reg, targets = _population()
     ind, _ = metrics.compute_indicators(stock, new_reg, targets, CFG)
-    eu = metrics.aggregate_europe(ind)
+    eu = metrics.aggregate_europe(ind, CFG.rarity.thresholds)
     slow = eu.filter(pl.col("model_gen") == "SLOW").row(0, named=True)
     gb = ind.filter((pl.col("model_gen") == "SLOW") & (pl.col("country") == "GB")).row(
         0, named=True
@@ -319,7 +319,9 @@ def test_aggregate_europe_sums_stock_and_keeps_gb_sorn() -> None:
 def test_normalize_and_composite() -> None:
     stock, new_reg, targets = _population()
     ind, _ = metrics.compute_indicators(stock, new_reg, targets, CFG)
-    scores = sc.composite(sc.normalize_components(metrics.aggregate_europe(ind), CFG), CFG)
+    scores = sc.composite(
+        sc.normalize_components(metrics.aggregate_europe(ind, CFG.rarity.thresholds), CFG), CFG
+    )
     by = {r["model_gen"]: r for r in scores.iter_rows(named=True)}
 
     assert by["SLOW"]["conservation"] == 1.0 and by["SLOW"]["recent_inflection_point"] == 0.0
@@ -461,7 +463,7 @@ def test_europe_keeps_unavailable_sales_null() -> None:
     stock = _stock(_gen_series("A", 1000, 0.1))
     ind, _ = metrics.compute_indicators(stock, _new_reg([]), [_target("A")], CFG)
     assert ind["cumulative_sales"][0] is None
-    eu = metrics.aggregate_europe(ind)
+    eu = metrics.aggregate_europe(ind, CFG.rarity.thresholds)
     assert eu["cumulative_sales"][0] is None  # not 0
 
 
@@ -756,3 +758,14 @@ def test_settled_allows_a_young_cohort_to_fill_up_but_not_a_later_import() -> No
     assert ages == [2, 3, 4] and rets == [1.0, 0.9, 0.8]
     assert metrics._settled([10, 11, 12, 13], [1.0, 0.8, 0.9, 0.7]) is None  # rise after year 2
     assert metrics._settled([10, 11, 12], [1.0, 0.8, 0.82]) is not None  # within tolerance
+
+
+def test_europe_row_carries_a_rarity_tier() -> None:
+    """The EU line is what the ranking publishes; its tier must come from the EU stock."""
+    cfg = load_score_config()
+    stock, new_reg, targets = _population()
+    indicators, _ = metrics.compute_indicators(stock, new_reg, targets, cfg)
+    eu = metrics.aggregate_europe(indicators, cfg.rarity.thresholds)
+    assert eu["rarity_tier"].null_count() == 0
+    row = eu.row(0, named=True)
+    assert row["rarity_tier"] == metrics.rarity_tier(int(row["stock"]), cfg.rarity.thresholds)
