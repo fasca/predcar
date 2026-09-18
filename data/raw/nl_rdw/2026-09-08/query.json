@@ -1,0 +1,13 @@
+{
+  "api_url": "https://opendata.rdw.nl/resource/m9d7-ebf2.json",
+  "params": {
+    "$select": "merk,handelsbenaming,date_extract_y(datum_eerste_toelating_dt) as jaar,count(*) as n",
+    "$where": "voertuigsoort='Personenauto'",
+    "$group": "merk,handelsbenaming,jaar",
+    "$order": "merk,handelsbenaming,jaar",
+    "$limit": "50000",
+    "$offset": "0"
+  },
+  "fetched_at": "2026-09-08T22:49:39+00:00",
+  "rows": 203051
+}

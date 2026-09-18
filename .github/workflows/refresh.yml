@@ -22,6 +22,7 @@ jobs:
     timeout-minutes: 90
     outputs:
       committed: ${{ steps.commit.outputs.committed }}
+      commit_sha: ${{ steps.commit.outputs.commit_sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -29,13 +30,30 @@ jobs:
           python-version: "3.12"
       - run: uv sync
 
-      - name: Télécharger et ingérer les sources
+      - name: Télécharger les sources fraîches
         run: |
           set -euo pipefail
           uv run predcar fetch uk
           uv run predcar ingest uk
           uv run predcar fetch nl
-          uv run predcar ingest nl
+          read -r first_year last_year < <(
+            uv run python -c 'from predcar.config import load_sources_config; c = load_sources_config().de_kba; print(c.first_year, c.last_year)'
+          )
+          for year in $(seq "$first_year" "$last_year"); do
+            uv run predcar fetch de --year "$year"
+            uv run predcar ingest de --snapshot "data/raw/de_kba/$year-01-01"
+          done
+
+      - name: Rejouer tout l'historique RDW archivé
+        # Every committed month is an input. Parsing only today's snapshot would erase the
+        # Dutch history from silver and postpone attrition forever.
+        run: |
+          set -euo pipefail
+          for snapshot in data/raw/nl_rdw/*/; do
+            if [[ -f "${snapshot}gekentekende_voertuigen_agg.json" || -f "${snapshot}gekentekende_voertuigen_agg.json.gz" ]]; then
+              uv run predcar ingest nl --snapshot "$snapshot"
+            fi
+          done
 
       - name: Normaliser, valider, scorer
         # normalize fails below the coverage gate: a refresh must never publish a ranking
@@ -65,7 +83,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reports/ data/raw/*/*/MANIFEST.json data/raw/nl_rdw/*/*.json.gz
+          git add reports/ data/raw/*/*/MANIFEST.json data/raw/nl_rdw/*/*.json.gz data/raw/nl_rdw/*/query.json
           if git diff --cached --quiet; then
             echo "Rien de neuf à committer."
             echo "committed=false" >> "$GITHUB_OUTPUT"
@@ -74,6 +92,7 @@ jobs:
           git commit -m "Refresh trimestriel $(date -u +%Y-%m-%d) (automatique)"
           git push origin HEAD:main
           echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   # A push made with the default GITHUB_TOKEN does not trigger other workflows, so the
   # deployment is called here instead of being left to pages.yml's push trigger.
@@ -81,6 +100,8 @@ jobs:
     needs: refresh
     if: needs.refresh.outputs.committed == 'true'
     uses: ./.github/workflows/pages.yml
+    with:
+      ref: ${{ needs.refresh.outputs.commit_sha }}
     permissions:
       contents: read
       pages: write

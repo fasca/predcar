@@ -361,7 +361,18 @@ def test_model_page_marks_the_national_reference_as_outside_the_score(
     assert "Parc national, hors score" in flat
     assert "n'entrent ni dans l'attrition, ni dans le score" in flat
     assert "Allemagne" in flat and "KBA FZ 2.2" in flat
-    assert "générations cibles de ce modèle, confondues" in flat
+    assert "modèle complet, sans répartition vérifiable" in flat
+    assert "3 générations cibles dans le périmètre" in flat
+    assert ">cette génération</td>" not in flat
+
+
+def test_score_table_scrolls_inside_its_card_on_mobile(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    out = tmp_path / "dist"
+    _build(gold, out)
+    page = next((out / "modeles").iterdir()).read_text(encoding="utf-8")
+    assert '<div class="table-wrap">\n  <table class="components-table">' in page
 
 
 def test_model_page_has_no_reference_section_without_the_table(

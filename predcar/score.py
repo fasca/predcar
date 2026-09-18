@@ -52,9 +52,9 @@ def normalize_components(eu: pl.DataFrame, cfg: ScoreConfig) -> pl.DataFrame:
         .otherwise((cons_raw.rank(method="average") - 1) / (n_avail - 1))
     )
     recent = (
-        pl.when(pl.col("inflection_year").is_null())
+        pl.when(pl.col("inflection_age").is_null())
         .then(None)
-        .when(pl.col("latest_year") - pl.col("inflection_year") < cfg.inflection.recent_years)
+        .when(pl.col("inflection_age") < cfg.inflection.recent_years)
         .then(1.0)
         .otherwise(0.0)
     )

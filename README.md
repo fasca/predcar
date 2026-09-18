@@ -115,10 +115,10 @@ entre les deux derniers bundles — cibles publiées ou sorties, paliers de rare
 inflexions apparues, entrées et sorties du top 50. S'y abonner remplace la newsletter, sans
 compte ni adresse.
 
-Deux workflows GitHub : `pages.yml` construit et déploie sur Pages (push touchant `site/`,
-`reports/`, `docs/methodology.md`, ou *Run workflow*) ; `refresh.yml` rejoue le pipeline chaque
-trimestre après les publications DfT, **relance les tests sur le nouveau bundle avant de le
-committer**, puis appelle le déploiement. Activer Pages une fois :
+Trois workflows GitHub : `rdw-snapshot.yml` archive chaque mois le payload RDW gzippé et sa
+requête ; `refresh.yml` rejoue cet historique, les données UK et les millésimes KBA chaque
+trimestre, puis **relance les tests sur le nouveau bundle avant de le committer** ; `pages.yml`
+déploie précisément ce nouveau commit. Activer Pages une fois :
 *Settings → Pages → Source : GitHub Actions*.
 
 ## Commandes

@@ -10,6 +10,22 @@ sources dépend de l'environnement et se revérifie à chaque session (leçon du
 il fonctionne depuis le WSL2 de l'utilisateur et, au 2026-09-12, depuis l'environnement
 Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
+## [1.0.1] — 2026-09-18
+
+### 2026-09-18 — Correctifs après audit de production
+
+**Corrigé** — le refresh trimestriel rejoue désormais tous les snapshots RDW versionnés et
+ingère les huit millésimes KBA avant le score. Chaque snapshot RDW conserve aussi `query.json` ;
+le manifeste orphelin du 2026-09-12 a été retiré de `data/raw/` (sa trace reste dans les bundles
+de preuves). Le déploiement Pages reçoit le SHA exact créé par le refresh, afin de ne pas
+reconstruire le bundle précédent.
+
+**Corrigé** — le ratio SORN reste au niveau génération même lorsque sa dernière valeur est
+zéro. L'âge d'une inflexion européenne est calculé dans le calendrier du pays qui l'observe :
+un snapshot NL plus récent ne pénalise plus une inflexion GB. Le tableau de score défile dans
+sa carte sur mobile et le parc allemand est toujours présenté comme celui du modèle complet,
+jamais comme celui d'une génération.
+
 ## [1.0.0] — 2026-09-15
 
 Première version publiée. Tout ce que `docs/SPEC.md` prévoyait a soit été livré, soit été

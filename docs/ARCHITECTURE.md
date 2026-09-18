@@ -76,8 +76,9 @@ Les sources décrivent le même parc à des granularités différentes :
 
 Règles (`metrics.py`) : deux familles ne sont **jamais additionnées** ; pour une génération
 cible on prend la série de niveau génération si elle existe, sinon la série de niveau modèle,
-et seulement si la génération est la seule de son modèle ; le ratio SORN vient toujours de
-VEH0120 ; le niveau utilisé est exposé dans les sorties.
+et seulement si la génération est la seule de son modèle ; le ratio SORN vient de VEH0124 au
+niveau génération quand il existe, sinon de VEH0120 au niveau modèle ; le niveau utilisé est
+exposé dans les sorties.
 
 ## 5. Le mapping, « le vrai travail » (spec §4)
 
@@ -160,15 +161,15 @@ Une divergence de schéma lève toujours une erreur explicite (`DftSchemaError`,
   (`predcar/changes.py`, `docs/methodology.md` §8) ; le flux Atom est l'alerte du projet,
   sans compte ni adresse.
 
-`.github/workflows/site.yml` reconstruit tout depuis les sources officielles (fetch, ingest,
-normalize, score, site) et déploie sur GitHub Pages : cron trimestriel (le 20 des mois de
-janvier, avril, juillet, octobre, après les publications DfT), déclenchement manuel, et
-chaque push sur `main`. Le run échoue — plutôt que de publier de faux chiffres — si un schéma
-source change ou si la couverture du mapping passe sous 95 %. Limite : le snapshot RDW
-téléchargé par le workflow n'est pas conservé, l'historique néerlandais se construit sur la
-machine de l'utilisateur (voir `tasks/todo.md`).
+`.github/workflows/refresh.yml` télécharge les sources officielles, rejoue tous les snapshots
+RDW versionnés, ingère les millésimes KBA 2019–2026, normalise, score, teste puis committe le
+nouveau bundle chaque trimestre. Il appelle ensuite `pages.yml` avec le SHA exact du commit
+créé ; Pages construit le site depuis ce bundle. `rdw-snapshot.yml` conserve chaque mois le
+payload RDW gzippé **et** sa requête. Un changement de schéma ou une couverture sous 95 % fait
+échouer le run avant publication.
 
-## 10. Ce qui n'existe pas encore
+## 10. Pistes hors produit
 
-- Phase 2 : KBA (DE), immatriculations FR, STATS19, Google Trends, YouTube.
-- Phase 3 : enchères, extrapolation Weibull, alertes.
+Les sources françaises par modèle, STATS19, Google Trends, YouTube et les enchères ont été
+évalués puis écartés ; leurs limites sont documentées dans `docs/SOURCES.md`. L'Allemagne est
+publiée hors score, la projection Weibull et les alertes sont livrées.

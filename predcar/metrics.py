@@ -537,11 +537,16 @@ def sorn_ratio(annual: pl.DataFrame, target: TargetModel, country: str) -> float
     generation series exists (VEH0124), else model_gen level (VEH0120, all generations)."""
     base = _for_target(annual, target, country)
     gen = base.filter(
-        (pl.col("generation") == target.generation)
-        & pl.col("series").is_in(GEN_LEVEL_SERIES)
-        & (pl.col("sorn") > 0)
+        (pl.col("generation") == target.generation) & pl.col("series").is_in(GEN_LEVEL_SERIES)
     )
-    rows = gen if gen.height else base.filter(pl.col("series") == SORN_SERIES)
+    # A positive value anywhere proves that this generation series carries SORN. Once that
+    # is established, a latest value of zero is meaningful and must not trigger the model-level
+    # fallback. Some synthetic/legacy series contain licensed rows only and still need VEH0120.
+    rows = (
+        gen
+        if gen.filter(pl.col("sorn") > 0).height
+        else base.filter(pl.col("series") == SORN_SERIES)
+    )
     if not rows.height:
         return None
     latest = rows.filter(pl.col("year") == rows["year"].max())
@@ -590,6 +595,7 @@ _INDICATORS_SCHEMA = {
     "relative_attrition": pl.Float64,
     "n_peers": pl.Int32,
     "inflection_year": pl.Int32,
+    "inflection_age": pl.Int32,
     "sorn_ratio": pl.Float64,
 }
 
@@ -696,6 +702,7 @@ def compute_indicators(
                 "relative_attrition": rel,
                 "n_peers": n_peers,
                 "inflection_year": inflection,
+                "inflection_age": latest_year - inflection if inflection is not None else None,
                 "sorn_ratio": sorn_ratio(annual, t, c),
             }
         )
@@ -773,6 +780,9 @@ def aggregate_europe(indicators: pl.DataFrame, thresholds: list[int]) -> pl.Data
             _weighted("relative_attrition", w).alias("relative_attrition"),
             pl.col("n_peers").max(),
             pl.col("inflection_year").max().alias("inflection_year"),
+            # Each country's observation calendar can differ. Keep the smallest local age
+            # instead of subtracting an NL snapshot year from a GB inflection year.
+            pl.col("inflection_age").min().alias("inflection_age"),
             pl.col("sorn_ratio").filter(pl.col("country") == "GB").first().alias("sorn_ratio"),
         )
         .with_columns(rarity_tier_expr(pl.col("stock"), thresholds).alias("rarity_tier"))

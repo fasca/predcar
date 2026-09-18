@@ -55,6 +55,7 @@ data/raw/**
 !data/raw/**/
 !data/raw/**/MANIFEST.json
 !data/raw/nl_rdw/**/*.json.gz
+!data/raw/nl_rdw/**/query.json
 data/silver/*.parquet
 data/gold/*.parquet
 data/gold/*.csv

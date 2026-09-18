@@ -152,6 +152,13 @@
   donne la casse ou l'export ; VEH0220/VEH0270 n'ajoutent que la cylindrée (gain marginal) ;
   VEH0125/0135/0145 sont géographiques sans modèle ; VEH0520 = poids lourds. Rien à ingérer.
 
+## Maintenance post-1.0
+
+- [x] Audit production : rejouer tout l'historique RDW et KBA au refresh, versionner la requête
+      RDW, déployer le SHA fraîchement committé, corriger SORN=0 et l'âge multi-pays des
+      inflexions, rendre la fiche modèle mobile et clarifier la portée du parc allemand
+      (2026-09-18).
+
 ---
 
 ## Review Notes

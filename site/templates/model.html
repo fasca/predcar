@@ -17,6 +17,7 @@
   <p class="headline unpublished">Score non publié : les composantes disponibles ne couvrent que
     {{ row.weight_coverage | fmt_pct(0) }} des poids (minimum {{ (min_weight_coverage * 100) | round | int }} %).</p>
   {% endif %}
+  <div class="table-wrap">
   <table class="components-table">
     <thead><tr><th>Composante</th><th class="num">Valeur 0–1</th><th class="num">Poids</th><th class="num">Part du score</th><th>Pourquoi</th></tr></thead>
     <tbody>
@@ -37,6 +38,7 @@
     {% endfor %}
     </tbody>
   </table>
+  </div>
 </section>
 
 <section class="charts">
@@ -168,7 +170,7 @@
         <td class="num">{{ r.year | fmt_year }}</td>
         <td class="num">{{ r.stock | fmt_int }}</td>
         <td class="num">{% if r.change is not none %}{{ ('+' if r.change >= 0 else '') ~ (r.change | fmt_pct) }} depuis {{ r.from_year }}{% else %}—{% endif %}</td>
-        <td>{% if r.generations > 1 %}les {{ r.generations }} générations cibles de ce modèle, confondues{% else %}cette génération{% endif %}</td>
+        <td>modèle complet, sans répartition vérifiable — {{ r.generations }} génération{{ 's' if r.generations > 1 }} cible{{ 's' if r.generations > 1 }} dans le périmètre</td>
       </tr>
     {% endfor %}
     </tbody>

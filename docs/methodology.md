@@ -8,7 +8,7 @@ chaque source, chaque limite. Paramètres dans `config/score.yaml`, jamais en du
 | Série | Pays | Granularité | Niveau | Ce qu'elle apporte |
 |---|---|---|---|---|
 | VEH0120 (DfT) | GB | trimestrielle, 1994 → | modèle générique (`model_gen`) | stock long historique, **SORN** |
-| VEH0124 (DfT) | GB | annuelle, 2014 → | génération (via année de 1re immatriculation) | stock par génération, cohortes (Licensed et SORN distingués ; le ratio SORN publié reste celui de VEH0120) |
+| VEH0124 (DfT) | GB | annuelle, 2014 → | génération (via année de 1re immatriculation) | stock par génération, cohortes et ratio SORN par génération |
 | VEH0160 (DfT) | GB | trimestrielle, 2001 → | modèle générique | immatriculations neuves (ventes) |
 | RDW `m9d7-ebf2` | NL | snapshot mensuel, depuis notre 1er snapshot | génération (via année de 1re admission) | stock par génération |
 | KBA FZ 2.2 | DE | annuelle, au 1ᵉʳ janvier | **modèle générique uniquement** | parc allemand — **informatif, hors score** (§3 bis) |
@@ -83,8 +83,9 @@ aujourd'hui dans les données ouvertes du KBA.
 
 Une ligne `EU` par génération cible : stock sommé sur les pays ; attrition, attrition
 relative et survie pondérées par le stock des pays où elles existent ; point d'inflexion =
-le plus récent des pays ; ratio SORN = valeur GB. Une valeur absente partout reste absente
-(null, jamais NaN ni 0).
+le plus récent des pays, dont l'âge est calculé contre la dernière observation de **ce même
+pays** ; ratio SORN = valeur GB. Une valeur absente partout reste absente (null, jamais NaN
+ni 0). Ainsi, un snapshot NL plus récent ne vieillit pas artificiellement une inflexion GB.
 
 ## 3 ter. Projection Weibull à 5 et 10 ans (publiée, hors score)
 
@@ -121,7 +122,7 @@ mettre dans le score reviendrait à noter deux fois la même attrition.
 | `rarity` | min-max de −ln(stock) sur la population scorée : 1 = stock le plus faible | jamais (si un stock existe) |
 | `conservation` | rang de −attrition_relative sur la population, ramené à 0–1 | pas d'historique ou pas de pairs |
 | `sorn_ratio` | ratio SORN tel quel | hors GB |
-| `recent_inflection_point` | 1 si (dernière année − année d'inflexion) < `inflection.recent_years` (5), sinon 0 | pas d'historique ou pas de pairs |
+| `recent_inflection_point` | 1 si l'âge local de l'inflexion (dernière année du pays − année d'inflexion) < `inflection.recent_years` (5), sinon 0 | pas d'historique ou pas de pairs |
 
 ## 5. Score composite
 

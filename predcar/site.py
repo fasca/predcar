@@ -198,6 +198,7 @@ _INT32_COLUMNS = (
     "history_years",
     "n_peers",
     "inflection_year",
+    "inflection_age",
     "rank",
     "year",
     "age_bucket",

@@ -17,6 +17,12 @@ on:
   # Called at the end of refresh.yml: a push made with GITHUB_TOKEN triggers no workflow,
   # so the quarterly refresh has to invoke this one explicitly.
   workflow_call:
+    inputs:
+      ref:
+        description: "Commit exact à publier après un refresh"
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
 
 permissions:
@@ -33,6 +39,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # A reusable workflow otherwise checks out the caller's original SHA. The refresh
+          # passes the commit it just pushed so Pages cannot rebuild the previous bundle.
+          ref: ${{ inputs.ref || github.sha }}
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"

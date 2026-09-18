@@ -313,6 +313,31 @@ def test_aggregate_europe_sums_stock_and_keeps_gb_sorn() -> None:
     assert lonely["relative_attrition"] is None  # null, never NaN
 
 
+def test_recent_inflection_uses_each_countrys_observation_year() -> None:
+    """A newer NL snapshot must not age a still-recent GB inflection."""
+    stock, new_reg, targets = _population()
+    ind, _ = metrics.compute_indicators(stock, new_reg, targets, CFG)
+    rows = ind.filter(pl.col("model_gen") == "SLOW").with_columns(
+        pl.when(pl.col("country") == "GB").then(2025).otherwise(2026).alias("latest_year"),
+        pl.when(pl.col("country") == "GB")
+        .then(2021)
+        .otherwise(None)
+        .cast(pl.Int32)
+        .alias("inflection_year"),
+        pl.when(pl.col("country") == "GB")
+        .then(4)
+        .otherwise(None)
+        .cast(pl.Int32)
+        .alias("inflection_age"),
+    )
+    eu = metrics.aggregate_europe(rows, CFG.rarity.thresholds)
+    scored = sc.normalize_components(eu, CFG).row(0, named=True)
+    assert scored["latest_year"] == 2026
+    assert scored["inflection_year"] == 2021
+    assert scored["inflection_age"] == 4
+    assert scored["recent_inflection_point"] == 1.0
+
+
 # --------------------------------------------------------------------------- score
 
 
@@ -531,6 +556,36 @@ def test_sorn_ratio_prefers_generation_level() -> None:
     )
     assert metrics.sorn_ratio(annual, _target("A", "G1"), "GB") == pytest.approx(0.1)
     assert metrics.sorn_ratio(annual, _target("A", "G2"), "GB") == pytest.approx(0.5)  # fallback
+
+
+def test_sorn_ratio_keeps_generation_level_when_latest_sorn_is_zero() -> None:
+    """Zero is a real generation-level observation, not a reason to use the model fallback."""
+    annual = metrics.annual_stock(
+        _stock(
+            [
+                _row(generation="G1", period=date(2023, 12, 31), count=50),
+                _row(
+                    generation="G1",
+                    period=date(2023, 12, 31),
+                    status="sorn",
+                    count=50,
+                ),
+                _row(generation="G1", period=date(2024, 12, 31), count=100),
+                _row(
+                    source_file="df_VEH0120_GB.csv",
+                    period=date(2024, 12, 31),
+                    count=100,
+                ),
+                _row(
+                    source_file="df_VEH0120_GB.csv",
+                    period=date(2024, 12, 31),
+                    status="sorn",
+                    count=100,
+                ),
+            ]
+        )
+    )
+    assert metrics.sorn_ratio(annual, _target("A", "G1"), "GB") == 0.0
 
 
 def test_cohort_retention_is_relative_to_the_cohort_peak() -> None:

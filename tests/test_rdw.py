@@ -9,6 +9,7 @@ import pytest
 from predcar import raw, schemas
 from predcar.config import load_sources_config
 from predcar.ingest import rdw
+from predcar.paths import RAW_DIR
 
 PERIOD = date(2026, 9, 8)
 
@@ -168,6 +169,20 @@ def test_ingest_reads_a_gzipped_snapshot(fixtures: Path, tmp_path: Path) -> None
     compressed = rdw.ingest(snapshot, tmp_path / "silver_gz")
 
     assert pl.read_parquet(compressed).equals(pl.read_parquet(plain))
+
+
+def test_committed_snapshots_are_complete_and_verifiable() -> None:
+    """Every RDW manifest in the repository carries both replay inputs."""
+    snapshots = sorted(
+        p
+        for p in (RAW_DIR / rdw.SOURCE).iterdir()
+        if p.is_dir() and (p / raw.MANIFEST_NAME).is_file()
+    )
+    assert snapshots, "at least one historical RDW snapshot must be archived"
+    for snapshot in snapshots:
+        assert raw.resolve(snapshot, rdw.DATA_FILE) is not None, snapshot
+        assert raw.resolve(snapshot, rdw.QUERY_FILE) is not None, snapshot
+        raw.verify(snapshot)
 
 
 @pytest.mark.parametrize("registered", [(rdw.QUERY_FILE,), (rdw.DATA_FILE,)])

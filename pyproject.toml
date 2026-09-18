@@ -1,6 +1,6 @@
 [project]
 name = "predcar"
-version = "1.0.0"
+version = "1.0.1"
 description = "Statistical proof of rarefaction of 1990-2015 car models in Europe from official open data"
 readme = "README.md"
 requires-python = ">=3.12"

@@ -158,3 +158,13 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
   DC2 à 2) n'est pas « rare », elle est **mal mappée** ; vérifier ses libellés avant de croire
   le chiffre. Et l'inverse d'une finition sportive (leçon du 2026-09-09) existe aussi : un
   libellé peut porter un mot-clé sans le mot « TYPE » (`INTEGRA R`).
+
+### 2026-09-18 Un refresh doit repartir uniquement des entrées versionnées
+- **Erreur**: le refresh trimestriel ne relisait que le snapshot RDW du jour et omettait KBA ;
+  `query.json`, pourtant requis à l'ingestion, n'était pas committé. Le workflow Pages appelé
+  après le push pouvait en plus reconstruire le SHA initial du run.
+- **Correction**: archiver les deux entrées RDW, rejouer tous les mois disponibles, télécharger
+  et ingérer tous les millésimes KBA, puis transmettre explicitement le SHA créé à Pages.
+- **Règle**: tester un workflow de reconstruction depuis un checkout propre. Tout fichier exigé
+  par un parseur doit être versionné ou retéléchargeable ; tout workflow qui committe puis en
+  appelle un autre lui transmet explicitement le commit produit.
