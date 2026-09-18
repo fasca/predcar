@@ -577,6 +577,36 @@ def previous_gold_dir(bundle_date: date | None, reports_dir: Path = REPORTS_DIR)
     return older[0] / "gold" if older else None
 
 
+MANIFEST_FILE = "manifest.json"
+# Config files whose text, recorded in every manifest, defines the method behind a ranking.
+_METHOD_CONFIGS = ("score.yaml", "mapping.yaml")
+
+
+def method_change(previous_gold: Path, current_gold: Path) -> str | None:
+    """What differs in the *method* between two bundles, as a short French label, or None.
+
+    The « Évolutions » page diffs two rankings. When the pipeline itself changed between them
+    (predcar version, ``config/score.yaml`` or ``config/mapping.yaml``), the moves are
+    corrections rather than fleet evolutions and the reader must be told so. Both bundles
+    need a ``manifest.json`` (``predcar export`` writes one); otherwise nothing is claimed.
+    """
+    manifests: list[dict] = []
+    for gold in (previous_gold, current_gold):
+        path = gold.parent / MANIFEST_FILE
+        if not path.is_file():
+            return None
+        manifests.append(json.loads(path.read_text(encoding="utf-8")))
+    prev, cur = manifests
+    labels: list[str] = []
+    v_prev, v_cur = (m.get("versions", {}).get("predcar") for m in manifests)
+    if v_prev != v_cur:
+        labels.append(f"predcar {v_prev or '?'} → {v_cur or '?'}")
+    for name in _METHOD_CONFIGS:
+        if prev.get("config", {}).get(name) != cur.get("config", {}).get(name):
+            labels.append(f"config/{name} modifié")
+    return ", ".join(labels) or None
+
+
 def build(
     gold_dir: Path | None = None,
     out_dir: Path = SITE_DIST_DIR,
@@ -603,7 +633,9 @@ def build(
     previous_dir = previous_gold_dir(bundle_date, reports_dir)
     previous_date = date.fromisoformat(previous_dir.parent.name) if previous_dir else None
     change_rows: list[dict] = []
+    method = None
     if previous_dir is not None:
+        method = method_change(previous_dir, gold_dir)
         diff = changes.compare(
             _read_table(previous_dir, "ranking"), _read_table(gold_dir, "ranking"), cfg
         )
@@ -624,6 +656,7 @@ def build(
         "built_on": built_on,
         "previous_on": previous_date,
         "change_count": len(change_rows),
+        "method_change": method,
         "latest_year": latest_year,
         "plotly_cdn": PLOTLY_CDN,
         "models_dir": MODELS_DIR,

@@ -757,8 +757,9 @@ def rarity_tier_expr(stock: pl.Expr, thresholds: list[int]) -> pl.Expr:
 
 def aggregate_europe(indicators: pl.DataFrame, thresholds: list[int]) -> pl.DataFrame:
     """One row per target: stock summed over countries, attrition stock-weighted, SORN from GB,
-    inflection = the most recent country inflection, survival stock-weighted, rarity tier from
-    the summed stock (``thresholds`` = ``rarity.thresholds``).
+    inflection = the country inflection with the smallest local age (year and age from that
+    same country), survival stock-weighted, rarity tier from the summed stock (``thresholds``
+    = ``rarity.thresholds``).
 
     A value missing in every country stays null (never NaN, never 0).
     """
@@ -779,9 +780,13 @@ def aggregate_europe(indicators: pl.DataFrame, thresholds: list[int]) -> pl.Data
             _weighted("attrition", w).alias("attrition"),
             _weighted("relative_attrition", w).alias("relative_attrition"),
             pl.col("n_peers").max(),
-            pl.col("inflection_year").max().alias("inflection_year"),
-            # Each country's observation calendar can differ. Keep the smallest local age
-            # instead of subtracting an NL snapshot year from a GB inflection year.
+            # "Most recent" is measured in local age: each country has its own observation
+            # calendar, so an NL snapshot year is never subtracted from a GB inflection year.
+            # The year published is the one of that same country, never a mix of two rows.
+            pl.col("inflection_year")
+            .sort_by("inflection_age", nulls_last=True)
+            .first()
+            .alias("inflection_year"),
             pl.col("inflection_age").min().alias("inflection_age"),
             pl.col("sorn_ratio").filter(pl.col("country") == "GB").first().alias("sorn_ratio"),
         )
