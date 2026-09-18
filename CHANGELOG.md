@@ -10,7 +10,7 @@ sources dépend de l'environnement et se revérifie à chaque session (leçon du
 il fonctionne depuis le WSL2 de l'utilisateur et, au 2026-09-12, depuis l'environnement
 Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
-## Non publié
+## [1.0.2] — 2026-09-18
 
 ### 2026-09-18 — Relecture de l'audit 1.0.1 : un changement de méthode n'est pas une alerte
 
