@@ -31,6 +31,7 @@ code { font-size: 0.9em; background: #eee; padding: 0 0.25em; border-radius: 3px
 .site-footer { max-width: 1200px; margin: 0 auto; padding: 1rem 1.25rem 2rem; color: var(--muted); font-size: 0.85rem; }
 
 .intro p { max-width: 70ch; }
+.intro .warning { border-left: 3px solid var(--accent); padding-left: 0.75rem; }
 .meta, .note, .count { color: var(--muted); font-size: 0.9rem; }
 .crumbs { font-size: 0.9rem; color: var(--muted); }
 .gen { color: var(--muted); font-weight: 400; }

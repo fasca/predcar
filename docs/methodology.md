@@ -83,9 +83,11 @@ aujourd'hui dans les données ouvertes du KBA.
 
 Une ligne `EU` par génération cible : stock sommé sur les pays ; attrition, attrition
 relative et survie pondérées par le stock des pays où elles existent ; point d'inflexion =
-le plus récent des pays, dont l'âge est calculé contre la dernière observation de **ce même
-pays** ; ratio SORN = valeur GB. Une valeur absente partout reste absente (null, jamais NaN
-ni 0). Ainsi, un snapshot NL plus récent ne vieillit pas artificiellement une inflexion GB.
+celui dont l'**âge local** est le plus petit (année d'inflexion et âge viennent du même pays,
+l'âge étant compté contre la dernière observation de **ce pays**) ; ratio SORN = valeur GB.
+Une valeur absente partout reste absente (null, jamais NaN ni 0). Ainsi, un snapshot NL plus
+récent ne vieillit pas artificiellement une inflexion GB, et la fiche modèle affiche cet âge
+à côté de l'année.
 
 ## 3 ter. Projection Weibull à 5 et 10 ans (publiée, hors score)
 
@@ -183,3 +185,9 @@ franchi vers le bas (`>=500` → `<500` → `<100` → `<20`, seuils de `rarity.
 N'en est pas un : **un mouvement de rang seul**. Dès qu'une cible s'ajoute, tous les rangs en
 dessous se décalent — 169 mouvements de dix places ou plus le jour où 21 cibles sont entrées.
 Le signaler noierait le reste.
+
+Un **changement de méthode** n'est pas une évolution du parc : quand la version de predcar,
+`config/score.yaml` ou `config/mapping.yaml` diffèrent entre les deux bundles (lus dans leur
+`manifest.json`), la page et le flux le disent en tête, et les mouvements listés se lisent
+comme une correction. Ce fut le cas entre le 2026-09-15 et le 2026-09-18 : mêmes données,
+âge des inflexions recalculé, 16 cibles déplacées.

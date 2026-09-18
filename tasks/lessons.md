@@ -168,3 +168,13 @@ _Ce fichier est mis à jour après chaque correction. Claude doit le lire au dé
 - **Règle**: tester un workflow de reconstruction depuis un checkout propre. Tout fichier exigé
   par un parseur doit être versionné ou retéléchargeable ; tout workflow qui committe puis en
   appelle un autre lui transmet explicitement le commit produit.
+
+### 2026-09-18 Un bundle rejoué sans nouvelles données produit un diff de méthode, pas une alerte
+- **Erreur**: le bundle 2026-09-18 (mêmes CSV DfT, même snapshot RDW, âge d'inflexion corrigé)
+  a fait publier sur « Évolutions » et dans le flux Atom cinq entrées et cinq sorties du top 50
+  comme si le parc avait bougé. Chaque manifest portait pourtant la version et la config.
+- **Correction**: `site.method_change` compare version et `score.yaml` / `mapping.yaml` des
+  deux manifests ; la page et le flux annoncent un changement de méthode.
+- **Règle**: toute sortie qui compare deux runs doit dire si la *méthode* a changé entre eux
+  avant de qualifier les écarts. Et un chiffre affiché à côté d'un jugement (« récente »)
+  doit permettre de le refaire : l'âge, le seuil et le calendrier vont avec l'année.
