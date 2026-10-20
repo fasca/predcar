@@ -1,0 +1,14 @@
+{
+  "gekentekende_voertuigen_agg.json": {
+    "downloaded_at": "2026-09-08T22:49:40+00:00",
+    "sha256": "1124fc13c7dbeaec4fd1fd25a162e5806191fc1fa287f9dee5fcabe83738a9e4",
+    "size_bytes": 16724623,
+    "url": "https://opendata.rdw.nl/resource/m9d7-ebf2.json"
+  },
+  "query.json": {
+    "downloaded_at": "2026-09-08T22:49:40+00:00",
+    "sha256": "a103220ba6b64ca0bdb0bd07a7184316ce0fa16a1ab3b3d63bc2adfbedb15b31",
+    "size_bytes": 425,
+    "url": null
+  }
+}

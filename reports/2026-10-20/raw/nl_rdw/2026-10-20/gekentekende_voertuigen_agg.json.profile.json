@@ -1,0 +1,428 @@
+{
+  "file": "gekentekende_voertuigen_agg.json",
+  "rows": 203340,
+  "keys": {
+    "merk": 203340,
+    "handelsbenaming": 203296,
+    "jaar": 202809,
+    "n": 203340
+  },
+  "value_types": {
+    "merk": [
+      "str"
+    ],
+    "handelsbenaming": [
+      "str"
+    ],
+    "jaar": [
+      "str"
+    ],
+    "n": [
+      "str"
+    ]
+  },
+  "sample": [
+    {
+      "merk": "3A3",
+      "handelsbenaming": "1102",
+      "jaar": "1990",
+      "n": "1"
+    },
+    {
+      "merk": "3A3",
+      "handelsbenaming": "110206",
+      "jaar": "1998",
+      "n": "1"
+    },
+    {
+      "merk": "3A3",
+      "handelsbenaming": "LANOS",
+      "jaar": "2010",
+      "n": "1"
+    },
+    {
+      "merk": "3A3",
+      "handelsbenaming": "LANOS",
+      "jaar": "2013",
+      "n": "1"
+    },
+    {
+      "merk": "3A3",
+      "handelsbenaming": "VIDA",
+      "jaar": "2012",
+      "n": "1"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "124 SPIDER",
+      "jaar": "2018",
+      "n": "3"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "124 SPIDER",
+      "jaar": "2019",
+      "n": "9"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "2200 COUPE",
+      "jaar": "1959",
+      "n": "1"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "500",
+      "jaar": "2023",
+      "n": "68"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "500",
+      "jaar": "2024",
+      "n": "78"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "500",
+      "jaar": "2025",
+      "n": "46"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "500",
+      "jaar": "2026",
+      "n": "10"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "595 SS",
+      "jaar": "1965",
+      "n": "1"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "600E",
+      "jaar": "2025",
+      "n": "40"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "600E",
+      "jaar": "2026",
+      "n": "30"
+    },
+    {
+      "merk": "ABARTH",
+      "handelsbenaming": "695",
+      "jaar": "1970",
+      "n": "1"
+    },
+    {
+      "merk": "ABS",
+      "handelsbenaming": "SPORTS",
+      "jaar": "1989",
+      "n": "1"
+    },
+    {
+      "merk": "ABT",
+      "handelsbenaming": "XGT",
+      "jaar": "2025",
+      "n": "1"
+    },
+    {
+      "merk": "ABT E-LINE GMBH",
+      "handelsbenaming": "ABT E-CARAVELLE 6.1",
+      "jaar": "2022",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "16/66",
+      "jaar": "1933",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "16/80 COMPETITION SPORTS",
+      "jaar": "1938",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "2 LITER",
+      "jaar": "1948",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "2.LITER SALOON",
+      "jaar": "1954",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "2 LITRE",
+      "jaar": "1950",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "2L SALOON",
+      "jaar": "1951",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "428 COUPE",
+      "jaar": "1971",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "428 FRUA COUPE",
+      "jaar": "1973",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "428 FRUA  FASTBACK",
+      "jaar": "1969",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "AC",
+      "jaar": "1957",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "AC ACE",
+      "jaar": "1957",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "AC BRISTOL",
+      "jaar": "1957",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "AC BRISTOL",
+      "jaar": "1958",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "AC BRISTOL LE MANS ROADSTER",
+      "jaar": "1958",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "ACE",
+      "jaar": "1954",
+      "n": "2"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "ACE",
+      "jaar": "1955",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "ACE",
+      "jaar": "1956",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "ACE BRISTOL",
+      "jaar": "1957",
+      "n": "2"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "ACE BRISTOL",
+      "jaar": "1958",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "ACE BRISTOL ROADSTER",
+      "jaar": "1962",
+      "n": "1"
+    },
+    {
+      "merk": "A.C.",
+      "handelsbenaming": "ACECA",
+      "jaar": "1958",
+      "n": "1"
+    }
+  ],
+  "top_makes": [
+    [
+      "VOLKSWAGEN",
+      16863
+    ],
+    [
+      "MERCEDES-BENZ",
+      16255
+    ],
+    [
+      "BMW",
+      10460
+    ],
+    [
+      "FORD",
+      10091
+    ],
+    [
+      "FIAT",
+      7326
+    ],
+    [
+      "CITROEN",
+      6976
+    ],
+    [
+      "VOLVO",
+      6432
+    ],
+    [
+      "OPEL",
+      6164
+    ],
+    [
+      "PEUGEOT",
+      5205
+    ],
+    [
+      "TOYOTA",
+      5071
+    ],
+    [
+      "RENAULT",
+      4988
+    ],
+    [
+      "AUDI",
+      4499
+    ],
+    [
+      "CHEVROLET",
+      4175
+    ],
+    [
+      "PORSCHE",
+      3580
+    ],
+    [
+      "JAGUAR",
+      3108
+    ],
+    [
+      "LAND ROVER",
+      2907
+    ],
+    [
+      "ALFA ROMEO",
+      2752
+    ],
+    [
+      "NISSAN",
+      2457
+    ],
+    [
+      "MAZDA",
+      2442
+    ],
+    [
+      "HONDA",
+      2199
+    ],
+    [
+      "SAAB",
+      2085
+    ],
+    [
+      "HYMER",
+      2013
+    ],
+    [
+      "MITSUBISHI",
+      1850
+    ],
+    [
+      "JEEP",
+      1759
+    ],
+    [
+      "DETHLEFFS",
+      1737
+    ],
+    [
+      "AUTO UNION",
+      1604
+    ],
+    [
+      "DODGE",
+      1556
+    ],
+    [
+      "MG",
+      1530
+    ],
+    [
+      "SUZUKI",
+      1502
+    ],
+    [
+      "AUSTIN",
+      1492
+    ],
+    [
+      "CADILLAC",
+      1431
+    ],
+    [
+      "LANCIA",
+      1314
+    ],
+    [
+      "MINI",
+      1313
+    ],
+    [
+      "CHRYSLER",
+      1309
+    ],
+    [
+      "CARTHAGO",
+      1268
+    ],
+    [
+      "BUERSTNER",
+      1224
+    ],
+    [
+      "CAPRON",
+      1125
+    ],
+    [
+      "HYUNDAI",
+      1067
+    ],
+    [
+      "BUICK",
+      1002
+    ],
+    [
+      "FERRARI",
+      994
+    ]
+  ]
+}

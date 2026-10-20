@@ -1,0 +1,83 @@
+{
+  "file": "df_VEH0124_AM.csv",
+  "rows": 566977,
+  "columns": [
+    "BodyType",
+    "Make",
+    "GenModel",
+    "Model",
+    "YearFirstUsed",
+    "YearManufacture",
+    "LicenceStatus",
+    "2025",
+    "2024",
+    "2023",
+    "2022",
+    "2021",
+    "2020",
+    "2019",
+    "2018",
+    "2017",
+    "2016",
+    "2015",
+    "2014"
+  ],
+  "id_columns": [
+    "BodyType",
+    "Make",
+    "GenModel",
+    "Model",
+    "YearFirstUsed",
+    "YearManufacture",
+    "LicenceStatus"
+  ],
+  "quarter_columns": [],
+  "n_quarter_columns": 0,
+  "year_columns": [
+    "2025",
+    "2024",
+    "2023",
+    "2022",
+    "2021",
+    "2020",
+    "2019",
+    "2018",
+    "2017",
+    "2016",
+    "2015",
+    "2014"
+  ],
+  "distinct_values": {
+    "BodyType": [
+      "Buses and coaches",
+      "Cars",
+      "Heavy goods vehicles",
+      "Light goods vehicles",
+      "Motorcycles",
+      "Other vehicles"
+    ],
+    "Make": [
+      "<583 distinct>"
+    ],
+    "GenModel": [
+      "<5560 distinct>"
+    ],
+    "Model": [
+      "<44455 distinct>"
+    ],
+    "YearFirstUsed": [
+      "<125 distinct>"
+    ],
+    "YearManufacture": [
+      "<127 distinct>"
+    ],
+    "LicenceStatus": [
+      "Licensed",
+      "SORN"
+    ]
+  },
+  "value_markers": {
+    "[z]": 821388,
+    "<other non-numeric>": 0
+  }
+}

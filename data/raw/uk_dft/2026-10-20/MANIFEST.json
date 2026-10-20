@@ -1,0 +1,26 @@
+{
+  "df_VEH0120_GB.csv": {
+    "downloaded_at": "2026-10-20T09:29:43+00:00",
+    "sha256": "afdc4feb04a9577c84080926e06769fe60fc8d0a445df1032a95ec2bb7766a92",
+    "size_bytes": 66825838,
+    "url": "https://assets.publishing.service.gov.uk/media/6aad4b12ce3f006bd4346ccf/df_VEH0120_GB.csv"
+  },
+  "df_VEH0124_AM.csv": {
+    "downloaded_at": "2026-10-20T09:29:45+00:00",
+    "sha256": "86fe32407fde0a92cb1fd4724e2b586917100d975b4d64dd8c972644418ecc3a",
+    "size_bytes": 54874318,
+    "url": "https://assets.publishing.service.gov.uk/media/69ef3c3a20a498c16734afd1/df_VEH0124_AM.csv"
+  },
+  "df_VEH0124_NZ.csv": {
+    "downloaded_at": "2026-10-20T09:29:49+00:00",
+    "sha256": "6a04aebfe77953a4686a633e6081351c1853119488e6738958df738756115984",
+    "size_bytes": 39295208,
+    "url": "https://assets.publishing.service.gov.uk/media/69ef3c8520a498c16734afd2/df_VEH0124_NZ.csv"
+  },
+  "df_VEH0160_GB.csv": {
+    "downloaded_at": "2026-10-20T09:29:51+00:00",
+    "sha256": "81702c732cfcff6daccba6d516e94b5c41cb38a799f1ad945248e0a111cae179",
+    "size_bytes": 28725430,
+    "url": "https://assets.publishing.service.gov.uk/media/6aad4b1d086ce7c57b8186f4/df_VEH0160_GB.csv"
+  }
+}
