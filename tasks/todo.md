@@ -157,7 +157,29 @@
 - [x] Audit production : rejouer tout l'historique RDW et KBA au refresh, versionner la requête
       RDW, déployer le SHA fraîchement committé, corriger SORN=0 et l'âge multi-pays des
       inflexions, rendre la fiche modèle mobile et clarifier la portée du parc allemand
-      (2026-09-18).
+      (2026-09-18, ChatGPT — `docs/audits/2026-09-18-chatgpt.md`).
+- [x] Relecture de cet audit (2026-09-18) : changement de méthode annoncé sur « Évolutions » et
+      le flux, année et âge d'inflexion Europe issus du même pays, âge affiché sur la fiche.
+
+## Maintenance récurrente
+
+- [ ] **Chaque janvier** : passer `de_kba.last_year` à l'année courante dans
+      `config/sources.yaml` dès que le KBA publie FZ 2 (sinon le refresh d'avril ignore le
+      millésime). Prochaine échéance : janvier 2027.
+- [ ] **Courriel git** : 27 commits portent `ton@email.com` ; GitHub ne les rattache à aucun
+      compte. `git config user.email <adresse du compte GitHub>` — sans réécrire l'historique.
+
+## Score v2 — pistes notées, non codées (décision du 2026-09-18 : PR séparée, à discuter)
+
+- [ ] Inflexion **continue** au lieu de binaire : `max(0, 1 − âge / recent_years)`. Aujourd'hui
+      20 % du score bascule de 0 à 1 sur un an d'écart (2020 vs 2021) ; 101 cibles à 1,0,
+      148 à 0.
+- [ ] **Run minimal** sous la médiane (`inflection.min_run`, 2 ans) : 47 cibles GB ont une
+      inflexion 2025, c'est-à-dire une seule année sous la médiane.
+- [ ] **Attrition NL sous-annuelle** : `annual_stock` ne garde qu'une observation par an, il
+      faut 4 fins d'année (2026 → 2029) pour 3 points lissés. `attrition()` accepte déjà des
+      dates à Δt fractionnaire ; une série RDW trimestrielle donnerait une attrition NL dès fin
+      2027. Rien à mesurer avant le 2e snapshot (cron du 2026-10-01).
 
 ---
 

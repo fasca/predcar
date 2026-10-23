@@ -10,9 +10,34 @@ sources dépend de l'environnement et se revérifie à chaque session (leçon du
 il fonctionne depuis le WSL2 de l'utilisateur et, au 2026-09-12, depuis l'environnement
 Claude Code. Voir `docs/ARCHITECTURE.md` §7.
 
+## [1.0.2] — 2026-09-18
+
+### 2026-09-18 — Relecture de l'audit 1.0.1 : un changement de méthode n'est pas une alerte
+
+**Ajouté** — la page « Évolutions » et le flux Atom annoncent un **changement de méthode**
+quand la version de predcar ou `config/score.yaml` / `config/mapping.yaml` diffèrent entre les
+deux bundles comparés (`site.method_change`, lu dans `manifest.json`). Entre le 2026-09-15 et
+le 2026-09-18, les données étaient identiques et 16 cibles ont bougé par correction : le lecteur
+le voit désormais au lieu de cinq fausses entrées dans le top 50.
+
+**Corrigé** — l'agrégat Europe publie l'année d'inflexion **du pays** dont l'âge local est le
+plus petit, jamais l'année d'un pays avec l'âge d'un autre (`metrics.aggregate_europe`). Aucune
+valeur ne change aujourd'hui (pas d'inflexion NL avant plusieurs fins d'année), le test couvre
+le cas à venir. La fiche modèle affiche cet âge à côté de l'année (« depuis 2021, soit 4 ans à la
+dernière observation du pays… ») : l'en-tête « dernière observation 2026 » ne contredit plus une
+inflexion 2021 jugée récente.
+
+**Modifié** — le compte rendu de l'intervention ChatGPT quitte la racine pour
+`docs/audits/2026-09-18-chatgpt.md`. Tâches récurrentes notées dans `tasks/todo.md` (millésime
+KBA à ouvrir chaque janvier dans `config/sources.yaml`, courriel git). Pistes de score v2
+(inflexion continue, run minimal, attrition NL sous-annuelle) notées, non codées : décision
+utilisateur du 2026-09-18.
+
 ## [1.0.1] — 2026-09-18
 
 ### 2026-09-18 — Correctifs après audit de production
+
+Intervention ChatGPT (Codex), compte rendu dans `docs/audits/2026-09-18-chatgpt.md`.
 
 **Corrigé** — le refresh trimestriel rejoue désormais tous les snapshots RDW versionnés et
 ingère les huit millésimes KBA avant le score. Chaque snapshot RDW conserve aussi `query.json` ;

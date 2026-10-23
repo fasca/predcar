@@ -31,7 +31,7 @@
           {% if c.name == 'rarity' %}parc actuel {{ row.stock | fmt_int }} (1 = le plus faible de la population)
           {% elif c.name == 'conservation' %}{% if c.available %}attrition relative {{ row.relative_attrition | fmt_pct }} par an vs pairs (négatif = disparaît moins vite){% else %}pas d'historique suffisant ou pas de pairs{% endif %}
           {% elif c.name == 'sorn_ratio' %}{% if c.available %}{{ row.sorn_ratio | fmt_pct }} du parc britannique est en SORN (hors route, conservé) ; déjà entre 0 et 1 et orienté « plus haut = plus collector », ce ratio est repris <em>tel quel</em> comme composante — la valeur 0–1 de cette ligne est donc le même nombre{% else %}non disponible hors Royaume-Uni{% endif %}
-          {% elif c.name == 'recent_inflection_point' %}{% if row.inflection_year %}attrition sous la médiane des pairs depuis {{ row.inflection_year }}{% elif c.available %}pas d'inflexion en cours{% else %}pas d'historique suffisant ou pas de pairs{% endif %}
+          {% elif c.name == 'recent_inflection_point' %}{% if row.inflection_year %}attrition sous la médiane des pairs depuis {{ row.inflection_year }}{% if row.inflection_age is not none %}, soit {{ row.inflection_age }} an{{ 's' if row.inflection_age != 1 }} à la dernière observation du pays qui la mesure (« récente » sous {{ cfg.inflection.recent_years }} ans){% endif %}{% elif c.available %}pas d'inflexion en cours{% else %}pas d'historique suffisant ou pas de pairs{% endif %}
           {% endif %}
         </td>
       </tr>

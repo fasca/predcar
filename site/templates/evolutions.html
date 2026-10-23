@@ -9,6 +9,11 @@
     pas signalé — dès que des cibles s'ajoutent, tous les rangs bougent. Ce qui compte : entrer ou
     sortir du top {{ top_n }}, franchir un palier de rareté, voir apparaître une inflexion.
     Abonnez-vous au <a href="feed.xml">flux Atom</a> pour être prévenu à chaque refresh.</p>
+  {% if method_change %}
+  <p class="warning"><strong>Changement de méthode</strong> entre ces deux bundles ({{ method_change }}) :
+    les mouvements ci-dessous peuvent refléter cette correction plutôt qu'une évolution du parc.
+    Le détail est dans le <a href="https://github.com/fasca/predcar/blob/main/CHANGELOG.md">journal des versions</a>.</p>
+  {% endif %}
   {% else %}
   <p class="note">Il faut deux bundles de preuves pour comparer ; celui-ci est le premier. La page
     se remplira au prochain refresh trimestriel.</p>

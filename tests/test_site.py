@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import date
 from pathlib import Path
@@ -532,6 +533,64 @@ def test_evolutions_page_and_feed_list_what_changed(
     # nav and discovery link
     index = (out / "index.html").read_text(encoding="utf-8")
     assert 'type="application/atom+xml"' in index and "evolutions.html" in index
+
+
+def _manifest(bundle_gold: Path, version: str, score_yaml: str = "weights: {}") -> None:
+    (bundle_gold.parent / site.MANIFEST_FILE).write_text(
+        json.dumps({"versions": {"predcar": version}, "config": {"score.yaml": score_yaml}}),
+        encoding="utf-8",
+    )
+
+
+def test_method_change_names_what_differs_between_two_manifests(tmp_path: Path) -> None:
+    prev, cur = tmp_path / "a" / "gold", tmp_path / "b" / "gold"
+    prev.mkdir(parents=True), cur.mkdir(parents=True)
+    assert site.method_change(prev, cur) is None  # no manifest: nothing is claimed
+    _manifest(prev, "1.0.0"), _manifest(cur, "1.0.0")
+    assert site.method_change(prev, cur) is None
+    _manifest(cur, "1.0.1")
+    assert site.method_change(prev, cur) == "predcar 1.0.0 → 1.0.1"
+    _manifest(cur, "1.0.0", score_yaml="weights: {rarity: 1}")
+    assert site.method_change(prev, cur) == "config/score.yaml modifié"
+
+
+def test_evolutions_page_and_feed_flag_a_method_change(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    """Same data, new method: the moves are a correction, and the reader is told so."""
+    import xml.etree.ElementTree as ET
+
+    reports = _bundle_pair(tmp_path, gold[0])
+    _manifest(reports / "2026-09-13" / "gold", "0.1.0")
+    _manifest(reports / "2026-09-14" / "gold", "1.0.1")
+    out = tmp_path / "dist"
+    _build_from(reports, gold, out)
+    page = (out / "evolutions.html").read_text(encoding="utf-8")
+    assert "Changement de méthode" in page and "predcar 0.1.0 → 1.0.1" in page
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    entry = ET.parse(out / "feed.xml").getroot().find("a:entry", ns)
+    assert "(changement de méthode)" in entry.find("a:title", ns).text
+    assert "predcar 0.1.0 → 1.0.1" in entry.find("a:summary", ns).text
+
+    # identical manifests: no banner, no marker
+    _manifest(reports / "2026-09-13" / "gold", "1.0.1")
+    _build_from(reports, gold, out)
+    page = (out / "evolutions.html").read_text(encoding="utf-8")
+    assert "Changement de méthode" not in page
+    assert "changement de méthode" not in (out / "feed.xml").read_text(encoding="utf-8")
+
+
+def test_model_page_gives_the_inflection_age_in_the_countrys_calendar(
+    gold: tuple[Path, Path], tmp_path: Path
+) -> None:
+    out = tmp_path / "dist"
+    _build(gold, out)
+    pages = [p.read_text(encoding="utf-8") for p in (out / "modeles").iterdir()]
+    with_inflection = [p for p in pages if "attrition sous la médiane des pairs depuis" in p]
+    assert with_inflection, "the fixture population carries at least one inflection"
+    for page in with_inflection:
+        assert re.search(r"depuis \d{4}, soit \d+ ans? à la dernière observation du pays", page)
+        assert f"sous {CFG.inflection.recent_years} ans" in page
 
 
 def test_evolutions_page_explains_itself_with_a_single_bundle(

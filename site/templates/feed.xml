@@ -9,11 +9,11 @@
   <author><name>predcar</name></author>
   {% if previous_on %}
   <entry>
-    <title>Refresh du {{ built_on }} : {{ change_count }} changement{{ 's' if change_count != 1 }}</title>
+    <title>Refresh du {{ built_on }} : {{ change_count }} changement{{ 's' if change_count != 1 }}{% if method_change %} (changement de méthode){% endif %}</title>
     <link href="{{ site_url }}evolutions.html" rel="alternate" type="text/html"/>
     <id>tag:fasca.github.io,2026:predcar/evolutions/{{ built_on }}</id>
     <updated>{{ built_on }}T00:00:00Z</updated>
-    <summary>Entre le {{ previous_on }} et le {{ built_on }}.</summary>
+    <summary>Entre le {{ previous_on }} et le {{ built_on }}.{% if method_change %} Changement de méthode ({{ method_change }}) : ces mouvements peuvent refléter une correction plutôt qu'une évolution du parc.{% endif %}</summary>
     <content type="xhtml">
       <div xmlns="http://www.w3.org/1999/xhtml">
         {% for kind, rows in by_kind.items() if rows %}

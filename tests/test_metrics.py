@@ -313,29 +313,40 @@ def test_aggregate_europe_sums_stock_and_keeps_gb_sorn() -> None:
     assert lonely["relative_attrition"] is None  # null, never NaN
 
 
-def test_recent_inflection_uses_each_countrys_observation_year() -> None:
-    """A newer NL snapshot must not age a still-recent GB inflection."""
+def _europe_inflection(gb: tuple[int, int | None], nl: tuple[int, int | None]) -> dict:
+    """EU row of SLOW with (latest_year, inflection_year) forced per country."""
     stock, new_reg, targets = _population()
     ind, _ = metrics.compute_indicators(stock, new_reg, targets, CFG)
+    is_gb = pl.col("country") == "GB"
     rows = ind.filter(pl.col("model_gen") == "SLOW").with_columns(
-        pl.when(pl.col("country") == "GB").then(2025).otherwise(2026).alias("latest_year"),
-        pl.when(pl.col("country") == "GB")
-        .then(2021)
-        .otherwise(None)
-        .cast(pl.Int32)
-        .alias("inflection_year"),
-        pl.when(pl.col("country") == "GB")
-        .then(4)
-        .otherwise(None)
-        .cast(pl.Int32)
-        .alias("inflection_age"),
+        pl.when(is_gb).then(gb[0]).otherwise(nl[0]).cast(pl.Int32).alias("latest_year"),
+        pl.when(is_gb).then(gb[1]).otherwise(nl[1]).cast(pl.Int32).alias("inflection_year"),
+    )
+    rows = rows.with_columns(
+        (pl.col("latest_year") - pl.col("inflection_year")).alias("inflection_age")
     )
     eu = metrics.aggregate_europe(rows, CFG.rarity.thresholds)
-    scored = sc.normalize_components(eu, CFG).row(0, named=True)
+    return sc.normalize_components(eu, CFG).row(0, named=True)
+
+
+def test_recent_inflection_uses_each_countrys_observation_year() -> None:
+    """A newer NL snapshot must not age a still-recent GB inflection."""
+    scored = _europe_inflection(gb=(2025, 2021), nl=(2026, None))
     assert scored["latest_year"] == 2026
     assert scored["inflection_year"] == 2021
     assert scored["inflection_age"] == 4
     assert scored["recent_inflection_point"] == 1.0
+
+
+def test_europe_inflection_year_and_age_come_from_the_same_country() -> None:
+    """Smallest local age wins, and the year published is that country's — never the latest
+    year of one country with the age of another."""
+    scored = _europe_inflection(gb=(2025, 2021), nl=(2027, 2022))
+    assert scored["inflection_year"] == 2021  # GB: 4 years old; NL 2022 is 5 years old
+    assert scored["inflection_age"] == 4
+    assert scored["recent_inflection_point"] == 1.0
+    none = _europe_inflection(gb=(2025, None), nl=(2027, None))
+    assert none["inflection_year"] is None and none["inflection_age"] is None
 
 
 # --------------------------------------------------------------------------- score
